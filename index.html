@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>跆拳道賽程整理工具</title>
+    <link rel="stylesheet" href="./sys.css">
+</head>
+<body>
+    <div class="app">
+        <header class="topbar">
+          <div class="brand">
+            <span class="brand-mark" aria-hidden="true"></span>
+            <div>
+              <h1>跆拳道賽程整理</h1>
+              <p>把秩序冊丟進來，自動排出本館孩子誰先上場</p>
+            </div>
+          </div>
+          <nav class="top-tabs" role="tablist">
+            <button class="top-tab active" type="button" data-tab="match" id="tabMatch">賽程整理</button>
+            <button class="top-tab" type="button" data-tab="custom" id="tabCustom">客製化統計</button>
+          </nav>
+        </header>
+
+        <main id="matchApp">
+          <ol class="how-guide">
+            <li>
+              <span class="how-num">1</span>
+              <div>
+                <strong>先填要找誰</strong>
+                <span>寫道館名稱，或貼上學員姓名</span>
+              </div>
+            </li>
+            <li>
+              <span class="how-num">2</span>
+              <div>
+                <strong>再上傳檔案</strong>
+                <span>秩序冊、對打表、品勢表都可以</span>
+              </div>
+            </li>
+            <li>
+              <span class="how-num">3</span>
+              <div>
+                <strong>按「整理賽程」</strong>
+                <span>看出場順序，需要時再匯出 Excel</span>
+              </div>
+            </li>
+          </ol>
+
+          <section class="panel">
+            <div class="step-head">
+              <span class="step-num">1</span>
+              <div>
+                <h2>先告訴系統要找誰</h2>
+                <p class="lead">秩序冊裡通常有幾百人。填本館或學員名字，才會只列出自己的孩子。</p>
+              </div>
+            </div>
+            <div class="form-grid">
+              <div class="field">
+                <label>比賽名稱</label>
+                <input type="text" id="competitionName" value="第十三屆中華盃跆拳道錦標賽" />
+              </div>
+              <div class="field">
+                <label>我的道館</label>
+                <input type="text" id="clubName" value="金城土城" placeholder="例如：金城土城" />
+                <p class="field-note">用在匯出 Excel 的標題，例如「金城土城｜比賽資料」</p>
+              </div>
+            </div>
+
+            <label class="check-row">
+              <input type="checkbox" id="filterEnabled" checked />
+              <span>只顯示本館／名單裡的學員<span class="check-extra">取消勾選就會把檔案裡全部選手都列出來</span></span>
+            </label>
+
+            <div class="field keyword-field">
+              <label>館別關鍵字</label>
+              <p class="hint">檔案裡可能寫「金城土城」或「金城土城館」，兩種都可加。輸入後按 Enter。</p>
+              <div class="keyword-box" id="keywordBox">
+                <div id="keywordTags" class="keyword-tags"></div>
+                <input type="text" id="keywordInput" placeholder="輸入後按 Enter，例如：金城土城館" autocomplete="off" />
+              </div>
+            </div>
+
+            <div class="field keyword-field" id="playerNamesField">
+              <label for="playerNames">學員名單</label>
+              <p class="hint">有些孩子是用學校名稱報名，館名對不到。把姓名貼上來，系統會用名字去找。</p>
+              <textarea id="playerNames" class="names-box" placeholder="一人一行，例如：&#10;黃羽希&#10;蔡葦儒&#10;黃宥豪"></textarea>
+            </div>
+          </section>
+
+          <section class="panel panel-upload">
+            <div class="panel-title">
+              <div class="step-head">
+                <span class="step-num">2</span>
+                <div>
+                  <h2>上傳秩序冊或對戰表</h2>
+                  <p class="lead">支援 PDF、Word、Excel。可一次丟多個檔，例如品勢表加上對打表。</p>
+                </div>
+              </div>
+              <div class="actions-small">
+                <button class="btn gray" id="clearBtn" type="button">清空檔案</button>
+              </div>
+            </div>
+            <div id="dropZone" class="drop-zone" tabindex="0">
+              <input type="file" id="fileInput" accept=".pdf,.docx,.xlsx,.xls,.csv,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv,text/plain" multiple hidden />
+              <div class="drop-zone-inner">
+                <span class="drop-icon" aria-hidden="true"></span>
+                <strong>把檔案拖到這裡，或點這裡選擇</strong>
+                <span>檔案只在這台電腦處理，不會傳到網路上</span>
+              </div>
+            </div>
+            <div id="fileList" class="file-list"></div>
+            <div id="parseStatus" class="parse-status hidden"></div>
+            <div class="main-actions">
+              <button class="btn primary btn-lg" id="analyzeBtn" type="button">整理賽程</button>
+              <p class="action-hint">檔案選好後，一定要按這個藍色按鈕，下面才會出現出場表。</p>
+            </div>
+          </section>
+
+          <section class="panel fold-panel">
+            <button class="fold-toggle" type="button" id="pasteToggle" aria-expanded="false">
+              <span>沒有檔案？改貼文字<span class="fold-note">選用，預設收合</span></span>
+              <span class="fold-arrow">＋</span>
+            </button>
+            <div id="pastePanel" class="fold-body hidden">
+              <p class="hint">適合貼手記。貼什麼就整理什麼，不必先勾篩選。</p>
+              <textarea id="sourceData" placeholder="1.黃羽希 幼兒白帶A 102紅103紅馬步正拳&#10;2.蔡葦儒 幼兒藍137紅138紅 三章&#10;3.張紘駿國小低年級藍帶B142紅144青"></textarea>
+              <div class="actions-small">
+                <button class="btn gray" id="loadSampleBtn" type="button">載入範例看看</button>
+              </div>
+            </div>
+          </section>
+
+          <section id="resultArea" class="hidden">
+            <div class="stats">
+              <div class="stat-card">
+                <span>找到選手</span>
+                <strong id="playerCount">0</strong>
+                <small>人</small>
+              </div>
+              <div class="stat-card">
+                <span>出場紀錄</span>
+                <strong id="matchCount">0</strong>
+                <small>筆</small>
+              </div>
+              <div class="stat-card stat-po">
+                <span>品勢</span>
+                <strong id="poomsaeCount">0</strong>
+                <small>筆</small>
+              </div>
+              <div class="stat-card stat-fight">
+                <span>對打</span>
+                <strong id="fightCount">0</strong>
+                <small>筆</small>
+              </div>
+            </div>
+
+            <section class="next-player" id="nextPlayerBox">
+              <div>
+                <span class="next-label">請先注意這位（依出場波次，最早上場）</span>
+                <h2 id="nextPlayerName">－</h2>
+                <p id="nextPlayerInfo">－</p>
+              </div>
+              <div class="next-match">
+                <span>場次</span>
+                <strong id="nextMatchNo">－</strong>
+              </div>
+            </section>
+
+            <section class="panel fold-panel">
+              <button class="fold-toggle" type="button" id="groupToggle" aria-expanded="false">
+                <span>用組別查看<span class="fold-note" id="groupSummary">點開可看同組名單</span></span>
+                <span class="fold-arrow">＋</span>
+              </button>
+              <div id="groupPanel" class="fold-body hidden">
+                <p class="hint">點一個組別，看同組還有誰。對打是上青、下紅；品勢若是一個個上場打分，就沒有青紅。</p>
+                <div id="groupChips" class="group-chips"></div>
+              </div>
+            </section>
+
+            <section class="panel table-panel">
+              <div class="panel-title">
+                <div class="step-head">
+                  <span class="step-num">3</span>
+                  <div>
+                    <h2>出場順序</h2>
+                    <p class="lead">越上面越早打。可先篩品勢或對打，也可搜尋姓名。</p>
+                  </div>
+                </div>
+                <div class="export-group">
+                  <button class="btn export" id="exportExcelBtn" type="button">匯出 Excel</button>
+                  <button class="btn gray" id="exportWordBtn" type="button">匯出 Word</button>
+                </div>
+              </div>
+
+              <div class="toolbar">
+                <div class="filter-buttons">
+                  <button class="filter active" data-filter="all" type="button">全部</button>
+                  <button class="filter" data-filter="品勢" type="button">只看品勢</button>
+                  <button class="filter" data-filter="對打" type="button">只看對打</button>
+                </div>
+                <input type="search" id="searchPlayer" placeholder="輸入姓名搜尋…" />
+              </div>
+
+              <div class="legend">
+                <span><b>波次</b> 101 與 201 會同時開打，算同一波</span>
+                <span class="side chung">青方</span>
+                <span>對打穿青護具（在籤表上方）</span>
+                <span class="side hong">紅方</span>
+                <span>對打穿紅護具（在籤表下方）</span>
+                <span class="side order">輪流出場</span>
+                <span>品勢一個個上場打分，沒有對手</span>
+              </div>
+
+              <div class="table-wrapper desktop-only">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>波次</th>
+                      <th>選手</th>
+                      <th>項目</th>
+                      <th>組別</th>
+                      <th>場地</th>
+                      <th>本場</th>
+                      <th>青紅／出場</th>
+                      <th>對手／順序</th>
+                      <th>下一場</th>
+                    </tr>
+                  </thead>
+                  <tbody id="resultBody"></tbody>
+                </table>
+              </div>
+              <div id="mobileCards" class="mobile-cards mobile-only"></div>
+              <div id="emptyMessage" class="empty hidden">
+                <p id="emptyTitle">找不到符合條件的選手</p>
+                <p id="emptyNameHint" class="empty-action hidden">
+                  檔案裡的單位常常是學校名，不是道館名，所以用館名會撈不到人。
+                  <button type="button" id="goPlayerNamesBtn">改用學員名單找人</button>
+                </p>
+              </div>
+            </section>
+          </section>
+        </main>
+
+        <main id="customApp" class="hidden">
+          <section class="panel">
+            <div class="panel-title">
+              <div class="step-head">
+                <span class="step-num alt">統</span>
+                <div>
+                  <h2>客製化統計</h2>
+                  <p class="lead">跟賽程無關。用來統計吃飯、報名費、出缺席，欄位可自己加。</p>
+                </div>
+              </div>
+              <div class="export-group">
+                <select id="customTemplate">
+                  <option value="meal">範本：吃飯統計</option>
+                  <option value="signup">範本：報名收費</option>
+                  <option value="blank">範本：空白名單</option>
+                </select>
+                <button class="btn gray" id="customApplyTpl" type="button">套用範本</button>
+                <button class="btn export" id="customExportBtn" type="button">匯出 Excel</button>
+              </div>
+            </div>
+            <div class="form-grid">
+              <div class="field">
+                <label>這次要統計什麼</label>
+                <input type="text" id="customTitle" value="吃飯統計" />
+              </div>
+              <div class="field">
+                <label>貼上姓名（會新增列）</label>
+                <div class="inline-add">
+                  <input type="text" id="customPasteNames" placeholder="黃羽希, 蔡葦儒" />
+                  <button class="btn gray" id="customAddNamesBtn" type="button">加入</button>
+                </div>
+              </div>
+            </div>
+            <div class="custom-toolbar">
+              <button class="btn gray" id="customAddColBtn" type="button">新增欄位</button>
+              <button class="btn gray" id="customAddRowBtn" type="button">新增一列</button>
+            </div>
+            <div class="table-wrapper">
+              <table class="custom-table" id="customTable">
+                <thead id="customHead"></thead>
+                <tbody id="customBody"></tbody>
+              </table>
+            </div>
+            <p class="custom-sum" id="customSum"></p>
+          </section>
+        </main>
+    </div>
+
+    <div id="groupModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modal-backdrop" id="modalBackdrop"></div>
+      <div class="modal-card">
+        <div class="modal-head">
+          <div>
+            <p class="modal-kicker">組別細節</p>
+            <h3 id="modalTitle">－</h3>
+          </div>
+          <button class="btn gray modal-close" id="modalCloseBtn" type="button">關閉</button>
+        </div>
+        <div id="modalBody" class="modal-body"></div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="./sys.js"></script>
+</body>
+</html>
