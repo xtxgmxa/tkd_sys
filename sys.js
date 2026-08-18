@@ -1288,10 +1288,113 @@ function itemMatchesClub(item, keywords) {
 
 function getPlayerNames() {
   if (!playerNamesEl) return [];
-  return playerNamesEl.value
-    .split(/[\n,，、;；]/)
-    .map((item) => item.replace(/^\d+[\.．、)]\s*/, "").trim())
-    .filter((item) => item.length >= 2);
+  return tidyPlayerNameList(playerNamesEl.value).names;
+}
+
+const NAME_HEADER_SKIP = new Set([
+  ...NAME_STOP,
+  "參加", "金額", "備註", "電話", "班級", "年級", "學校", "性別",
+  "是否", "出勤", "報名", "繳費", "家長", "聯絡", "名字", "編號",
+  "序號", "備住", "出席", "午餐", "晚餐", "素食", "葷食"
+]);
+
+function isLikelyPersonName(text) {
+  const name = String(text || "").replace(/\s+/g, "");
+  if (!/^[\u4e00-\u9fff]{2,4}$/.test(name)) return false;
+  if (NAME_HEADER_SKIP.has(name)) return false;
+  if (/(國小|國中|高中|小學|道館|協會|跆拳|年級|公斤|品勢|對打|場地|場次|護具)$/.test(name)) return false;
+  if (/^(白|黃|綠|藍|紅|黑)帶/.test(name)) return false;
+  if (/^[一二三四五六七八九十]+章$/.test(name)) return false;
+  return true;
+}
+
+function pickNameFromToken(token) {
+  let text = String(token || "").replace(/[()（）\[\]【】*＊]/g, " ").trim();
+  text = text.replace(/^\d+[\.．、)\s]+/, "").replace(/\s+/g, "");
+  if (!text) return "";
+  const cleaned = cleanName(text);
+  if (cleaned && isLikelyPersonName(cleaned)) return cleaned;
+  const clubName = text.match(/(?:國小|國中|高中|小學|道館|館|隊|團)([\u4e00-\u9fff]{2,4})$/);
+  if (clubName && isLikelyPersonName(clubName[1])) return clubName[1];
+  const leading = text.match(/^([\u4e00-\u9fff]{2,4})(?:\d|[A-Za-z]|白帶|黃帶|綠帶|藍帶|紅帶|黑帶|幼兒|國小|國中)/);
+  if (leading && isLikelyPersonName(leading[1])) return leading[1];
+  return isLikelyPersonName(text) ? text : "";
+}
+
+function harvestNamesFromPiece(piece) {
+  const found = [];
+  const text = String(piece || "").trim();
+  if (!text) return found;
+
+  const tokens = text.split(/\s+/).filter(Boolean);
+  if (tokens.length > 1) {
+    tokens.forEach((token) => {
+      const name = pickNameFromToken(token);
+      if (name) found.push(name);
+    });
+    if (found.length) return found;
+  }
+
+  const one = pickNameFromToken(text);
+  if (one) return [one];
+
+  const glued = text.replace(/[^\u4e00-\u9fff]/g, "");
+  if (glued.length >= 4 && glued.length <= 24 && !/(國小|國中|高中|道館|館)/.test(glued)) {
+    if (glued.length % 3 === 0) {
+      const chunks = glued.match(/[\u4e00-\u9fff]{3}/g) || [];
+      if (chunks.length && chunks.every(isLikelyPersonName)) return chunks;
+    }
+  }
+
+  const scanned = text.match(/[\u4e00-\u9fff]{2,4}/g) || [];
+  scanned.forEach((item) => {
+    if (isLikelyPersonName(item)) found.push(item);
+  });
+  return found;
+}
+
+function tidyPlayerNameList(raw) {
+  const names = [];
+  const seen = new Set();
+  function add(name) {
+    if (!name || seen.has(name)) return;
+    seen.add(name);
+    names.push(name);
+  }
+
+  String(raw || "").split(/\r?\n/).forEach((line) => {
+    const compact = line.replace(/\s+/g, "");
+    if (!compact || /^(姓名|名字|選手|單位|道館|序|編號|學校|年級)$/.test(compact)) return;
+    line.split(/\t/).forEach((cell) => {
+      cell.split(/[,，、;；|/／]+/).forEach((piece) => {
+        harvestNamesFromPiece(piece).forEach(add);
+      });
+    });
+  });
+
+  return { names, text: names.join("\n") };
+}
+
+function showNameTidyStatus(count) {
+  const el = document.getElementById("playerNamesStatus");
+  if (!el) return;
+  el.textContent = count ? `已整理成 ${count} 人` : "";
+}
+
+function applyTidiedNames(raw, mergeWithCurrent) {
+  if (!playerNamesEl) return;
+  const source = mergeWithCurrent ? `${playerNamesEl.value}\n${raw}` : raw;
+  const tidied = tidyPlayerNameList(source);
+  if (!tidied.names.length) {
+    showNameTidyStatus(0);
+    const el = document.getElementById("playerNamesStatus");
+    if (el) el.textContent = "沒辨識到姓名，請改貼中文名字";
+    return false;
+  }
+  playerNamesEl.value = tidied.text;
+  showNameTidyStatus(tidied.names.length);
+  saveSettings();
+  return true;
 }
 
 function itemMatchesName(item, names) {
@@ -2422,10 +2525,18 @@ function bindFold(toggleId, panelId) {
 bindFold("pasteToggle", "pastePanel");
 bindFold("groupToggle", "groupPanel");
 
-if (playerNamesEl) playerNamesEl.addEventListener("change", saveSettings);
 if (playerNamesEl) {
+  playerNamesEl.addEventListener("change", saveSettings);
   playerNamesEl.addEventListener("focus", clearPlayerNamesPulse);
   playerNamesEl.addEventListener("pointerdown", clearPlayerNamesPulse);
+  playerNamesEl.addEventListener("paste", (event) => {
+    const text = event.clipboardData?.getData("text") || "";
+    const tidied = tidyPlayerNameList(text);
+    if (tidied.names.length < 1) return;
+    event.preventDefault();
+    applyTidiedNames(text, Boolean(playerNamesEl.value.trim()));
+    clearPlayerNamesPulse();
+  });
 }
 document.getElementById("goPlayerNamesBtn")?.addEventListener("click", guideToPlayerNames);
 if (filterEnabledEl) filterEnabledEl.addEventListener("change", saveSettings);

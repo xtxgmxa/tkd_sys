@@ -231,6 +231,13 @@ textarea {
 
 .names-box { min-height: 108px; }
 
+.name-status {
+  margin: 8px 0 0;
+  color: #0f766e;
+  font-size: 14px;
+  font-weight: 700;
+}
+
 .hint {
   color: #64748b;
   font-size: 14px;
