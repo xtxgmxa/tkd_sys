@@ -257,6 +257,7 @@ analyzeBtn.addEventListener("click", async () => {
     parsedAll.forEach((item) => {
       delete item._src;
       if (!item.boutStyle) item.boutStyle = isOrderStyle(item) ? "order" : "bracket";
+      resolveCourt(item);
     });
 
     const notesOnly = raw && looksLikeCoachNotes(raw) && uploadedFiles.length === 0;
@@ -512,9 +513,9 @@ function parseOrderBooklet(raw) {
       continue;
     }
 
-    const courtMatch = line.match(/^(第[一二三四五六七八九十\d]+場地)$/);
+    const courtMatch = readCourtLine(line);
     if (courtMatch) {
-      court = courtMatch[1];
+      court = courtMatch;
       continue;
     }
 
@@ -1182,6 +1183,7 @@ function enrichItem(item) {
   item.detailLabel = isFight(item)
     ? (item.weightClass || item.belt)
     : (item.eventName || item.belt);
+  resolveCourt(item);
   return item;
 }
 
@@ -1240,8 +1242,8 @@ function extractDualPoomsae(text) {
     first = (src.match(/第一品勢\s*:\s*(.+)$/) || [])[1] || "";
     second = (src.match(/第二品勢\s*:\s*(.+)$/) || [])[1] || "";
   }
-  first = normalizePoomsaeName(first);
-  second = normalizePoomsaeName(second);
+  first = completeWrappedPoomsae(first);
+  second = completeWrappedPoomsae(second);
   return {
     event1: first,
     event2: second,
@@ -1259,7 +1261,18 @@ function normalizePoomsaeName(text) {
     .replace(/比賽(?:組別|人數).*$/g, "")
     .replace(/[|]/g, " ")
     .replace(/\s+/g, "")
+    .replace(/[，]/g, "、")
+    .replace(/、+/g, "、")
+    .replace(/^、|、$/g, "")
     .trim();
+}
+
+function completeWrappedPoomsae(text) {
+  let name = normalizePoomsaeName(text);
+  if (/馬步正拳/.test(name) && /前抬[腳腿]/.test(name) && !/前踢/.test(name)) {
+    name = `${name}、前踢`;
+  }
+  return name;
 }
 
 function formatPoomsaeLabel(item, compact) {
@@ -1565,8 +1578,12 @@ function parseMatchList(raw) {
   }
 
   lines.forEach((line) => {
-    const courtHit = line.match(/^(第[一二三四五六七八九十\d]+場地)/);
-    if (courtHit) court = courtHit[1];
+    const courtHit = readCourtLine(line);
+    if (courtHit) {
+      flushChunk();
+      court = courtHit;
+      return;
+    }
     if (/^(MATCH LIST|組別量級)/.test(line)) {
       flushChunk();
       current.push(line);
@@ -1579,6 +1596,7 @@ function parseMatchList(raw) {
   const items = [];
   chunks.forEach((chunk) => {
     const joined = chunk.lines.join("\n");
+    if (/敗部/.test(joined)) return;
     const headerLine = joined.match(/([A-Z]{1,3}\d{2}[^\n]{0,40}?)比賽人數:\s*(\d+)\s*人/)
       || joined.match(/([^\n]{4,40}?)比賽人數:\s*(\d+)\s*人/);
     const division = (headerLine ? headerLine[1] : "").replace(/組別量級:/, "").trim();
@@ -1665,9 +1683,10 @@ function parsePoomsaeOrderTable(raw) {
   }
 
   lines.forEach((line) => {
-    const courtHit = line.match(/^(第[一二三四五六七八九十\d]+場地)$/);
+    const courtHit = readCourtLine(line);
     if (courtHit) {
-      court = courtHit[1];
+      flush();
+      court = courtHit;
       header.court = court;
       return;
     }
@@ -1694,21 +1713,33 @@ function parsePoomsaeOrderTable(raw) {
     }
     const sizeHit = line.match(/人\s*數\s*:\s*(\d+)/);
     if (sizeHit) header.groupSize = parseInt(sizeHit[1], 10);
-    if (/第一品勢|第二品勢/.test(line) && !/^籤號/.test(line)) {
+    if (/第一品勢|第二品勢/.test(line) && !/^籤號/.test(line) && !/姓名/.test(line)) {
       const dual = extractDualPoomsae(line);
-      if (dual.event1 || dual.event2 || dual.eventName) {
-        header.event1 = dual.event1;
-        header.event2 = dual.event2;
-        header.eventName = dual.eventName;
+      if (dual.event1) header.event1 = dual.event1;
+      if (dual.event2) header.event2 = dual.event2;
+      header.event1 = completeWrappedPoomsae(header.event1);
+      if (header.event1 || header.event2) {
+        header.eventName = [header.event1, header.event2].filter(Boolean).join("、");
+      }
+    } else if (header.event1 && /[、，]$/.test(header.event1) && !/組\s*別|籤號|場\s*次|人\s*數/.test(line)) {
+      const extra = normalizePoomsaeName(line);
+      if (extra && extra.length <= 12) {
+        header.event1 = completeWrappedPoomsae(header.event1 + extra);
+        header.eventName = [header.event1, header.event2].filter(Boolean).join("、");
       }
     }
     if (/^(籤號|單位|姓名)/.test(line) && !/^\d/.test(line)) return;
-    const person = line.match(/^(\d{1,2})\s+(.+?)\s+([\u4e00-\u9fff]{2,4}(?:\s*[\/／]\s*[\u4e00-\u9fff]{2,4})*)\s*$/);
-    if (person) {
-      const item = parseSeedLine(`${person[1]} ${person[2]} ${person[3]}`.trim(), header);
+    const person = line.match(/^(\d{1,2})\s+(.+?)\s+([\u4e00-\u9fff]{2,6}(?:\s*[\/／]\s*[\u4e00-\u9fff]{2,6})*)(?:\s+(\d{3,8}))?\s*$/);
+    const playerLine = person
+      ? `${person[1]} ${person[2]} ${person[3]}`.trim()
+      : normalizePlayerLine(line);
+    if (playerLine && /^\d/.test(line) && /[\u4e00-\u9fff]{2,}/.test(line)) {
+      const item = parseSeedLine(playerLine, header);
       if (item) {
-        item.player = person[3].replace(/\s+/g, "");
-        item.club = person[2].replace(/\s+/g, " ").trim();
+        if (person) {
+          item.player = person[3].replace(/\s+/g, "");
+          item.club = person[2].replace(/\s+/g, " ").trim();
+        }
         item.matchNo = header.matchNo || "";
         item.boutStyle = "order";
         item.orderNo = item.seed;
@@ -1719,7 +1750,7 @@ function parsePoomsaeOrderTable(raw) {
         item.opponentClub = "";
         item.event1 = header.event1 || "";
         item.event2 = header.event2 || "";
-        item.eventName = header.eventName || "";
+        item.eventName = header.eventName || [item.event1, item.event2].filter(Boolean).join("、");
         current.push(item);
       }
     }
@@ -1730,31 +1761,54 @@ function parsePoomsaeOrderTable(raw) {
 
 function parseLooseBracket(raw) {
   const text = String(raw || "").replace(/[：]/g, ":").replace(/\|/g, " ");
-  const chunks = text.split(/比賽組別\s*:/);
-  const items = [];
+  const lines = text.split(/\n/).map((line) => line.replace(/\s+/g, " ").trim()).filter(Boolean);
+  const chunks = [];
   let court = "";
-  String(raw || "").split(/\n/).forEach((line) => {
-    const m = line.trim().match(/^(第[一二三四五六七八九十\d]+場地)$/);
-    if (m) court = m[1];
-    if (/^對打$/.test(line.trim())) court = court || line.trim();
-  });
+  let buf = [];
 
-  chunks.slice(1).forEach((chunk) => {
+  function flushChunk() {
+    if (!buf.length) return;
+    chunks.push({ court, text: buf.join("\n") });
+    buf = [];
+  }
+
+  lines.forEach((line) => {
+    const courtHit = readCourtLine(line);
+    if (courtHit) {
+      flushChunk();
+      court = courtHit;
+      return;
+    }
+    if (/^比賽組別/.test(line)) {
+      flushChunk();
+      buf.push(line.replace(/^比賽組別\s*:?\s*/, ""));
+      return;
+    }
+    if (buf.length) buf.push(line);
+  });
+  flushChunk();
+
+  const items = [];
+  chunks.forEach((entry) => {
+    const chunk = entry.text;
+    if (/敗部/.test(chunk)) return;
     const head = chunk.split(/\n/)[0] || "";
-    const division = head.replace(/量級.*$/, "").trim() || head.trim();
-    const weight = extractWeight(chunk) || (chunk.match(/(\d+)\s*公斤/) || [])[1];
+    const weightRaw = extractWeight(chunk) || (chunk.match(/(\d+)\s*公斤/) || [])[1] || "";
+    const weightDigits = String(weightRaw).replace(/[^\d.+＋\-－]/g, "");
+    let division = (head.replace(/量級.*$/, "").replace(/比賽人數.*$/, "").trim() || head.trim()).replace(/\s+/g, "");
+    if (weightDigits && !/公斤/.test(division)) division += `${weightDigits}公斤級`;
     const header = {
       type: /品勢/.test(chunk) ? "品勢" : "對打",
-      division: (division + (weight ? weight + "公斤級" : "")).replace(/\s+/g, ""),
-      court,
-      weightClass: weight ? weight + "公斤" : "",
+      division,
+      court: entry.court,
+      weightClass: weightDigits ? `${weightDigits}公斤` : "",
       groupSize: parseInt((chunk.match(/(\d+)\s*人/) || [])[1] || "0", 10),
       boutStyle: /品勢/.test(chunk) ? detectPoomsaeStyleFromText(chunk) : "bracket"
     };
-    const weightNum = parseInt(String(weight || "").replace(/\D/g, ""), 10) || 0;
-    const lines = chunk.split(/\n/).map((line) => line.replace(/\s+/g, " ").trim()).filter(Boolean);
+    const weightNum = parseInt(String(weightRaw || "").replace(/\D/g, ""), 10) || 0;
+    const chunkLines = chunk.split(/\n/).map((line) => line.replace(/\s+/g, " ").trim()).filter(Boolean);
     const tokens = [];
-    lines.forEach((line) => {
+    chunkLines.forEach((line) => {
       if (/^(籤號|單位|姓名|取\d|敗部|量級)/.test(line)) return;
       const playerLine = normalizePlayerLine(line);
       if (playerLine) {
@@ -1770,79 +1824,135 @@ function parseLooseBracket(raw) {
         }
       }
     });
+    if (/敗部/.test(chunk)) return;
     items.push(...tokensToBracketItems(tokens, header));
   });
   return items;
 }
 
 function tokensToBracketItems(tokens, header) {
-  const players = [];
-  const matchNos = [];
+  const nodes = [];
   tokens.forEach((token) => {
     if (token.kind === "p") {
       const item = parseSeedLine(token.line, header);
       if (item) {
         item._src = token.line;
-        players.push(item);
+        nodes.push({ kind: "p", item });
       }
-    } else if (token.kind === "m") {
-      matchNos.push(token.no);
+    } else if (token.kind === "m" && token.no && token.no !== "X") {
+      nodes.push({ kind: "m", no: String(token.no) });
     }
   });
+  pairBracketNodes(nodes);
+  const players = nodes.filter((node) => node.kind === "p").map((node) => node.item);
+  stampGroup(players, header);
+  return players;
+}
 
-  const realMatches = matchNos.filter((no) => String(no).length >= 3);
+function pairBracketNodes(nodes) {
+  const players = nodes.filter((node) => node.kind === "p").map((node) => node.item);
+  const matchAt = [];
+  nodes.forEach((node, index) => {
+    if (node.kind === "m") matchAt.push(index);
+  });
 
-  if (players.length === 2 && (realMatches[0] || matchNos[0])) {
-    applyPair(players[0], players[1], realMatches[0] || matchNos[0]);
-    stampGroup(players, header);
-    return players;
+  if (players.length <= 1) {
+    if (players[0] && !players[0].matchNo) players[0].bye = true;
+    return;
   }
-
-  const useBooklet = players.length <= 4
-    && players.some((item) => [1, 2, 3, 4].includes(item.seed))
-    && realMatches.length >= (players.length >= 4 ? 3 : 2);
-
-  if (useBooklet) {
-    const seeds = { 1: null, 2: null, 3: null, 4: null };
+  if (!matchAt.length) {
     players.forEach((item) => {
-      if (item.seed >= 1 && item.seed <= 4) seeds[item.seed] = item;
+      if (!item.matchNo) item.bye = true;
     });
-    const m14 = realMatches[0];
-    const mFinal = realMatches[1];
-    const m32 = realMatches[2];
-    applyBracketLogic(seeds, m14, m32, mFinal);
-    const members = [1, 2, 3, 4].map((n) => seeds[n]).filter(Boolean);
-    stampGroup(members, header);
-    return members;
+    return;
   }
 
-  for (let i = 0; i < tokens.length - 2; i++) {
-    if (tokens[i].kind === "p" && tokens[i + 1].kind === "m" && tokens[i + 2].kind === "p") {
-      const a = players.find((row) => row._src === tokens[i].line);
-      const b = players.find((row) => row._src === tokens[i + 2].line);
-      if (a && b && !a.matchNo && !b.matchNo && String(tokens[i + 1].no).length >= 2) {
-        applyPair(a, b, tokens[i + 1].no);
-      }
+  const waves = matchAt.map((index) => matchWave(getNumber(nodes[index].no)));
+  const maxWave = Math.max(...waves);
+  const roots = matchAt.filter((_, i) => waves[i] === maxWave);
+
+  if (roots.length !== 1) {
+    pairSequentialMatches(nodes);
+    return;
+  }
+
+  const split = roots[0];
+  const matchNo = nodes[split].no;
+  const left = nodes.slice(0, split);
+  const right = nodes.slice(split + 1);
+  pairBracketNodes(left);
+  pairBracketNodes(right);
+  linkBracketSides(left, right, matchNo);
+}
+
+function subtreeExitMatch(nodes) {
+  let best = "";
+  let bestWave = -1;
+  nodes.forEach((node) => {
+    if (node.kind !== "m") return;
+    const wave = matchWave(getNumber(node.no));
+    if (wave >= bestWave) {
+      best = node.no;
+      bestWave = wave;
     }
+  });
+  return best;
+}
+
+function linkBracketSides(leftNodes, rightNodes, matchNo) {
+  const left = leftNodes.filter((node) => node.kind === "p").map((node) => node.item);
+  const right = rightNodes.filter((node) => node.kind === "p").map((node) => node.item);
+  if (!left.length && !right.length) return;
+
+  if (left.length === 1 && right.length === 1 && !left[0].matchNo && !right[0].matchNo) {
+    applyPair(left[0], right[0], matchNo);
+    return;
   }
 
+  if (left.length === 1 && !left[0].matchNo) {
+    left[0].bye = true;
+    if (!left[0].opponent) left[0].opponent = "輪空";
+  }
+  if (right.length === 1 && !right[0].matchNo) {
+    right[0].bye = true;
+    if (!right[0].opponent) right[0].opponent = "輪空";
+  }
+
+  const leftHint = winnerHint(left, left.length === 1 && !left[0].matchNo ? "" : subtreeExitMatch(leftNodes));
+  const rightHint = winnerHint(right, right.length === 1 && !right[0].matchNo ? "" : subtreeExitMatch(rightNodes));
+
+  left.forEach((item) => {
+    if (item.nextMatchNo) return;
+    item.nextMatchNo = matchNo;
+    item.nextColor = "青方";
+    item.nextOpponentHint = rightHint;
+  });
+  right.forEach((item) => {
+    if (item.nextMatchNo) return;
+    item.nextMatchNo = matchNo;
+    item.nextColor = "紅方";
+    item.nextOpponentHint = leftHint;
+  });
+}
+
+function pairSequentialMatches(nodes) {
+  const players = nodes.filter((node) => node.kind === "p").map((node) => node.item);
+  for (let i = 0; i < nodes.length - 2; i++) {
+    if (nodes[i].kind !== "p" || nodes[i + 1].kind !== "m" || nodes[i + 2].kind !== "p") continue;
+    const a = nodes[i].item;
+    const b = nodes[i + 2].item;
+    if (a && b && !a.matchNo && !b.matchNo) applyPair(a, b, nodes[i + 1].no);
+  }
   const unpaired = players.filter((item) => !item.matchNo);
   const used = new Set(players.map((item) => item.matchNo).filter(Boolean));
-  const leftover = realMatches.filter((no) => !used.has(no));
-  for (let i = 0; i + 1 < unpaired.length; i += 2) {
-    const m = leftover.shift();
-    if (m) applyPair(unpaired[i], unpaired[i + 1], m);
-  }
-  unpaired.filter((item) => !item.matchNo).forEach((item) => {
+  const leftover = nodes.filter((node) => node.kind === "m" && !used.has(node.no)).map((node) => node.no);
+  unpaired.forEach((item) => {
     item.bye = true;
     if (leftover[0] && !item.nextMatchNo) {
-      item.nextMatchNo = leftover[0];
+      item.nextMatchNo = leftover.shift();
       item.nextColor = "青方";
     }
   });
-
-  stampGroup(players, header);
-  return players;
 }
 
 function stampGroup(list, header) {
@@ -1875,6 +1985,57 @@ function matchWave(n) {
   if (n >= 1000 && n < 10000) return n % 1000;
   if (n >= 100 && n < 1000) return n % 100;
   return n;
+}
+
+function courtNameFromIndex(n) {
+  const cn = ["", "一", "二", "三", "四", "五", "六", "七", "八", "九"];
+  if (n >= 1 && n <= 9) return `第${cn[n]}場地`;
+  if (n > 9) return `第${n}場地`;
+  return "";
+}
+
+function readCourtLine(line) {
+  const t = String(line || "").replace(/\s+/g, "").trim();
+  const m = t.match(/^(第[一二三四五六七八九十\d]+(?:[、，,][一二三四五六七八九十\d]+)*場地)$/);
+  return m ? m[1] : "";
+}
+
+function inferCourtFromMatchNo(matchNo, item) {
+  const n = getNumber(matchNo);
+  if (!n || n < 100) return "";
+  const s = String(n);
+  const first = parseInt(s[0], 10);
+  const second = s.length >= 4 ? parseInt(s[1], 10) : 0;
+  if (s.length === 3) return courtNameFromIndex(first);
+  if (s.length === 4 && isPoomsae(item) && second >= 1 && second <= 8) {
+    return courtNameFromIndex(second);
+  }
+  return courtNameFromIndex(first);
+}
+
+function resolveCourt(item) {
+  if (!item) return;
+  const n = getNumber(item.matchNo || item.nextMatchNo);
+  const pdfIdx = courtIndex(item.court);
+  if (!n || n < 100) return;
+  const s = String(n);
+  const first = parseInt(s[0], 10);
+  const second = s.length >= 4 ? parseInt(s[1], 10) : 0;
+  if (s.length === 3) {
+    item.court = courtNameFromIndex(first);
+    return;
+  }
+  if (s.length === 4) {
+    if (pdfIdx && (pdfIdx === first || pdfIdx === second) && !/[、，,]/.test(item.court || "")) {
+      item.court = courtNameFromIndex(pdfIdx);
+      return;
+    }
+    if (isPoomsae(item) && second >= 1 && second <= 8) {
+      item.court = courtNameFromIndex(second);
+      return;
+    }
+    item.court = courtNameFromIndex(first);
+  }
 }
 
 function courtIndex(court) {
