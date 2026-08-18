@@ -556,10 +556,16 @@ function parseGroupHeader(line) {
   rest = rest.replace(/(\d+)\s*人\s*$/, "").trim();
 
   let eventName = "";
-  const eventMatch = rest.match(/品勢:\s*(.+)$/);
-  if (eventMatch) {
-    eventName = eventMatch[1].trim();
-    rest = rest.replace(/品勢:\s*.+$/, "").trim();
+  const dual = extractDualPoomsae(rest);
+  if (dual.eventName) {
+    eventName = dual.eventName;
+    rest = rest.replace(/第一品勢.*$/, "").replace(/品勢:\s*.+$/, "").trim();
+  } else {
+    const eventMatch = rest.match(/品勢:\s*(.+)$/);
+    if (eventMatch) {
+      eventName = eventMatch[1].trim();
+      rest = rest.replace(/品勢:\s*.+$/, "").trim();
+    }
   }
 
   const type = /^P/i.test(groupCode) ? "品勢" : /^K/i.test(groupCode) ? "對打" : "";
@@ -567,6 +573,8 @@ function parseGroupHeader(line) {
     groupCode,
     division: rest,
     eventName,
+    event1: dual.event1 || "",
+    event2: dual.event2 || "",
     groupSize,
     type,
     weightClass: extractWeight(rest),
@@ -624,6 +632,8 @@ function parseSeedLine(line, header) {
     weightClass: header.weightClass || "",
     belt: header.belt || "",
     eventName: header.eventName || "",
+    event1: header.event1 || "",
+    event2: header.event2 || "",
     ageGroup: header.ageGroup || "",
     gender: header.gender || "",
     color: "",
@@ -1161,6 +1171,9 @@ function enrichItem(item) {
   if (!item.weightClass) item.weightClass = extractWeight(blob);
   if (!item.belt) item.belt = extractBelt(blob);
   if (!item.eventName && isPoomsae(item)) item.eventName = extractPoomsaeEvent(blob);
+  if (isPoomsae(item) && (item.event1 || item.event2)) {
+    item.eventName = [item.event1, item.event2].filter(Boolean).join("、") || item.eventName;
+  }
   if (!item.gender) item.gender = extractGender(blob);
   if (!item.ageGroup) item.ageGroup = extractAgeGroup(blob);
   if (!item.division) {
@@ -1206,8 +1219,57 @@ function extractBelt(text) {
 }
 
 function extractPoomsaeEvent(text) {
-  const match = String(text || "").match(/(指定品勢|自選品勢|團體品勢|個人品勢|對練|太極[一二三四五六七八]章|[一二三四五六七八]章|馬步正拳[、，,]?前抬[腳腿]?[、，,]?前踢|馬步正拳|前抬腳|前踢)/);
+  const dual = extractDualPoomsae(text);
+  if (dual.eventName) return dual.eventName;
+  const match = String(text || "").match(/(指定品勢|自選品勢|團體品勢|個人品勢|自由品勢|對練|太極[一二三四五六七八]章|[一二三四五六七八]章|馬步正拳[、，,]?前抬[腳腿]?[、，,]?前踢|馬步正拳|前抬腳|前踢)/);
   return match ? match[1] : "";
+}
+
+function extractDualPoomsae(text) {
+  const src = String(text || "").replace(/[：]/g, ":").replace(/\|/g, " ");
+  if (!/第一品勢|第二品勢/.test(src)) {
+    return { event1: "", event2: "", eventName: "" };
+  }
+  let first = "";
+  let second = "";
+  const dual = src.match(/第一品勢\s*:\s*(.*?)第二品勢\s*:\s*(.*)$/);
+  if (dual) {
+    first = dual[1];
+    second = dual[2];
+  } else {
+    first = (src.match(/第一品勢\s*:\s*(.+)$/) || [])[1] || "";
+    second = (src.match(/第二品勢\s*:\s*(.+)$/) || [])[1] || "";
+  }
+  first = normalizePoomsaeName(first);
+  second = normalizePoomsaeName(second);
+  return {
+    event1: first,
+    event2: second,
+    eventName: [first, second].filter(Boolean).join("、")
+  };
+}
+
+function normalizePoomsaeName(text) {
+  return String(text || "")
+    .replace(/籤號.*$/g, "")
+    .replace(/單位.*$/g, "")
+    .replace(/姓名.*$/g, "")
+    .replace(/總分.*$/g, "")
+    .replace(/名次.*$/g, "")
+    .replace(/比賽(?:組別|人數).*$/g, "")
+    .replace(/[|]/g, " ")
+    .replace(/\s+/g, "")
+    .trim();
+}
+
+function formatPoomsaeLabel(item, compact) {
+  const a = item.event1 || "";
+  const b = item.event2 || "";
+  const joined = item.eventName || [a, b].filter(Boolean).join("、") || item.detailLabel || "";
+  if (!joined) return "";
+  if (compact) return shortPoomsae(joined);
+  if (a && b) return `第一：${a}　第二：${b}`;
+  return joined;
 }
 
 function extractGender(text) {
@@ -1580,15 +1642,24 @@ function parsePoomsaeOrderTable(raw) {
   const lines = text.split(/\n/).map((line) => line.replace(/\s+/g, " ").trim()).filter(Boolean);
   const items = [];
   let court = "";
-  let header = { type: "品勢", division: "", matchNo: "", eventName: "", groupSize: 0, court: "" };
+  let header = { type: "品勢", division: "", matchNo: "", eventName: "", event1: "", event2: "", groupSize: 0, court: "" };
   let current = [];
 
-  function flush() {
-    if (!current.length) return;
+  function stampCurrent() {
     current.forEach((item) => {
       item.groupSize = header.groupSize || current.length;
       item.groupMembers = current;
+      item.event1 = header.event1 || item.event1 || "";
+      item.event2 = header.event2 || item.event2 || "";
+      item.eventName = header.eventName || [item.event1, item.event2].filter(Boolean).join("、");
+      item.detailLabel = item.eventName || item.detailLabel;
+      item.court = item.court || header.court || court;
     });
+  }
+
+  function flush() {
+    if (!current.length) return;
+    stampCurrent();
     items.push(...current);
     current = [];
   }
@@ -1600,27 +1671,44 @@ function parsePoomsaeOrderTable(raw) {
       header.court = court;
       return;
     }
-    const title = line.match(/^(\d{2,4})\s*-?\s*品勢出場順序表/);
+    const title = line.match(/^(\d{2,4})\s*-?\s*(?:自由)?品勢出場順序表/);
     const matchHit = line.match(/場\s*次\s*:\s*(\d{2,4})/) || title;
     if (matchHit) {
       flush();
-      header = { ...header, type: "品勢", matchNo: matchHit[1], court };
+      header = {
+        type: "品勢",
+        division: "",
+        matchNo: matchHit[1],
+        eventName: "",
+        event1: "",
+        event2: "",
+        groupSize: 0,
+        court
+      };
     }
     const divHit = line.match(/比賽組別:\s*(.+?)(?:\s+比賽人數:\s*(\d+)\s*人)?$/)
       || line.match(/組\s*別\s*:\s*(.+)$/);
     if (divHit) {
-      header.division = divHit[1].replace(/第一品勢.*$/, "").trim();
+      header.division = divHit[1].replace(/第一品勢.*$/, "").replace(/第二品勢.*$/, "").trim();
       if (divHit[2]) header.groupSize = parseInt(divHit[2], 10);
     }
     const sizeHit = line.match(/人\s*數\s*:\s*(\d+)/);
     if (sizeHit) header.groupSize = parseInt(sizeHit[1], 10);
-    const eventHit = line.match(/第一品勢\s*:\s*(.+?)(?:第二品勢|$)/);
-    if (eventHit) header.eventName = eventHit[1].replace(/第二品勢.*$/, "").trim();
-    if (/^籤號/.test(line)) return;
-    const person = line.match(/^(\d{1,2})\s+(.+?)\s+([\u4e00-\u9fff]{2,4})(?:\s+(\d{3,6}))?$/);
+    if (/第一品勢|第二品勢/.test(line) && !/^籤號/.test(line)) {
+      const dual = extractDualPoomsae(line);
+      if (dual.event1 || dual.event2 || dual.eventName) {
+        header.event1 = dual.event1;
+        header.event2 = dual.event2;
+        header.eventName = dual.eventName;
+      }
+    }
+    if (/^(籤號|單位|姓名)/.test(line) && !/^\d/.test(line)) return;
+    const person = line.match(/^(\d{1,2})\s+(.+?)\s+([\u4e00-\u9fff]{2,4}(?:\s*[\/／]\s*[\u4e00-\u9fff]{2,4})*)\s*$/);
     if (person) {
-      const item = parseSeedLine(`${person[1]} ${person[2]} ${person[3]} ${person[4] || ""}`.trim(), header);
+      const item = parseSeedLine(`${person[1]} ${person[2]} ${person[3]}`.trim(), header);
       if (item) {
+        item.player = person[3].replace(/\s+/g, "");
+        item.club = person[2].replace(/\s+/g, " ").trim();
         item.matchNo = header.matchNo || "";
         item.boutStyle = "order";
         item.orderNo = item.seed;
@@ -1629,6 +1717,9 @@ function parsePoomsaeOrderTable(raw) {
         item.nextColor = "";
         item.opponent = "";
         item.opponentClub = "";
+        item.event1 = header.event1 || "";
+        item.event2 = header.event2 || "";
+        item.eventName = header.eventName || "";
         current.push(item);
       }
     }
@@ -1781,6 +1872,7 @@ function sortMatches(a, b) {
 
 function matchWave(n) {
   if (!n || n >= 999999) return 999999;
+  if (n >= 1000 && n < 10000) return n % 1000;
   if (n >= 100 && n < 1000) return n % 100;
   return n;
 }
@@ -2044,6 +2136,7 @@ function renderTableRow(item, index) {
     <td>
       <button type="button" class="group-link">
         ${escapeHTML(displayValue(item.division))}
+        ${isPoomsae(item) && formatPoomsaeLabel(item) ? "<br><small>" + escapeHTML(formatPoomsaeLabel(item)) + "</small>" : ""}
       </button>
     </td>
     <td class="${isMissing(item.court) ? "missing" : ""}">${escapeHTML(displayValue(item.court))}</td>
@@ -2100,7 +2193,7 @@ function renderMobileCard(item, index) {
       ${escapeHTML(displayValue(item.type))} ・ ${escapeHTML(displayValue(item.court))}<br>
       ${escapeHTML(displayValue(item.division))}
       ${item.groupSize ? " ｜ 同組 " + item.groupSize + " 人" : ""}<br>
-      ${isFight(item) ? "級別" : "品勢項目"}：${escapeHTML(displayValue(item.detailLabel))}<br>
+      ${isFight(item) ? "級別" : "品勢項目"}：${escapeHTML(displayValue(isFight(item) ? item.detailLabel : formatPoomsaeLabel(item) || item.detailLabel))}<br>
       ${vsLine}<br>
       ${isOrderStyle(item) ? nextLine : "贏了下一場：" + nextLine}
     </div>
@@ -2126,7 +2219,9 @@ function openGroupModal(key) {
       ${detailCell("組別", sample.division)}
       ${detailCell("組別代碼", sample.groupCode)}
       ${detailCell("同組人數", size ? size + " 人" : "")}
-      ${detailCell(isFight(sample) ? "對打級別" : "品勢項目", isFight(sample) ? sample.weightClass : sample.eventName)}
+      ${detailCell(isFight(sample) ? "對打級別" : "品勢項目", isFight(sample) ? sample.weightClass : (formatPoomsaeLabel(sample) || sample.eventName))}
+      ${!isFight(sample) && sample.event1 ? detailCell("第一品勢", sample.event1) : ""}
+      ${!isFight(sample) && sample.event2 ? detailCell("第二品勢", sample.event2) : ""}
       ${detailCell("帶色 / 段級", sample.belt)}
       ${detailCell("場地", sample.court)}
       ${detailCell("年齡層", sample.ageGroup)}
@@ -2311,7 +2406,7 @@ function rowsForExport(data) {
     組別: displayValue(item.division),
     年齡層: displayValue(item.ageGroup),
     性別: displayValue(item.gender),
-    級別或品勢項目: displayValue(item.detailLabel),
+    級別或品勢項目: displayValue(isPoomsae(item) ? formatPoomsaeLabel(item) : item.detailLabel),
     帶色段級: displayValue(item.belt),
     場地: displayValue(item.court),
     本場場次: item.bye && !item.matchNo ? "輪空晉級" : displayValue(item.matchNo),
@@ -2355,7 +2450,7 @@ document.getElementById("exportExcelBtn").addEventListener("click", () => {
       formatMatchExport(item),
       sideExport(item),
       opponentExport(item),
-      shortPoomsae(item.eventName || item.detailLabel) || item.weightClass || "",
+      (isPoomsae(item) ? formatPoomsaeLabel(item, true) : "") || item.weightClass || item.detailLabel || "",
       item.court || ""
     ]);
   });
@@ -2366,18 +2461,20 @@ document.getElementById("exportExcelBtn").addEventListener("click", () => {
   if (poomsae.length) {
     const poomRows = [
       [`${club}｜比賽資料`],
-      ["姓名", "組別", "場次", "比賽品勢"]
+      ["姓名", "組別", "場次", "第一品勢", "第二品勢", "比賽品勢"]
     ];
     poomsae.forEach((item) => {
       poomRows.push([
         item.player || "",
         compactDivision(item),
         formatMatchExport(item),
-        shortPoomsae(item.eventName || item.detailLabel)
+        shortPoomsae(item.event1 || "") || (item.event2 ? "" : formatPoomsaeLabel(item, true)),
+        shortPoomsae(item.event2 || ""),
+        formatPoomsaeLabel(item, true)
       ]);
     });
     const poomSheet = XLSX.utils.aoa_to_sheet(poomRows);
-    poomSheet["!cols"] = [12, 32, 18, 18].map((wch) => ({ wch }));
+    poomSheet["!cols"] = [12, 32, 16, 16, 16, 18].map((wch) => ({ wch }));
     XLSX.utils.book_append_sheet(workbook, poomSheet, "比賽資料");
   }
 
