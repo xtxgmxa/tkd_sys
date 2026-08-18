@@ -433,8 +433,18 @@ function joinLine(parts) {
 }
 
 
+function normalizeSourceText(raw) {
+  return String(raw || "")
+    .normalize("NFKC")
+    .replace(/\u00a0/g, " ")
+    .replace(/[：]/g, ":")
+    .replace(/姓\s*名/g, "姓名")
+    .replace(/(?:^|\n)\s*第\s*\n\s*([一二三四五六七八九十\d]+)\s*\n\s*場\s*\n\s*地\s*(?=\n|$)/g, "\n第$1場地\n")
+    .trim();
+}
+
 function parseInput(raw) {
-  const text = String(raw || "").trim();
+  const text = normalizeSourceText(raw);
   if (!text) return [];
 
   if (looksLikeCoachNotes(text)) {
@@ -459,7 +469,7 @@ function parseInput(raw) {
     if (order.length) return order;
   }
 
-  if (/比賽組別/.test(text) && /籤號/.test(text) && /(公斤|量級)/.test(text)) {
+  if (/比賽組別/.test(text) && /籤號/.test(text) && /(公斤|量級|Kg)/i.test(text)) {
     const loose = parseLooseBracket(text);
     if (loose.length) return loose;
   }
@@ -612,7 +622,7 @@ function parseSeedLine(line, header) {
 
   let rest = match[2].trim().replace(/\|/g, " ").replace(/\s+/g, " ");
   let playerId = "";
-  const idMatch = rest.match(/^(.*?)\s+(\d{4,8})$/);
+  const idMatch = rest.match(/^(.*?)\s+(\d{3,8})$/);
   if (idMatch) {
     rest = idMatch[1].trim();
     playerId = idMatch[2];
@@ -651,7 +661,7 @@ function parseSeedLine(line, header) {
 }
 
 function splitClubPlayer(middle) {
-  const cleaned = String(middle || "").replace(/\*/g, "").replace(/\s+/g, " ").trim();
+  const cleaned = String(middle || "").normalize("NFKC").replace(/\*/g, "").replace(/\s+/g, " ").trim();
   if (!cleaned) return null;
 
   const clubFirst = cleaned.match(/^(.+?(?:分館|中心|國小|國中|高中|小學|協會|跆訓|跆拳|道館|館|隊|團))\s+(.+)$/);
@@ -1334,6 +1344,7 @@ function cleanClub(club) {
 
 function normalizeText(text) {
   return String(text || "")
+    .normalize("NFKC")
     .replace(/\s+/g, "")
     .replace(/跆拳道館/g, "")
     .replace(/跆拳道/g, "")
@@ -1809,22 +1820,19 @@ function parseLooseBracket(raw) {
     const chunkLines = chunk.split(/\n/).map((line) => line.replace(/\s+/g, " ").trim()).filter(Boolean);
     const tokens = [];
     chunkLines.forEach((line) => {
-      if (/^(籤號|單位|姓名|取\d|敗部|量級)/.test(line)) return;
+      if (/^(籤號|單位|姓名|取\d|敗部|量級|X)$/.test(line)) return;
       const playerLine = normalizePlayerLine(line);
       if (playerLine) {
         tokens.push({ kind: "p", line: playerLine });
         return;
       }
-      const m = line.match(/^(\d{2,4})(?:-\d+)?$/);
+      const m = line.match(/^(\d{3,4})(?:-\d+)?$/);
       if (m) {
         const no = parseInt(m[1], 10);
         if (no === weightNum) return;
-        if (String(m[1]).length >= 3 || (no >= 10 && no !== weightNum)) {
-          tokens.push({ kind: "m", no: m[1] });
-        }
+        tokens.push({ kind: "m", no: m[1] });
       }
     });
-    if (/敗部/.test(chunk)) return;
     items.push(...tokensToBracketItems(tokens, header));
   });
   return items;
@@ -2198,10 +2206,12 @@ document.querySelectorAll(".filter").forEach((button) => {
 document.getElementById("searchPlayer").addEventListener("input", render);
 
 function getFilteredData() {
-  const keyword = document.getElementById("searchPlayer").value.trim().toLowerCase();
+  const keyword = normalizeText(document.getElementById("searchPlayer").value);
   return allData.filter((item) => {
     const typeOK = currentFilter === "all" || (item.type || "").includes(currentFilter);
-    const searchOK = !keyword || (item.player || "").toLowerCase().includes(keyword);
+    const searchOK = !keyword
+      || normalizeText(item.player).includes(keyword)
+      || normalizeText(item.club).includes(keyword);
     return typeOK && searchOK;
   });
 }
