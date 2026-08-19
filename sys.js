@@ -117,7 +117,7 @@ function loadSavedSettings() {
       if (!exportFields.length) exportFields = EXPORT_FIELDS.map((item) => item.key);
     }
     const savedMode = ["all", "club", "names", "auto", "either"].includes(saved.displayMode)
-      ? (saved.displayMode === "either" ? "auto" : saved.displayMode)
+      ? saved.displayMode
       : (saved.filterEnabled === false ? "all" : "auto");
     setDisplayMode(savedMode);
     if (saved.customState) customState = saved.customState;
@@ -1834,6 +1834,17 @@ function nameRowsFromParsed() {
   return parsedAll.filter((item) => itemMatchesName(item, names));
 }
 
+function mergeUniqueItems(a, b) {
+  const seen = new Set();
+  const out = [];
+  [...a, ...b].forEach((item) => {
+    if (seen.has(item)) return;
+    seen.add(item);
+    out.push(item);
+  });
+  return out;
+}
+
 function rowsForDisplayMode(forceAll) {
   const mode = getDisplayMode();
   if (forceAll || mode === "all") {
@@ -1848,6 +1859,13 @@ function rowsForDisplayMode(forceAll) {
     lastFilterSource = "club";
     const keywords = getActiveKeywords();
     return keywords.length ? clubRowsFromParsed() : parsedAll.slice();
+  }
+  if (mode === "either") {
+    lastFilterSource = "either";
+    const keywords = getActiveKeywords();
+    const names = getPlayerNames();
+    if (!keywords.length && !names.length) return parsedAll.slice();
+    return mergeUniqueItems(clubRowsFromParsed(), nameRowsFromParsed());
   }
   const clubRows = clubRowsFromParsed();
   if (clubRows.length) {
@@ -1880,13 +1898,13 @@ function viewStatusMessage() {
   if (!total) return "還沒找到選手。請先上傳檔案並按「整理賽程」。";
   if (mode === "all") return `完成：檔案裡共 ${total} 筆，目前顯示全部 ${shown} 筆。`;
   if (mode === "names") {
-    if (!getPlayerNames().length) return `學員名單是空的，所以沒人可顯示。請先填名單，或改選「本館為主」。`;
+    if (!getPlayerNames().length) return `學員名單是空的，所以沒人可顯示。請先填名單，或改選「先看本館」。`;
     if (!shown) return `檔案裡有 ${total} 筆，但學員名單沒對到人。可改選「只看本館」或檢查姓名。`;
     return `完成：檔案裡共 ${total} 筆，只顯示學員名單裡的 ${shown} 筆。`;
   }
   if (mode === "auto") {
     if (lastFilterSource === "namesFallback") {
-      return `本館沒抓到人，已改用學員名單，顯示 ${shown} 筆（檔案共 ${total} 筆）。`;
+      return `本館沒抓到人，已改只顯示學員名單 ${shown} 筆（檔案共 ${total} 筆）。不是把兩邊加在一起。`;
     }
     if (!shown) {
       return getPlayerNames().length
@@ -1895,7 +1913,11 @@ function viewStatusMessage() {
     }
     return `完成：檔案裡共 ${total} 筆，依本館顯示 ${shown} 筆。`;
   }
-  if (!shown) return `檔案裡有 ${total} 筆，但用館別關鍵字沒對到人。可改選「本館為主，沒人再用學員」，或套用學員名單。`;
+  if (mode === "either") {
+    if (!shown) return `檔案裡有 ${total} 筆，本館和學員名單都沒對到人。`;
+    return `完成：檔案裡共 ${total} 筆，本館＋學員加總顯示 ${shown} 筆。`;
+  }
+  if (!shown) return `檔案裡有 ${total} 筆，但用館別關鍵字沒對到人。可改選「先看本館，沒抓到才改看學員」，或套用學員名單。`;
   return `完成：檔案裡共 ${total} 筆，依館別關鍵字顯示 ${shown} 筆。`;
 }
 
@@ -2668,7 +2690,7 @@ function render() {
     if (parsedAll.length && allData.length === 0 && mode === "names") {
       emptyTitle.textContent = getPlayerNames().length
         ? "檔案裡找不到學員名單上的人"
-        : "學員名單還是空的，請先填人或改選「本館為主」";
+        : "學員名單還是空的，請先填人或改選「先看本館」";
     } else if (parsedAll.length && allData.length === 0 && mode === "auto") {
       emptyTitle.textContent = getPlayerNames().length
         ? "本館和學員名單都沒對到人"
@@ -2945,8 +2967,8 @@ const TOUR_STEPS = [
     `
   },
   {
-    title: "先看本館，沒資料才用學員",
-    copy: "建議選「本館為主，沒人再用學員」。有抓到金城土城就只看本館；秩序冊寫學校名、本館是空的，才改套用學員名單。",
+    title: "不是加總：先本館，沒抓到才改學員",
+    copy: "這不是把本館和學員加在一起。本館有抓到人，就只顯示本館；本館一個都沒有，才改只顯示學員名單。若有人掛學校名、本館又有其他人要一起看，請改選「本館＋學員（加總）」。",
     stage: `
       <div class="demo-swap">
         <div class="demo-swap-scene a">

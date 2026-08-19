@@ -54,7 +54,7 @@
               <span class="step-num">1</span>
               <div>
                 <h2>先告訴系統要找誰</h2>
-                <p class="lead">本館和學員名單通常一起填。先用本館找人；本館沒資料，才套用學員名單。</p>
+                <p class="lead">本館和學員名單通常一起填。預設先看本館、沒抓到才改看學員；若要兩邊的人一起出現，再改選「本館＋學員（加總）」。</p>
               </div>
             </div>
             <div class="form-grid">
@@ -92,10 +92,14 @@
 
             <fieldset class="scope-box">
               <legend>顯示範圍</legend>
-              <p class="hint">本館和學員名單通常一起填。先用本館找人；本館沒抓到，才改用學員名單。整理後改選會立刻換。</p>
+              <p class="hint">本館和學員名單通常一起填。預設不是加總；有人掛學校名、又要連本館一起看時，再選「本館＋學員」。整理後改選會立刻換。</p>
               <label class="choice-row">
                 <input type="radio" name="displayMode" value="auto" checked />
-                <span>本館為主，沒人再用學員<small>建議。先看館別關鍵字；本館沒資料，才套用學員名單。</small></span>
+                <span>先看本館，沒抓到才改看學員<small>建議。不是加總。本館有人就只顯示本館；本館一個都沒有，才改顯示學員名單。</small></span>
+              </label>
+              <label class="choice-row">
+                <input type="radio" name="displayMode" value="either" />
+                <span>本館＋學員（加總）<small>兩邊符合任一就顯示。例如本館抓得到一部分，名單裡還有掛學校名的人，要一起看。</small></span>
               </label>
               <label class="choice-row">
                 <input type="radio" name="displayMode" value="club" />
