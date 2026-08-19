@@ -16,11 +16,13 @@
               <p>把秩序冊丟進來，自動排出本館孩子誰先上場</p>
             </div>
           </div>
-          <nav class="top-tabs" role="tablist">
+          <div class="top-actions">
             <button type="button" class="tour-launch" id="openTourBtn">操作教學點我</button>
-            <button class="top-tab active" type="button" data-tab="match" id="tabMatch">賽程整理</button>
-            <button class="top-tab" type="button" data-tab="custom" id="tabCustom">客製化統計</button>
-          </nav>
+            <nav class="top-tabs" role="tablist">
+              <button class="top-tab active" type="button" data-tab="match" id="tabMatch">賽程整理</button>
+              <button class="top-tab" type="button" data-tab="custom" id="tabCustom">客製化統計</button>
+            </nav>
+          </div>
         </header>
 
         <main id="matchApp">
@@ -238,13 +240,10 @@
               </div>
 
               <div class="legend">
-                <span><b>波次</b> 101 與 201 會同時開打，算同一波</span>
-                <span class="side chung">青方</span>
-                <span>對打穿青護具（在籤表上方）</span>
-                <span class="side hong">紅方</span>
-                <span>對打穿紅護具（在籤表下方）</span>
-                <span class="side order">輪流出場</span>
-                <span>品勢一個個上場打分，沒有對手</span>
+                <div class="legend-item legend-wave"><b>波次</b> 101 與 201 會同時開打，算同一波</div>
+                <div class="legend-item"><span>對打穿青護具（籤表上方）</span><span class="side chung">青方</span></div>
+                <div class="legend-item"><span>對打穿紅護具（籤表下方）</span><span class="side hong">紅方</span></div>
+                <div class="legend-item"><span>品勢一個個上場打分，沒有對手</span><span class="side order">輪流出場</span></div>
               </div>
 
               <div class="table-wrapper desktop-only">
@@ -400,7 +399,7 @@
         <div class="modal-head">
           <div>
             <p class="modal-kicker">操作教學</p>
-            <h3 id="tourTitle">先告訴系統要找誰</h3>
+            <h3 id="tourTitle">平常只要三步</h3>
           </div>
           <button class="btn gray modal-close" id="tourCloseBtn" type="button">關閉</button>
         </div>

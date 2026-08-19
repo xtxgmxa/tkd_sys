@@ -2807,34 +2807,50 @@ function formatNextMatch(item) {
   return "未提及";
 }
 
+function cardRow(label, valueHtml) {
+  if (!valueHtml) return "";
+  return `<div class="card-row"><span>${label}</span><b>${valueHtml}</b></div>`;
+}
+
 function renderMobileCard(item, index) {
   const card = document.createElement("div");
   card.className = "match-card";
-  const firstMatch = isOrderStyle(item)
-    ? `本場 ${displayValue(item.matchNo)} ｜ ${orderLabel(item)}`
+  const typeClass = isFight(item) ? "fight" : isPoomsae(item) ? "po" : "unknown";
+  const detail = isFight(item)
+    ? displayValue(item.detailLabel)
+    : displayValue(formatPoomsaeLabel(item) || item.detailLabel);
+  const kpis = isOrderStyle(item)
+    ? `<div class="card-kpis">
+        <div class="kpi"><span>場次</span><strong>${escapeHTML(displayValue(item.matchNo))}</strong></div>
+        <div class="kpi"><span>出場順序</span><strong>${escapeHTML(orderLabel(item))}</strong></div>
+      </div>
+      <p class="card-note">品勢輪流出場：一個個上場打分，沒有對手、沒有青紅。</p>`
     : (item.bye && !item.matchNo
-      ? "本場輪空晉級"
-      : `本場 ${displayValue(item.matchNo)} ${item.color || ""}`);
-  const vsLine = isOrderStyle(item)
-    ? `出場：<strong>${escapeHTML(orderLabel(item))}</strong>（無青紅、無對戰）`
-    : `對手：<strong>${escapeHTML(displayValue(item.opponent))}</strong>${item.opponentClub ? "／" + escapeHTML(item.opponentClub) : ""}`;
-  const nextLine = isOrderStyle(item)
-    ? "一個個上場打分，打完換下一位"
-    : (item.nextMatchNo
-      ? escapeHTML("場次 " + item.nextMatchNo + " " + (item.nextColor || "") + (item.nextOpponentHint ? " vs " + item.nextOpponentHint : ""))
-      : (item.nextOpponentHint ? "對上 " + item.nextOpponentHint : "未提及"));
+      ? `<div class="card-kpis"><div class="kpi"><span>本場</span><strong>輪空晉級</strong></div><div class="kpi"><span>護具</span>${sideCell(item)}</div></div>`
+      : `<div class="card-kpis">
+          <div class="kpi"><span>場次</span><strong>${escapeHTML(displayValue(item.matchNo))}</strong></div>
+          <div class="kpi"><span>護具</span>${sideCell(item)}</div>
+        </div>`);
+  const vsRow = isOrderStyle(item)
+    ? ""
+    : cardRow("對手", `${escapeHTML(displayValue(item.opponent))}${item.opponentClub ? "<small>" + escapeHTML(item.opponentClub) + "</small>" : ""}`);
+  const nextRow = isOrderStyle(item)
+    ? ""
+    : cardRow("下一場", item.nextMatchNo
+      ? escapeHTML("場次 " + item.nextMatchNo + (item.nextColor ? " " + item.nextColor : "") + (item.nextOpponentHint ? " vs " + item.nextOpponentHint : ""))
+      : (item.nextOpponentHint ? "對上 " + escapeHTML(item.nextOpponentHint) : "未提及"));
   card.innerHTML = `
-    <div class="card-top">
+    <div class="card-head">
       <div class="card-player">${index + 1}. ${escapeHTML(item.player)}</div>
-      <div class="card-number">${escapeHTML(firstMatch)}</div>
+      <span class="type ${typeClass}">${escapeHTML(displayValue(item.type))}</span>
     </div>
-    <div class="card-info">
-      ${escapeHTML(displayValue(item.type))} ・ ${escapeHTML(displayValue(item.court))}<br>
-      ${escapeHTML(displayValue(item.division))}
-      ${item.groupSize ? " ｜ 同組 " + item.groupSize + " 人" : ""}<br>
-      ${isFight(item) ? "級別" : "品勢項目"}：${escapeHTML(displayValue(isFight(item) ? item.detailLabel : formatPoomsaeLabel(item) || item.detailLabel))}<br>
-      ${vsLine}<br>
-      ${isOrderStyle(item) ? nextLine : "贏了下一場：" + nextLine}
+    ${kpis}
+    <div class="card-rows">
+      ${cardRow("場地", escapeHTML(displayValue(item.court)))}
+      ${cardRow("組別", `${escapeHTML(displayValue(item.division))}${item.groupSize ? "<small>同組 " + item.groupSize + " 人</small>" : ""}`)}
+      ${cardRow(isFight(item) ? "級別" : "品勢", escapeHTML(detail))}
+      ${vsRow}
+      ${nextRow}
     </div>
   `;
   card.addEventListener("click", () => openGroupModal(item.groupKey));
@@ -2959,29 +2975,22 @@ document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") closeModal();
 });
 
-const TOUR_SEEN_KEY = "tkd_sys_tutorial_seen_v2";
+const TOUR_SEEN_KEY = "tkd_sys_tutorial_seen_v3";
 const TOUR_STEPS = [
   {
-    title: "本館和學員名單不一樣",
-    copy: "兩邊通常一起填，但用途不同。本館是用「金城土城」去檔案裡抓人；學員名單是你指定的名字，當後備。",
+    title: "平常只要三步",
+    copy: "確認道館名稱（已幫你填好）→ 點大方塊選檔案 → 按藍色「整理賽程」。學員名單可以先空著。要用時再點「點這裡選常用選手」勾選即可。",
     stage: `
-      <div class="demo-split">
-        <div class="demo-card on demo-pulse">
-          <b>本館</b>
-          <span class="demo-chip">金城土城館</span>
-          <small>檔案有寫道館時用這個</small>
-        </div>
-        <div class="demo-card">
-          <b>學員名單</b>
-          <span class="demo-chip alt">李晨希、潘侑廷…</span>
-          <small>本館抓不到人時才用</small>
-        </div>
-      </div>
+      <ol class="demo-steps">
+        <li><span>1</span><div><b>確認道館</b><small>已填好金城土城</small></div></li>
+        <li><span>2</span><div><b>點選檔案</b><small>點那個大方塊就可以</small></div></li>
+        <li><span>3</span><div><b>按整理賽程</b><small>不按，下面不會出表</small></div></li>
+      </ol>
     `
   },
   {
-    title: "不是加總：先本館，沒抓到才改學員",
-    copy: "這不是把本館和學員加在一起。本館有抓到人，就只顯示本館；本館一個都沒有，才改只顯示學員名單。若有人掛學校名、本館又有其他人要一起看，請改選「本館＋學員（加總）」。",
+    title: "先看本館，找不到才改看名單",
+    copy: "這不是把兩邊加總。本館有抓到人，就只顯示本館；一個都沒有，才改看學員名單。有人掛學校名、又要連本館一起看時，再點「找人的方式」改成「本館＋學員」。",
     stage: `
       <div class="demo-swap">
         <div class="demo-swap-scene a">
@@ -3010,12 +3019,13 @@ const TOUR_STEPS = [
     `
   },
   {
-    title: "把檔案丟進來",
-    copy: "秩序冊、對打表、品勢表都可以，一次多個也沒關係。比賽名稱有寫在檔案裡時會自動帶入；但是建議一次丟一個",
+    title: "點這裡選檔案",
+    copy: "點那個大方塊選檔案就可以，也可以拖進去。秩序冊、對打表、品勢表都可以。同一場比賽可以一次多選；不同比賽請分開整理。比賽名稱常會從檔案自動帶入。",
     stage: `
       <div class="demo-drop">
         <span class="demo-file">秩序冊.pdf</span>
-        把檔案拖到這裡
+        <strong>點這裡選檔案</strong>
+        <small>也可以把檔案拖進來</small>
       </div>
     `
   },
@@ -3025,17 +3035,25 @@ const TOUR_STEPS = [
     stage: `<span class="demo-btn">整理賽程</span>`
   },
   {
-    title: "看出場，再匯出",
-    copy: "上面越早打。可以篩品勢或對打、搜姓名。需要帶走時再匯出 Excel，欄位可勾選。",
+    title: "品勢看順序，對打看青紅",
+    copy: "越上面越早打。品勢多半一個個上場，看「場次」和「第幾位」；對打才有青紅和對手。手機上點卡片可看同組。要帶走再匯出 Excel，欄位可勾選。",
     stage: `
-      <table class="demo-table">
-        <thead><tr><th>選手</th><th>場次</th><th>對手</th></tr></thead>
-        <tbody>
-          <tr><td>李晨希</td><td>326 青</td><td>吳禹靚</td></tr>
-          <tr><td>潘侑廷</td><td>341 青</td><td>輪空</td></tr>
-          <tr><td>黃宥豪</td><td>345 青</td><td>吳謙宥</td></tr>
-        </tbody>
-      </table>
+      <div class="demo-results">
+        <div class="demo-mini-card">
+          <div class="demo-mini-head"><b>潘侑廷</b><span class="type po">品勢</span></div>
+          <div class="demo-mini-kpis">
+            <div><span>場次</span><strong>2111</strong></div>
+            <div><span>出場順序</span><strong>第3位</strong></div>
+          </div>
+        </div>
+        <div class="demo-mini-card">
+          <div class="demo-mini-head"><b>李晨希</b><span class="type fight">對打</span></div>
+          <div class="demo-mini-kpis">
+            <div><span>場次</span><strong>326</strong></div>
+            <div><span>護具</span><span class="side chung">青方</span></div>
+          </div>
+        </div>
+      </div>
     `
   }
 ];
