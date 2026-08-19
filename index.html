@@ -52,7 +52,7 @@
               <span class="step-num">1</span>
               <div>
                 <h2>先告訴系統要找誰</h2>
-                <p class="lead">秩序冊裡通常有幾百人。填本館或學員名字，才會只列出自己的孩子。</p>
+                <p class="lead">秩序冊裡通常有幾百人。先填本館或學員名字，再用最下面的「顯示範圍」決定要看哪一種。</p>
               </div>
             </div>
             <div class="form-grid">
@@ -67,11 +67,6 @@
               </div>
             </div>
 
-            <label class="check-row">
-              <input type="checkbox" id="filterEnabled" checked />
-              <span>只顯示本館／名單裡的學員<span class="check-extra">取消勾選就會把檔案裡全部選手都列出來</span></span>
-            </label>
-
             <div class="field keyword-field">
               <label>館別關鍵字</label>
               <p class="hint">檔案裡可能寫「金城土城」或「金城土城館」，兩種都可加。輸入後按 Enter。</p>
@@ -82,11 +77,35 @@
             </div>
 
             <div class="field keyword-field" id="playerNamesField">
-              <label for="playerNames">學員名單</label>
-              <p class="hint">館名對不到時，把孩子名字貼上來即可。格式亂也沒關係，貼上會自動整理。</p>
+              <div class="field-label-row">
+                <label for="playerNames">學員名單</label>
+                <button type="button" class="text-link" id="openRosterBtn">套用選手範本名單請點我</button>
+              </div>
+              <p class="hint">可點上面套用本館範本名單，也可以在框裡自己打或貼上。格式亂也沒關係，貼上會自動整理。</p>
               <textarea id="playerNames" class="names-box" placeholder="在這裡貼上名字"></textarea>
               <p id="playerNamesStatus" class="name-status"></p>
             </div>
+
+            <fieldset class="scope-box">
+              <legend>顯示範圍</legend>
+              <p class="hint">館別和學員名單是兩種條件。請選一種看的方式；整理過檔案後改這裡會立刻換，不必重傳。</p>
+              <label class="choice-row">
+                <input type="radio" name="displayMode" value="club" checked />
+                <span>只看本館<small>只顯示符合館別關鍵字的人。有填學員名單也不會拿來篩。</small></span>
+              </label>
+              <label class="choice-row">
+                <input type="radio" name="displayMode" value="names" />
+                <span>只看學員名單<small>只顯示框裡填的那些人。本館其他人不會出現。</small></span>
+              </label>
+              <label class="choice-row">
+                <input type="radio" name="displayMode" value="either" />
+                <span>本館或學員名單<small>兩種條件符合任一就顯示，等於把名單加進本館一起看。</small></span>
+              </label>
+              <label class="choice-row">
+                <input type="radio" name="displayMode" value="all" />
+                <span>全部選手<small>檔案裡所有人都列出來，不管館別和名單。</small></span>
+              </label>
+            </fieldset>
           </section>
 
           <section class="panel panel-upload">
@@ -302,6 +321,61 @@
           <button class="btn gray modal-close" id="modalCloseBtn" type="button">關閉</button>
         </div>
         <div id="modalBody" class="modal-body"></div>
+      </div>
+    </div>
+
+    <div id="rosterModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="rosterTitle">
+      <div class="modal-backdrop" id="rosterBackdrop"></div>
+      <div class="modal-card modal-card-narrow">
+        <div class="modal-head">
+          <div>
+            <p class="modal-kicker">選手範本</p>
+            <h3 id="rosterTitle">金城土城館學員</h3>
+          </div>
+          <button class="btn gray modal-close" id="rosterCloseBtn" type="button">關閉</button>
+        </div>
+        <div class="modal-body">
+          <p class="hint">勾選後按套用，會填進外面的學員名單。也可以不到這裡，直接在外面自己打或貼。</p>
+          <div class="roster-toolbar">
+            <button class="btn gray" type="button" id="rosterAllBtn">全選</button>
+            <button class="btn gray" type="button" id="rosterNoneBtn">全不選</button>
+            <input type="search" id="rosterSearch" placeholder="搜尋姓名…" />
+          </div>
+          <div id="rosterList" class="roster-grid"></div>
+          <div class="inline-add">
+            <input type="text" id="rosterAddName" placeholder="加入新名字" />
+            <button class="btn gray" type="button" id="rosterAddBtn">加入</button>
+          </div>
+          <div class="modal-actions">
+            <button class="btn gray" type="button" id="rosterCancelBtn">取消</button>
+            <button class="btn primary" type="button" id="rosterApplyBtn">套用到學員名單</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="exportModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="exportTitle">
+      <div class="modal-backdrop" id="exportBackdrop"></div>
+      <div class="modal-card modal-card-narrow">
+        <div class="modal-head">
+          <div>
+            <p class="modal-kicker">匯出 Excel</p>
+            <h3 id="exportTitle">選擇要顯示的欄位</h3>
+          </div>
+          <button class="btn gray modal-close" id="exportCloseBtn" type="button">關閉</button>
+        </div>
+        <div class="modal-body">
+          <p class="hint">預設全選。不需要的欄位取消勾選，只會影響「全部」工作表。</p>
+          <div class="roster-toolbar">
+            <button class="btn gray" type="button" id="exportAllBtn">全選</button>
+            <button class="btn gray" type="button" id="exportNoneBtn">全不選</button>
+          </div>
+          <div id="exportFieldList" class="picker-grid"></div>
+          <div class="modal-actions">
+            <button class="btn gray" type="button" id="exportCancelBtn">取消</button>
+            <button class="btn export" type="button" id="exportConfirmBtn">開始匯出</button>
+          </div>
+        </div>
       </div>
     </div>
 

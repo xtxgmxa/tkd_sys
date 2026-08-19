@@ -3,6 +3,41 @@ let allData = [];
 let currentFilter = "all";
 let uploadedFiles = [];
 let clubKeywords = ["金城土城", "金城土城館"];
+const ROSTER_VERSION = 2;
+const DEFAULT_CHECKED_ROSTER = [
+  "李晨希", "潘侑廷", "黃宥豪", "黃靖允", "李宜霏",
+  "黃家宥", "蔡葦霖", "陳昶亨", "賴芷涵", "謝唯甄", "黃郁婷", "盧俐彤", "張秩嘉", "張紘嘉", "黃國霖",
+  "李亦宸", "陳知禧", "趙翊軒", "黃振恩"
+];
+const DEFAULT_CLUB_ROSTER = [
+  "江曼聿", "吳謙宥", "李宜霏", "李晨希", "柯允皓", "張秩嘉", "張紘嘉", "張紘駿", "陳昶亨", "游以彤",
+  "黃羽希", "黃宥豪", "黃郁婷", "黃家宥", "黃振恩", "黃國霖", "黃靖允", "劉家妘", "潘侑廷",
+  "蔡葦儒", "蔡葦霖", "盧俐彤", "盧祐希", "賴芷涵", "謝昕澂", "謝唯甄", "鍾昀蓁", "簡鈞浤", "蘇心甯",
+  "李亦宸", "陳知禧"
+];
+let clubRoster = DEFAULT_CLUB_ROSTER.slice();
+const DEFAULT_CHECKED_SET = new Set(DEFAULT_CHECKED_ROSTER);
+const EXPORT_FIELDS = [
+  { key: "選手", label: "選手" },
+  { key: "項目", label: "項目" },
+  { key: "組別", label: "組別" },
+  { key: "年齡層", label: "年齡層" },
+  { key: "性別", label: "性別" },
+  { key: "級別或品勢項目", label: "品勢或級別" },
+  { key: "帶色段級", label: "帶色／段級" },
+  { key: "場地", label: "場地" },
+  { key: "本場場次", label: "本場場次" },
+  { key: "青紅方", label: "青紅／出場" },
+  { key: "對手", label: "對手／順序" },
+  { key: "對手道館", label: "對手道館" },
+  { key: "下一場場次", label: "下一場場次" },
+  { key: "下一場青紅", label: "下一場青紅" },
+  { key: "下一場對手", label: "下一場對手" },
+  { key: "籤號", label: "籤號" },
+  { key: "同組人數", label: "同組人數" },
+  { key: "本館", label: "單位／道館" }
+];
+let exportFields = EXPORT_FIELDS.map((item) => item.key);
 let customState = {
   title: "吃飯統計",
   columns: [
@@ -48,7 +83,6 @@ const groupModal = document.getElementById("groupModal");
 const modalBody = document.getElementById("modalBody");
 const modalTitle = document.getElementById("modalTitle");
 const playerNamesEl = document.getElementById("playerNames");
-const filterEnabledEl = document.getElementById("filterEnabled");
 
 if (window.pdfjsLib) {
   pdfjsLib.GlobalWorkerOptions.workerSrc =
@@ -67,10 +101,19 @@ function loadSavedSettings() {
     if (Array.isArray(saved.keywords) && saved.keywords.length) {
       clubKeywords = saved.keywords;
     }
-    if (saved.playerNames && playerNamesEl) playerNamesEl.value = saved.playerNames;
-    if (typeof saved.filterEnabled === "boolean" && filterEnabledEl) {
-      filterEnabledEl.checked = saved.filterEnabled;
+    if (saved.rosterVersion === ROSTER_VERSION && Array.isArray(saved.clubRoster) && saved.clubRoster.length) {
+      clubRoster = uniqueNameList([...DEFAULT_CLUB_ROSTER, ...saved.clubRoster]);
+    } else {
+      clubRoster = DEFAULT_CLUB_ROSTER.slice();
     }
+    if (Array.isArray(saved.exportFields) && saved.exportFields.length) {
+      exportFields = saved.exportFields.filter((key) => EXPORT_FIELDS.some((item) => item.key === key));
+      if (!exportFields.length) exportFields = EXPORT_FIELDS.map((item) => item.key);
+    }
+    const savedMode = ["all", "club", "names", "either"].includes(saved.displayMode)
+      ? saved.displayMode
+      : (saved.filterEnabled === false ? "all" : "club");
+    setDisplayMode(savedMode);
     if (saved.customState) customState = saved.customState;
   } catch (error) {
     /* ignore */
@@ -83,7 +126,10 @@ function saveSettings() {
     clubName: clubName.value,
     keywords: clubKeywords,
     playerNames: playerNamesEl ? playerNamesEl.value : "",
-    filterEnabled: filterEnabledEl ? filterEnabledEl.checked : true,
+    clubRoster,
+    rosterVersion: ROSTER_VERSION,
+    exportFields,
+    displayMode: getDisplayMode(),
     customState
   }));
 }
@@ -98,6 +144,7 @@ function renderKeywords() {
       clubKeywords.splice(index, 1);
       saveSettings();
       renderKeywords();
+      applyViewFilter(true);
     });
     keywordTagsEl.appendChild(tag);
   });
@@ -110,6 +157,7 @@ function addKeyword(raw) {
   clubKeywords.push(word);
   saveSettings();
   renderKeywords();
+  applyViewFilter(true);
 }
 
 keywordInput.addEventListener("keydown", (event) => {
@@ -122,12 +170,14 @@ keywordInput.addEventListener("keydown", (event) => {
     clubKeywords.pop();
     saveSettings();
     renderKeywords();
+    applyViewFilter(true);
   }
 });
 
 clubName.addEventListener("change", () => {
   addKeyword(clubName.value);
   saveSettings();
+  applyViewFilter(true);
 });
 
 document.getElementById("competitionName").addEventListener("change", saveSettings);
@@ -259,40 +309,21 @@ analyzeBtn.addEventListener("click", async () => {
       if (!item.boutStyle) item.boutStyle = isOrderStyle(item) ? "order" : "bracket";
       resolveCourt(item);
     });
+    rememberClubRoster(parsedAll);
 
     const notesOnly = raw && looksLikeCoachNotes(raw) && uploadedFiles.length === 0;
-    const filterOn = filterEnabledEl ? filterEnabledEl.checked : true;
-
-    if (notesOnly || !filterOn) {
-      allData = parsedAll.slice();
-    } else {
-      allData = parsedAll.filter((item) => itemMatchesFilter(item));
-    }
-
-    allData.sort(sortMatches);
-
     currentFilter = "all";
     document.querySelectorAll(".filter").forEach((btn) => btn.classList.remove("active"));
-    document.querySelector('[data-filter="all"]').classList.add("active");
-    document.getElementById("searchPlayer").value = "";
+    document.querySelector('[data-filter="all"]')?.classList.add("active");
+    const searchEl = document.getElementById("searchPlayer");
+    if (searchEl) searchEl.value = "";
 
-    resultArea.classList.remove("hidden");
-    updateStats();
-    render();
+    applyViewFilter(true, notesOnly);
 
     const scannedHint = uploadedFiles.some((file) => /\.pdf$/i.test(file.name)) && parsedAll.length === 0
       ? " 若是掃描型 PDF，裡面沒有可選文字，請改貼文字或用 Word/Excel。"
       : "";
-
-    setStatus(
-      parsedAll.length && !allData.length
-        ? `檔案裡有 ${parsedAll.length} 筆，但用道館名稱沒對到人。可點下方「改用學員名單找人」。${scannedHint}`
-        : `完成：檔案裡共 ${parsedAll.length} 筆，目前顯示 ${allData.length} 筆。請往下看出場順序。${scannedHint}`
-    );
-
-    if (!allData.length) {
-      resultArea.classList.remove("hidden");
-    }
+    if (scannedHint) setStatus((parseStatus.textContent || "") + scannedHint);
   } catch (error) {
     setStatus("解析失敗：" + error.message, true);
     alert("資料無法解析：\n" + error.message);
@@ -438,6 +469,9 @@ function normalizeSourceText(raw) {
     .normalize("NFKC")
     .replace(/\u00a0/g, " ")
     .replace(/[：]/g, ":")
+    .replace(/舘/g, "館")
+    .replace(/籤\s*號/g, "籤號")
+    .replace(/單\s*位/g, "單位")
     .replace(/姓\s*名/g, "姓名")
     .replace(/(?:^|\n)\s*第\s*\n\s*([一二三四五六七八九十\d]+)\s*\n\s*場\s*\n\s*地\s*(?=\n|$)/g, "\n第$1場地\n")
     .trim();
@@ -467,6 +501,11 @@ function parseInput(raw) {
   if (sequentialPoomsae && !bracketPoomsae) {
     const order = parsePoomsaeOrderTable(text);
     if (order.length) return order;
+  }
+
+  if (/人數\s*:\s*\d+\s*人/.test(text) && /場次\s*:/.test(text) && /\d+-[1-4]\s/.test(text) && !/比賽組別/.test(text)) {
+    const chart = parseCompactPoomsaeChart(text);
+    if (chart.length) return chart;
   }
 
   if (/比賽組別/.test(text) && /籤號/.test(text) && /(公斤|量級|Kg)/i.test(text)) {
@@ -504,12 +543,35 @@ function parseOrderBooklet(raw) {
     .replace(/[）]/g, ")");
 
   const lines = text.split(/\n/).map((line) => line.replace(/[ \t]+/g, " ").trim()).filter((line) => {
-    return line && !/^=====/.test(line) && !/^籤號/.test(line);
+    return line && !/^=====/.test(line) && !/^-\s*\d+\s*-$/.test(line);
   });
 
   const items = [];
   let court = "";
   let sectionType = "";
+  let header = null;
+  let buf = [];
+
+  function flush() {
+    if (!header) {
+      buf = [];
+      return;
+    }
+    const tokens = [];
+    buf.forEach((line) => {
+      if (/^(籤號|單位|姓名|編號)/.test(line)) return;
+      if (/^X$/i.test(line)) return;
+      const playerLine = normalizePlayerLine(line);
+      if (playerLine) {
+        tokens.push({ kind: "p", line: playerLine });
+        return;
+      }
+      const matchLine = line.match(/^(\d{3,4})(?:-\d+)?$/);
+      if (matchLine) tokens.push({ kind: "m", no: matchLine[1] });
+    });
+    if (tokens.length) items.push(...tokensToBracketItems(tokens, header));
+    buf = [];
+  }
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
@@ -525,43 +587,37 @@ function parseOrderBooklet(raw) {
 
     const courtMatch = readCourtLine(line);
     if (courtMatch) {
+      flush();
       court = courtMatch;
       continue;
     }
 
-    const header = parseGroupHeader(line);
-    if (!header) continue;
-    if (!header.type) header.type = sectionType;
-    if (header.type === "對練" || header.type === "競技") header.type = "對打";
-    header.court = court;
-    header.boutStyle = "bracket";
-
-    const block = [];
-    let j = i + 1;
-    while (j < lines.length && block.length < 7) {
-      const next = lines[j];
-      if (/^比賽組別/.test(next) || /^(品勢|對打|對練)$/.test(next) || /^第.+場地$/.test(next)) {
-        break;
-      }
-      if (/^[1-4](\s|$)/.test(next) || /^(X|\d{2,4})$/.test(next)) {
-        block.push(next);
-      }
-      j += 1;
+    const nextHeader = parseGroupHeader(line);
+    if (nextHeader) {
+      flush();
+      header = nextHeader;
+      if (!header.type) header.type = sectionType;
+      if (!header.type && /品勢/.test(line)) header.type = "品勢";
+      if (header.type === "對練" || header.type === "競技") header.type = "對打";
+      header.court = court;
+      header.boutStyle = header.type === "品勢" ? "bracket" : (header.boutStyle || "bracket");
+      continue;
     }
 
-    items.push(...parseBracketBlock(header, block));
-    i = j - 1;
+    if (header) buf.push(line);
   }
-
+  flush();
   return items;
 }
 
 function parseGroupHeader(line) {
-  const match = line.match(/^比賽組別:\s*([A-Za-z0-9]+)\s*(.+)$/);
-  if (!match) return null;
+  const src = String(line || "").replace(/^.*?(比賽組別:)/, "$1");
+  const withCode = src.match(/^比賽組別:\s*([A-Za-z]{1,3}\d{2})\s*(.+)$/);
+  const plain = src.match(/^比賽組別:\s*(.+)$/);
+  if (!withCode && !plain) return null;
 
-  const groupCode = match[1];
-  let rest = match[2].trim();
+  const groupCode = withCode ? withCode[1] : "";
+  let rest = (withCode ? withCode[2] : plain[1]).trim();
   const sizeMatch = rest.match(/(\d+)\s*人\s*$/);
   const groupSize = sizeMatch ? parseInt(sizeMatch[1], 10) : 0;
   rest = rest.replace(/(\d+)\s*人\s*$/, "").trim();
@@ -579,7 +635,8 @@ function parseGroupHeader(line) {
     }
   }
 
-  const type = /^P/i.test(groupCode) ? "品勢" : /^K/i.test(groupCode) ? "對打" : "";
+  let type = /^P/i.test(groupCode) ? "品勢" : /^K/i.test(groupCode) ? "對打" : "";
+  if (!type && /品勢/.test(String(line || "") + rest + eventName)) type = "品勢";
   return {
     groupCode,
     division: rest,
@@ -593,6 +650,114 @@ function parseGroupHeader(line) {
     ageGroup: extractAgeGroup(rest),
     gender: extractGender(rest)
   };
+}
+
+function parseCompactPoomsaeChart(raw) {
+  const text = String(raw || "");
+  const lines = text.split(/\n/).map((line) => line.replace(/\s+/g, " ").trim()).filter((line) => {
+    return line && !/^=====/.test(line) && !/^-\s*\d+\s*-$/.test(line);
+  });
+  const items = [];
+  let court = "";
+  let header = null;
+  let current = [];
+
+  function flush() {
+    if (!header || !current.length) {
+      current = [];
+      return;
+    }
+    const seeds = { 1: null, 2: null, 3: null, 4: null };
+    current.forEach((item) => {
+      item.type = "品勢";
+      item.boutStyle = "bracket";
+      item.court = item.court || header.court || court;
+      item.division = header.division || item.division;
+      item.eventName = header.eventName || item.eventName;
+      item.groupSize = header.groupSize || current.length;
+      if (item.seed >= 1 && item.seed <= 4) seeds[item.seed] = item;
+    });
+    applySides(seeds[1], seeds[4]);
+    applySides(seeds[3], seeds[2]);
+    const present = [seeds[1], seeds[2], seeds[3], seeds[4]].filter(Boolean);
+    if (present.length === 2 && !seeds[1]?.opponent && !seeds[2]?.opponent) {
+      applySides(present[0], present[1]);
+    }
+    present.forEach((item) => {
+      if (!item.opponent) {
+        item.bye = true;
+        item.opponent = "輪空";
+      }
+    });
+    const top = [seeds[1], seeds[4]].filter(Boolean);
+    const bot = [seeds[3], seeds[2]].filter(Boolean);
+    if (top.length && bot.length) {
+      const topHint = winnerHint(bot, "");
+      const botHint = winnerHint(top, "");
+      top.forEach((item) => {
+        if (!item.nextOpponentHint) {
+          item.nextOpponentHint = topHint;
+          item.nextColor = "青方";
+        }
+      });
+      bot.forEach((item) => {
+        if (!item.nextOpponentHint) {
+          item.nextOpponentHint = botHint;
+          item.nextColor = "紅方";
+        }
+      });
+    }
+    items.push(...current);
+    current = [];
+  }
+
+  lines.forEach((line) => {
+    const courtHit = readCourtLine(line);
+    if (courtHit) {
+      flush();
+      court = courtHit;
+      return;
+    }
+    const head = line.match(/([^:\n]*?)\s*人數:\s*(\d+)\s*人(?:\s*場次:\s*(\d{2,4})?)?$/);
+    if (head && !/比賽組別/.test(line) && /[\u4e00-\u9fff]/.test(head[1])) {
+      flush();
+      const division = head[1].replace(/.*=====\s*/, "").replace(/^-\s*\d+\s*-\s*/, "").trim();
+      header = {
+        type: "品勢",
+        division,
+        groupSize: parseInt(head[2], 10),
+        matchNo: head[3] || "",
+        court,
+        eventName: extractPoomsaeEvent(division) || "",
+        boutStyle: "bracket",
+        gender: extractGender(division),
+        ageGroup: extractAgeGroup(division),
+        belt: extractBelt(division)
+      };
+      return;
+    }
+    if (/^(籤號|單位|姓名|編號)/.test(line) || !header) return;
+    const normalized = line.replace(/^(\d+)月(\d+)日\s+/, "$1-$2 ");
+    const dashed = normalized.match(/^(\d+)-([1-4])\s+(.+)$/);
+    const plain = normalized.match(/^([1-4])\s+(.+)$/);
+    let seed = "";
+    let rest = "";
+    if (dashed && /[\u4e00-\u9fffA-Za-z]/.test(dashed[3])) {
+      seed = dashed[2];
+      rest = dashed[3];
+    } else if (plain && /[\u4e00-\u9fffA-Za-z]/.test(plain[2]) && !/^(人|公斤|量級)/.test(plain[2])) {
+      seed = plain[1];
+      rest = plain[2];
+    }
+    if (!seed) return;
+    const item = parseSeedLine(`${seed} ${rest}`.trim(), header);
+    if (item) {
+      item.matchNo = header.matchNo || "";
+      current.push(item);
+    }
+  });
+  flush();
+  return items;
 }
 
 function parseBracketBlock(header, block) {
@@ -686,17 +851,24 @@ function winnerHint(players, matchNo) {
   if (list.length === 1) return `${list[0].player}（${list[0].club || "未提及"}）`;
   const names = list.map((item) => item.player).join("／");
   if (matchNo && matchNo !== "X") return `場次${matchNo}勝者（${names}）`;
-  return names;
+  return `${names} 勝者`;
 }
 
 function applyPair(upper, lower, matchNo) {
-  if (!upper || !lower || !matchNo || matchNo === "X") return false;
+  if (!upper || !lower) return false;
+  if (!applySides(upper, lower)) return false;
+  if (!matchNo || matchNo === "X") return false;
   upper.matchNo = matchNo;
+  lower.matchNo = matchNo;
+  return true;
+}
+
+function applySides(upper, lower) {
+  if (!upper || !lower) return false;
   upper.color = "青方";
   upper.opponent = lower.player;
   upper.opponentClub = lower.club;
   upper.bye = false;
-  lower.matchNo = matchNo;
   lower.color = "紅方";
   lower.opponent = upper.player;
   lower.opponentClub = upper.club;
@@ -1212,7 +1384,7 @@ function splitStuckPlayerClub(item) {
 }
 
 function detectType(text) {
-  if (/品勢|Poomsae|指定品勢|自選品勢/i.test(text)) return "品勢";
+  if (/品勢|Poomsae|指定品勢|自選品勢|基本動作|[一二三四五六七八]章|高麗|金剛/i.test(text)) return "品勢";
   if (/對打|競技對打|Kyorugi|對練/i.test(text)) return "對打";
   if (/kg|公斤|量級/.test(text) && !/品勢/.test(text)) return "對打";
   return "";
@@ -1233,7 +1405,7 @@ function extractBelt(text) {
 function extractPoomsaeEvent(text) {
   const dual = extractDualPoomsae(text);
   if (dual.eventName) return dual.eventName;
-  const match = String(text || "").match(/(指定品勢|自選品勢|團體品勢|個人品勢|自由品勢|對練|太極[一二三四五六七八]章|[一二三四五六七八]章|馬步正拳[、，,]?前抬[腳腿]?[、，,]?前踢|馬步正拳|前抬腳|前踢)/);
+  const match = String(text || "").match(/(指定品勢|自選品勢|團體品勢|個人品勢|自由品勢|基本動作|對練|太極[一二三四五六七八]章|[一二三四五六七八]章|馬步正拳[、，,]?前抬[腳腿]?[、，,]?前踢|馬步正拳|前抬腳|前踢|高麗|金剛)/);
   return match ? match[1] : "";
 }
 
@@ -1296,8 +1468,8 @@ function formatPoomsaeLabel(item, compact) {
 }
 
 function extractGender(text) {
-  if (/女子|女生/.test(text)) return "女子";
-  if (/男子|男生/.test(text)) return "男子";
+  if (/女子|女生|\(女\)|組\(女\)/.test(text)) return "女子";
+  if (/男子|男生|\(男\)|組\(男\)/.test(text)) return "男子";
   if (/混合/.test(text)) return "混合";
   return "";
 }
@@ -1346,6 +1518,7 @@ function normalizeText(text) {
   return String(text || "")
     .normalize("NFKC")
     .replace(/\s+/g, "")
+    .replace(/舘/g, "館")
     .replace(/跆拳道館/g, "")
     .replace(/跆拳道/g, "")
     .replace(/道館/g, "")
@@ -1467,6 +1640,29 @@ function showNameTidyStatus(count) {
   el.textContent = count ? `已整理成 ${count} 人` : "";
 }
 
+function uniqueNameList(list) {
+  const seen = new Set();
+  return (list || []).filter((name) => {
+    const key = normalizeText(name);
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function rememberClubRoster() {
+  /* 範本名單以秩序冊為準，不再從其他檔案自動塞人 */
+}
+
+function getClubRoster() {
+  const all = uniqueNameList([...DEFAULT_CLUB_ROSTER, ...clubRoster]);
+  const pinned = DEFAULT_CHECKED_ROSTER.filter((name) => all.includes(name));
+  const rest = all
+    .filter((name) => !DEFAULT_CHECKED_SET.has(name))
+    .sort((a, b) => a.localeCompare(b, "zh-Hant"));
+  return [...pinned, ...rest];
+}
+
 function applyTidiedNames(raw, mergeWithCurrent) {
   if (!playerNamesEl) return;
   const source = mergeWithCurrent ? `${playerNamesEl.value}\n${raw}` : raw;
@@ -1480,6 +1676,7 @@ function applyTidiedNames(raw, mergeWithCurrent) {
   playerNamesEl.value = tidied.text;
   showNameTidyStatus(tidied.names.length);
   saveSettings();
+  applyViewFilter(true);
   return true;
 }
 
@@ -1493,14 +1690,61 @@ function itemMatchesName(item, names) {
   });
 }
 
+function getDisplayMode() {
+  return document.querySelector('input[name="displayMode"]:checked')?.value || "club";
+}
+
+function setDisplayMode(mode) {
+  const input = document.querySelector(`input[name="displayMode"][value="${mode}"]`);
+  if (input) input.checked = true;
+}
+
+function applyViewFilter(updateStatus, forceAll) {
+  if (!parsedAll.length) return;
+  allData = forceAll || getDisplayMode() === "all"
+    ? parsedAll.slice()
+    : parsedAll.filter((item) => itemMatchesFilter(item));
+  allData.sort(sortMatches);
+  resultArea.classList.remove("hidden");
+  updateStats();
+  render();
+  if (updateStatus) setStatus(viewStatusMessage());
+}
+
+function viewStatusMessage() {
+  const mode = getDisplayMode();
+  const total = parsedAll.length;
+  const shown = allData.length;
+  if (!total) return "還沒找到選手。請先上傳檔案並按「整理賽程」。";
+  if (mode === "all") return `完成：檔案裡共 ${total} 筆，目前顯示全部 ${shown} 筆。`;
+  if (mode === "names") {
+    if (!getPlayerNames().length) return `學員名單是空的，所以沒人可顯示。請先填名單，或改選「只看本館」。`;
+    if (!shown) return `檔案裡有 ${total} 筆，但學員名單沒對到人。可改選「只看本館」或檢查姓名。`;
+    return `完成：檔案裡共 ${total} 筆，只顯示學員名單裡的 ${shown} 筆。`;
+  }
+  if (mode === "either") {
+    if (!shown) return `檔案裡有 ${total} 筆，但本館和學員名單都沒對到人。可點下方「改用學員名單找人」。`;
+    return `完成：檔案裡共 ${total} 筆，本館或學員名單共顯示 ${shown} 筆。`;
+  }
+  if (!shown) return `檔案裡有 ${total} 筆，但用館別關鍵字沒對到人。可改選「只看學員名單」，或點下方「改用學員名單找人」。`;
+  return `完成：檔案裡共 ${total} 筆，依館別關鍵字顯示 ${shown} 筆。`;
+}
+
 function itemMatchesFilter(item) {
+  const mode = getDisplayMode();
   const keywords = getActiveKeywords();
   const names = getPlayerNames();
-  if (!keywords.length && !names.length) return true;
+  if (mode === "all") return true;
+  if (mode === "names") return names.length ? itemMatchesName(item, names) : false;
   const clubHit = keywords.length ? itemMatchesClub(item, keywords) : false;
-  const nameHit = names.length ? itemMatchesName(item, names) : false;
-  if (keywords.length && names.length) return clubHit || nameHit;
-  if (names.length) return nameHit;
+  if (mode === "either") {
+    const nameHit = names.length ? itemMatchesName(item, names) : false;
+    if (!keywords.length && !names.length) return true;
+    if (keywords.length && names.length) return clubHit || nameHit;
+    if (names.length) return nameHit;
+    return clubHit;
+  }
+  if (!keywords.length) return true;
   return clubHit;
 }
 
@@ -1651,8 +1895,13 @@ function detectPoomsaeStyleFromText(text) {
 }
 
 function normalizePlayerLine(line) {
-  const t = String(line || "").replace(/\|/g, " ").replace(/\s+/g, " ").trim();
+  const t = String(line || "").replace(/\|/g, " ").replace(/\s+/g, " ").trim()
+    .replace(/^(\d+)月(\d+)日\s+/, "$1-$2 ");
   if (!t || /^(籤號|單位|姓名|No|護具|量級|比賽)/.test(t)) return "";
+  const dashed = t.match(/^(\d+)-([1-4])\s+(.+)$/);
+  if (dashed && /[\u4e00-\u9fffA-Za-z]/.test(dashed[3])) {
+    return `${dashed[2]} ${dashed[3]}`;
+  }
   const start = t.match(/^([1-9]\d?)\s+(.+)$/);
   if (start && /[\u4e00-\u9fff]{2,}/.test(start[2]) && !/^(籤號|單位|姓名|公斤|量級|人)/.test(start[2])) {
     if (!/^\d{2,4}(?:-\d+)?$/.test(start[2]) && !/^(公斤級?|量級)$/.test(start[2].replace(/\s/g, ""))) {
@@ -2244,9 +2493,13 @@ function render() {
 
   const emptyTitle = document.getElementById("emptyTitle");
   const emptyNameHint = document.getElementById("emptyNameHint");
-  const showNameHint = parsedAll.length > 0 && allData.length === 0;
+  const showNameHint = parsedAll.length > 0 && allData.length === 0 && getDisplayMode() !== "names";
   if (emptyTitle) {
-    if (showNameHint) {
+    if (parsedAll.length && allData.length === 0 && getDisplayMode() === "names") {
+      emptyTitle.textContent = getPlayerNames().length
+        ? "檔案裡找不到學員名單上的人"
+        : "學員名單還是空的，請先填人或改選「只看本館」";
+    } else if (showNameHint) {
       emptyTitle.textContent = "用道館名稱沒找到人";
     } else if (allData.length === 0) {
       emptyTitle.textContent = "還沒找到選手。請確認已按「整理賽程」。";
@@ -2266,6 +2519,9 @@ function render() {
 }
 
 function guideToPlayerNames() {
+  setDisplayMode("names");
+  saveSettings();
+  applyViewFilter(true);
   const field = document.getElementById("playerNamesField");
   if (!field || !playerNamesEl) return;
   switchTab("match");
@@ -2318,7 +2574,7 @@ function renderTableRow(item, index) {
     <td class="${!isOrderStyle(item) && isMissing(item.opponent) ? "missing" : ""}">
       ${opponentCell(item)}
     </td>
-    <td class="next-cell ${isOrderStyle(item) || isMissing(item.nextMatchNo) ? (isOrderStyle(item) ? "" : "missing") : ""}">
+    <td class="next-cell ${isOrderStyle(item) || (isMissing(item.nextMatchNo) && isMissing(item.nextOpponentHint)) ? (isOrderStyle(item) ? "" : "missing") : ""}">
       ${isOrderStyle(item) ? "－" : formatNextMatch(item)}
     </td>
   `;
@@ -2333,10 +2589,13 @@ function sideBadge(color) {
 }
 
 function formatNextMatch(item) {
-  if (!item.nextMatchNo) return "未提及";
-  const color = item.nextColor ? " " + item.nextColor : "";
-  const hint = item.nextOpponentHint ? "<br><small>vs " + escapeHTML(item.nextOpponentHint) + "</small>" : "";
-  return `場次 ${escapeHTML(item.nextMatchNo)}${escapeHTML(color)}${hint}`;
+  if (item.nextMatchNo) {
+    const color = item.nextColor ? " " + item.nextColor : "";
+    const hint = item.nextOpponentHint ? "<br><small>vs " + escapeHTML(item.nextOpponentHint) + "</small>" : "";
+    return `場次 ${escapeHTML(item.nextMatchNo)}${escapeHTML(color)}${hint}`;
+  }
+  if (item.nextOpponentHint) return `對上 ${escapeHTML(item.nextOpponentHint)}`;
+  return "未提及";
 }
 
 function renderMobileCard(item, index) {
@@ -2354,7 +2613,7 @@ function renderMobileCard(item, index) {
     ? "一個個上場打分，打完換下一位"
     : (item.nextMatchNo
       ? escapeHTML("場次 " + item.nextMatchNo + " " + (item.nextColor || "") + (item.nextOpponentHint ? " vs " + item.nextOpponentHint : ""))
-      : "未提及");
+      : (item.nextOpponentHint ? "對上 " + item.nextOpponentHint : "未提及"));
   card.innerHTML = `
     <div class="card-top">
       <div class="card-player">${index + 1}. ${escapeHTML(item.player)}</div>
@@ -2426,7 +2685,7 @@ function matchPlanRow(item) {
     ? "一個個上場打分，打完換下一位"
     : (item.nextMatchNo
       ? `贏了下一場：場次 ${item.nextMatchNo} ${item.nextColor || ""} vs ${item.nextOpponentHint || "未提及"}`
-      : "贏了下一場：未提及");
+      : (item.nextOpponentHint ? `贏了下一場：對上 ${item.nextOpponentHint}` : "贏了下一場：未提及"));
   return `
     <div class="person-row ours">
       <div>
@@ -2480,11 +2739,11 @@ function renderOtherPeople(sample, ours, members, opponents) {
 }
 
 function closeModal() {
-  groupModal.classList.add("hidden");
+  document.querySelectorAll(".modal").forEach((el) => el.classList.add("hidden"));
 }
 
-document.getElementById("modalCloseBtn").addEventListener("click", closeModal);
-document.getElementById("modalBackdrop").addEventListener("click", closeModal);
+document.getElementById("modalCloseBtn")?.addEventListener("click", closeModal);
+document.getElementById("modalBackdrop")?.addEventListener("click", closeModal);
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") closeModal();
 });
@@ -2602,31 +2861,51 @@ document.getElementById("exportExcelBtn").addEventListener("click", () => {
     alert("沒有可匯出的資料。請先解析檔案，並確認畫面上有選手列。");
     return;
   }
+  openExportModal();
+});
 
+function openExportModal() {
+  const box = document.getElementById("exportFieldList");
+  const modal = document.getElementById("exportModal");
+  if (!box || !modal) {
+    doExportExcel();
+    return;
+  }
+  box.innerHTML = EXPORT_FIELDS.map((field) => `
+    <label class="check-chip">
+      <input type="checkbox" value="${escapeHTML(field.key)}" ${exportFields.includes(field.key) ? "checked" : ""} />
+      <span>${escapeHTML(field.label)}</span>
+    </label>
+  `).join("");
+  modal.classList.remove("hidden");
+}
+
+function collectExportFields() {
+  const checked = [...document.querySelectorAll("#exportFieldList input[type=checkbox]:checked")].map((input) => input.value);
+  return checked.filter((key) => EXPORT_FIELDS.some((item) => item.key === key));
+}
+
+function doExportExcel() {
   const club = clubName.value.trim() || "本館";
   const workbook = XLSX.utils.book_new();
   const poomsae = allData.filter((item) => classifyType(item) === "品勢");
   const fight = allData.filter((item) => classifyType(item) === "對打");
   const other = allData.filter((item) => classifyType(item) !== "品勢" && classifyType(item) !== "對打");
+  const selected = EXPORT_FIELDS.filter((field) => exportFields.includes(field.key));
+  if (!selected.length) {
+    alert("請至少勾選一個欄位");
+    return;
+  }
 
   const allRows = [
     [`${club}｜全部賽程`],
-    ["姓名", "項目", "組別", "場次", "青紅／出場", "對手／順序", "品勢或級別", "場地"]
+    selected.map((field) => field.label)
   ];
-  allData.forEach((item) => {
-    allRows.push([
-      item.player || "",
-      classifyType(item),
-      compactDivision(item),
-      formatMatchExport(item),
-      sideExport(item),
-      opponentExport(item),
-      (isPoomsae(item) ? formatPoomsaeLabel(item, true) : "") || item.weightClass || item.detailLabel || "",
-      item.court || ""
-    ]);
+  rowsForExport(allData).forEach((row) => {
+    allRows.push(selected.map((field) => row[field.key] ?? ""));
   });
   const allSheet = XLSX.utils.aoa_to_sheet(allRows);
-  allSheet["!cols"] = [15, 8, 28, 18, 14, 18, 16, 12].map((wch) => ({ wch }));
+  allSheet["!cols"] = selected.map(() => ({ wch: 16 }));
   XLSX.utils.book_append_sheet(workbook, allSheet, "全部");
 
   if (poomsae.length) {
@@ -2682,7 +2961,7 @@ document.getElementById("exportExcelBtn").addEventListener("click", () => {
   } catch (error) {
     alert("匯出失敗：" + error.message);
   }
-});
+}
 
 document.getElementById("exportWordBtn").addEventListener("click", () => {
   if (!allData.length) {
@@ -2794,7 +3073,10 @@ bindFold("pasteToggle", "pastePanel");
 bindFold("groupToggle", "groupPanel");
 
 if (playerNamesEl) {
-  playerNamesEl.addEventListener("change", saveSettings);
+  playerNamesEl.addEventListener("change", () => {
+    saveSettings();
+    applyViewFilter(true);
+  });
   playerNamesEl.addEventListener("focus", clearPlayerNamesPulse);
   playerNamesEl.addEventListener("pointerdown", clearPlayerNamesPulse);
   playerNamesEl.addEventListener("paste", (event) => {
@@ -2807,7 +3089,118 @@ if (playerNamesEl) {
   });
 }
 document.getElementById("goPlayerNamesBtn")?.addEventListener("click", guideToPlayerNames);
-if (filterEnabledEl) filterEnabledEl.addEventListener("change", saveSettings);
+document.getElementById("openRosterBtn")?.addEventListener("click", openRosterModal);
+document.getElementById("rosterCloseBtn")?.addEventListener("click", closeModal);
+document.getElementById("rosterBackdrop")?.addEventListener("click", closeModal);
+document.getElementById("rosterCancelBtn")?.addEventListener("click", closeModal);
+document.getElementById("rosterAllBtn")?.addEventListener("click", () => setRosterChecked(true));
+document.getElementById("rosterNoneBtn")?.addEventListener("click", () => setRosterChecked(false));
+document.getElementById("rosterSearch")?.addEventListener("input", filterRosterList);
+document.getElementById("rosterAddBtn")?.addEventListener("click", addRosterName);
+document.getElementById("rosterAddName")?.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    addRosterName();
+  }
+});
+document.getElementById("rosterApplyBtn")?.addEventListener("click", applyRosterToNames);
+
+document.getElementById("exportCloseBtn")?.addEventListener("click", closeModal);
+document.getElementById("exportBackdrop")?.addEventListener("click", closeModal);
+document.getElementById("exportCancelBtn")?.addEventListener("click", closeModal);
+document.getElementById("exportAllBtn")?.addEventListener("click", () => setExportChecked(true));
+document.getElementById("exportNoneBtn")?.addEventListener("click", () => setExportChecked(false));
+document.getElementById("exportConfirmBtn")?.addEventListener("click", () => {
+  const selected = collectExportFields();
+  if (!selected.length) {
+    alert("請至少勾選一個欄位");
+    return;
+  }
+  exportFields = selected;
+  saveSettings();
+  closeModal();
+  doExportExcel();
+});
+
+function openRosterModal() {
+  const modal = document.getElementById("rosterModal");
+  const title = document.getElementById("rosterTitle");
+  if (title) title.textContent = `${clubName.value.trim() || "金城土城"}學員`;
+  const search = document.getElementById("rosterSearch");
+  if (search) search.value = "";
+  renderRosterList();
+  modal?.classList.remove("hidden");
+}
+
+function rosterChip(name, checked) {
+  return `
+    <label class="check-chip">
+      <input type="checkbox" value="${escapeHTML(name)}" ${checked ? "checked" : ""} />
+      <span>${escapeHTML(name)}</span>
+    </label>
+  `;
+}
+
+function renderRosterList() {
+  const box = document.getElementById("rosterList");
+  if (!box) return;
+  const names = getClubRoster();
+  box.innerHTML = names.map((name) => rosterChip(name, DEFAULT_CHECKED_SET.has(name))).join("")
+    || `<p class="hint">還沒有名單</p>`;
+  filterRosterList();
+}
+
+function filterRosterList() {
+  const keyword = normalizeText(document.getElementById("rosterSearch")?.value || "");
+  document.querySelectorAll("#rosterList .check-chip").forEach((chip) => {
+    const name = chip.querySelector("span")?.textContent || "";
+    chip.style.display = !keyword || normalizeText(name).includes(keyword) ? "" : "none";
+  });
+}
+
+function setRosterChecked(on) {
+  document.querySelectorAll("#rosterList input[type=checkbox]").forEach((input) => {
+    input.checked = on;
+  });
+}
+
+function setExportChecked(on) {
+  document.querySelectorAll("#exportFieldList input[type=checkbox]").forEach((input) => {
+    input.checked = on;
+  });
+}
+
+function addRosterName() {
+  const input = document.getElementById("rosterAddName");
+  const name = String(input?.value || "").replace(/\s+/g, "");
+  if (!/^[\u4e00-\u9fff]{2,4}$/.test(name)) {
+    alert("請輸入 2 到 4 個字的中文姓名");
+    return;
+  }
+  clubRoster = uniqueNameList([...clubRoster, name]);
+  saveSettings();
+  if (input) input.value = "";
+  renderRosterList();
+  const added = document.querySelector(`#rosterList input[value="${CSS.escape(name)}"]`);
+  if (added) added.checked = true;
+}
+
+function applyRosterToNames() {
+  const names = [...document.querySelectorAll("#rosterList input[type=checkbox]:checked")].map((input) => input.value);
+  if (!names.length) {
+    alert("請至少勾選一位選手，或改到下面的框自己貼名單");
+    return;
+  }
+  setDisplayMode("names");
+  applyTidiedNames(names.join("\n"), false);
+  closeModal();
+}
+document.querySelectorAll('input[name="displayMode"]').forEach((input) => {
+  input.addEventListener("change", () => {
+    saveSettings();
+    applyViewFilter(true);
+  });
+});
 
 document.getElementById("tabMatch")?.addEventListener("click", () => switchTab("match"));
 document.getElementById("tabCustom")?.addEventListener("click", () => switchTab("custom"));

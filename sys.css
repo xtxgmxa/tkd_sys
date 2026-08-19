@@ -246,33 +246,50 @@ textarea {
   line-height: 1.7;
 }
 
-.check-row {
+.scope-box {
+  margin: 20px 0 0;
+  padding: 14px 16px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #f8fafc;
+}
+.scope-box legend {
+  padding: 0 6px;
+  font-size: 15px;
+  font-weight: 800;
+}
+.scope-box .hint { margin-bottom: 8px; }
+.choice-row {
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  margin: 18px 0 4px;
-  font-size: 15px;
-  font-weight: 700;
-  cursor: pointer;
-  background: #f8fafc;
+  margin: 0 0 8px;
+  padding: 10px 12px;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
-  padding: 12px 14px;
+  background: #fff;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
 }
-
-.check-row input {
+.choice-row:last-of-type { margin-bottom: 0; }
+.choice-row input {
   width: 18px;
   height: 18px;
   margin-top: 3px;
   flex-shrink: 0;
 }
-
-.check-extra {
+.choice-row small {
   display: block;
-  margin-top: 2px;
+  margin-top: 3px;
   color: #64748b;
   font-size: 13px;
   font-weight: 500;
+  line-height: 1.55;
+}
+.choice-row:has(input:checked) {
+  border-color: #93c5fd;
+  background: #eff6ff;
 }
 
 .keyword-box {
@@ -732,7 +749,71 @@ tbody tr:hover { background: #f8fafc; }
   margin-top: 20px;
 }
 
-.modal-head { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+.field-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.text-link {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: #2563eb;
+  font-weight: 800;
+  font-size: 14px;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.text-link:hover { color: #1d4ed8; }
+
+.modal-card-narrow { width: min(640px, 100%); }
+.roster-toolbar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.roster-toolbar input[type="search"] {
+  flex: 1;
+  min-width: 140px;
+  margin: 0;
+}
+.roster-grid, .picker-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+  gap: 8px;
+  max-height: 46vh;
+  overflow: auto;
+  padding: 4px 2px;
+}
+.picker-grid { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+.check-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.check-chip input { width: 16px; height: 16px; margin: 0; }
+.check-chip:has(input:checked) {
+  border-color: #93c5fd;
+  background: #eff6ff;
+}
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
 .modal-kicker { margin: 0; font-size: 13px; font-weight: 700; color: #64748b; }
 .modal-head h3 { margin: 4px 0 0; font-size: 24px; font-weight: 800; }
 .modal-body { display: grid; gap: 16px; }
