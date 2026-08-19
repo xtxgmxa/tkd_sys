@@ -1818,6 +1818,19 @@ function getDisplayMode() {
 function setDisplayMode(mode) {
   const input = document.querySelector(`input[name="displayMode"][value="${mode}"]`);
   if (input) input.checked = true;
+  updateScopeSummary();
+}
+
+function updateScopeSummary() {
+  const labels = {
+    auto: "目前：先看本館，沒抓到才改看學員",
+    either: "目前：本館＋學員加總",
+    club: "目前：只看本館",
+    names: "目前：只看學員名單",
+    all: "目前：全部選手"
+  };
+  const el = document.getElementById("scopeSummary");
+  if (el) el.textContent = labels[getDisplayMode()] || labels.auto;
 }
 
 let lastFilterSource = "club";
@@ -3419,8 +3432,21 @@ function bindFold(toggleId, panelId) {
   });
 }
 
+function setFoldOpen(toggleId, panelId, open) {
+  const toggle = document.getElementById(toggleId);
+  const panel = document.getElementById(panelId);
+  if (!toggle || !panel) return;
+  panel.classList.toggle("hidden", !open);
+  toggle.setAttribute("aria-expanded", open ? "true" : "false");
+  const arrow = toggle.querySelector(".fold-arrow");
+  if (arrow) arrow.textContent = open ? "－" : "＋";
+}
+
 bindFold("pasteToggle", "pastePanel");
 bindFold("groupToggle", "groupPanel");
+bindFold("scopeToggle", "scopePanel");
+updateScopeSummary();
+if (getDisplayMode() !== "auto") setFoldOpen("scopeToggle", "scopePanel", true);
 
 if (playerNamesEl) {
   playerNamesEl.addEventListener("change", () => {
@@ -3548,6 +3574,7 @@ function applyRosterToNames() {
 document.querySelectorAll('input[name="displayMode"]').forEach((input) => {
   input.addEventListener("change", () => {
     saveSettings();
+    updateScopeSummary();
     applyViewFilter(true);
   });
 });

@@ -269,6 +269,18 @@ textarea {
   line-height: 1.7;
 }
 
+.scope-fold {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid #e2e8f0;
+}
+.scope-fold .fold-toggle { font-size: 16px; }
+.scope-fold .scope-box {
+  margin: 0;
+  padding: 12px 0 0;
+  border: 0;
+  background: transparent;
+}
 .scope-box {
   margin: 20px 0 0;
   padding: 14px 16px 10px;
