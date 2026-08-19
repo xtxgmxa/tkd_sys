@@ -116,9 +116,9 @@ function loadSavedSettings() {
       exportFields = saved.exportFields.filter((key) => EXPORT_FIELDS.some((item) => item.key === key));
       if (!exportFields.length) exportFields = EXPORT_FIELDS.map((item) => item.key);
     }
-    const savedMode = ["all", "club", "names", "either"].includes(saved.displayMode)
-      ? saved.displayMode
-      : (saved.filterEnabled === false ? "all" : "club");
+    const savedMode = ["all", "club", "names", "auto", "either"].includes(saved.displayMode)
+      ? (saved.displayMode === "either" ? "auto" : saved.displayMode)
+      : (saved.filterEnabled === false ? "all" : "auto");
     setDisplayMode(savedMode);
     if (saved.customState) customState = saved.customState;
   } catch (error) {
@@ -200,6 +200,7 @@ document.getElementById("competitionName").addEventListener("change", saveSettin
 
 loadSavedSettings();
 renderKeywords();
+maybeOpenTour();
 
 
 document.getElementById("loadSampleBtn").addEventListener("click", () => {
@@ -1811,7 +1812,7 @@ function itemMatchesName(item, names) {
 }
 
 function getDisplayMode() {
-  return document.querySelector('input[name="displayMode"]:checked')?.value || "club";
+  return document.querySelector('input[name="displayMode"]:checked')?.value || "auto";
 }
 
 function setDisplayMode(mode) {
@@ -1819,11 +1820,52 @@ function setDisplayMode(mode) {
   if (input) input.checked = true;
 }
 
+let lastFilterSource = "club";
+
+function clubRowsFromParsed() {
+  const keywords = getActiveKeywords();
+  if (!keywords.length) return [];
+  return parsedAll.filter((item) => itemMatchesClub(item, keywords));
+}
+
+function nameRowsFromParsed() {
+  const names = getPlayerNames();
+  if (!names.length) return [];
+  return parsedAll.filter((item) => itemMatchesName(item, names));
+}
+
+function rowsForDisplayMode(forceAll) {
+  const mode = getDisplayMode();
+  if (forceAll || mode === "all") {
+    lastFilterSource = "all";
+    return parsedAll.slice();
+  }
+  if (mode === "names") {
+    lastFilterSource = "names";
+    return nameRowsFromParsed();
+  }
+  if (mode === "club") {
+    lastFilterSource = "club";
+    const keywords = getActiveKeywords();
+    return keywords.length ? clubRowsFromParsed() : parsedAll.slice();
+  }
+  const clubRows = clubRowsFromParsed();
+  if (clubRows.length) {
+    lastFilterSource = "club";
+    return clubRows;
+  }
+  const nameRows = nameRowsFromParsed();
+  if (nameRows.length) {
+    lastFilterSource = "namesFallback";
+    return nameRows;
+  }
+  lastFilterSource = "club";
+  return [];
+}
+
 function applyViewFilter(updateStatus, forceAll) {
   if (!parsedAll.length) return;
-  allData = forceAll || getDisplayMode() === "all"
-    ? parsedAll.slice()
-    : parsedAll.filter((item) => itemMatchesFilter(item));
+  allData = rowsForDisplayMode(forceAll);
   allData.sort(sortMatches);
   resultArea.classList.remove("hidden");
   updateStats();
@@ -1838,15 +1880,22 @@ function viewStatusMessage() {
   if (!total) return "還沒找到選手。請先上傳檔案並按「整理賽程」。";
   if (mode === "all") return `完成：檔案裡共 ${total} 筆，目前顯示全部 ${shown} 筆。`;
   if (mode === "names") {
-    if (!getPlayerNames().length) return `學員名單是空的，所以沒人可顯示。請先填名單，或改選「只看本館」。`;
+    if (!getPlayerNames().length) return `學員名單是空的，所以沒人可顯示。請先填名單，或改選「本館為主」。`;
     if (!shown) return `檔案裡有 ${total} 筆，但學員名單沒對到人。可改選「只看本館」或檢查姓名。`;
     return `完成：檔案裡共 ${total} 筆，只顯示學員名單裡的 ${shown} 筆。`;
   }
-  if (mode === "either") {
-    if (!shown) return `檔案裡有 ${total} 筆，但本館和學員名單都沒對到人。可點下方「改用學員名單找人」。`;
-    return `完成：檔案裡共 ${total} 筆，本館或學員名單共顯示 ${shown} 筆。`;
+  if (mode === "auto") {
+    if (lastFilterSource === "namesFallback") {
+      return `本館沒抓到人，已改用學員名單，顯示 ${shown} 筆（檔案共 ${total} 筆）。`;
+    }
+    if (!shown) {
+      return getPlayerNames().length
+        ? `檔案裡有 ${total} 筆，本館和學員名單都沒對到人。`
+        : `檔案裡有 ${total} 筆，本館沒對到人。可套用學員名單再整理。`;
+    }
+    return `完成：檔案裡共 ${total} 筆，依本館顯示 ${shown} 筆。`;
   }
-  if (!shown) return `檔案裡有 ${total} 筆，但用館別關鍵字沒對到人。可改選「只看學員名單」，或點下方「改用學員名單找人」。`;
+  if (!shown) return `檔案裡有 ${total} 筆，但用館別關鍵字沒對到人。可改選「本館為主，沒人再用學員」，或套用學員名單。`;
   return `完成：檔案裡共 ${total} 筆，依館別關鍵字顯示 ${shown} 筆。`;
 }
 
@@ -2613,12 +2662,17 @@ function render() {
 
   const emptyTitle = document.getElementById("emptyTitle");
   const emptyNameHint = document.getElementById("emptyNameHint");
-  const showNameHint = parsedAll.length > 0 && allData.length === 0 && getDisplayMode() !== "names";
+  const mode = getDisplayMode();
+  const showNameHint = parsedAll.length > 0 && allData.length === 0 && mode !== "names";
   if (emptyTitle) {
-    if (parsedAll.length && allData.length === 0 && getDisplayMode() === "names") {
+    if (parsedAll.length && allData.length === 0 && mode === "names") {
       emptyTitle.textContent = getPlayerNames().length
         ? "檔案裡找不到學員名單上的人"
-        : "學員名單還是空的，請先填人或改選「只看本館」";
+        : "學員名單還是空的，請先填人或改選「本館為主」";
+    } else if (parsedAll.length && allData.length === 0 && mode === "auto") {
+      emptyTitle.textContent = getPlayerNames().length
+        ? "本館和學員名單都沒對到人"
+        : "本館沒找到人，可套用學員名單再整理";
     } else if (showNameHint) {
       emptyTitle.textContent = "用道館名稱沒找到人";
     } else if (allData.length === 0) {
@@ -2639,7 +2693,7 @@ function render() {
 }
 
 function guideToPlayerNames() {
-  setDisplayMode("names");
+  setDisplayMode("auto");
   saveSettings();
   applyViewFilter(true);
   const field = document.getElementById("playerNamesField");
@@ -2859,6 +2913,8 @@ function renderOtherPeople(sample, ours, members, opponents) {
 }
 
 function closeModal() {
+  const tour = document.getElementById("tourModal");
+  if (tour && !tour.classList.contains("hidden")) markTourSeen();
   document.querySelectorAll(".modal").forEach((el) => el.classList.add("hidden"));
 }
 
@@ -2866,6 +2922,158 @@ document.getElementById("modalCloseBtn")?.addEventListener("click", closeModal);
 document.getElementById("modalBackdrop")?.addEventListener("click", closeModal);
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") closeModal();
+});
+
+const TOUR_SEEN_KEY = "tkd_sys_tutorial_seen_v2";
+const TOUR_STEPS = [
+  {
+    title: "本館和學員名單不一樣",
+    copy: "兩邊通常一起填，但用途不同。本館是用「金城土城」去檔案裡抓人；學員名單是你指定的名字，當後備。",
+    stage: `
+      <div class="demo-split">
+        <div class="demo-card on demo-pulse">
+          <b>本館</b>
+          <span class="demo-chip">金城土城館</span>
+          <small>檔案有寫道館時用這個</small>
+        </div>
+        <div class="demo-card">
+          <b>學員名單</b>
+          <span class="demo-chip alt">李晨希、潘侑廷…</span>
+          <small>本館抓不到人時才用</small>
+        </div>
+      </div>
+    `
+  },
+  {
+    title: "先看本館，沒資料才用學員",
+    copy: "建議選「本館為主，沒人再用學員」。有抓到金城土城就只看本館；秩序冊寫學校名、本館是空的，才改套用學員名單。",
+    stage: `
+      <div class="demo-swap">
+        <div class="demo-swap-scene a">
+          <div class="demo-card on">
+            <b>① 本館</b>
+            <small class="demo-ok">有抓到人 → 就用這份</small>
+          </div>
+          <div class="demo-arrow">→</div>
+          <div class="demo-card dim">
+            <b>② 學員名單</b>
+            <small>先不用</small>
+          </div>
+        </div>
+        <div class="demo-swap-scene b">
+          <div class="demo-card dim">
+            <b>① 本館</b>
+            <small class="demo-miss">沒資料</small>
+          </div>
+          <div class="demo-arrow">→</div>
+          <div class="demo-card on demo-pulse">
+            <b>② 學員名單</b>
+            <small class="demo-ok">才改用這份</small>
+          </div>
+        </div>
+      </div>
+    `
+  },
+  {
+    title: "把檔案丟進來",
+    copy: "秩序冊、對打表、品勢表都可以，一次多個也沒關係。比賽名稱有寫在檔案裡時會自動帶入；但是建議一次丟一個",
+    stage: `
+      <div class="demo-drop">
+        <span class="demo-file">秩序冊.pdf</span>
+        把檔案拖到這裡
+      </div>
+    `
+  },
+  {
+    title: "一定要按「整理賽程」",
+    copy: "檔案選好還不會出表。要按這個藍色按鈕，下面才會出現誰先上場、對上誰、下一場是誰。",
+    stage: `<span class="demo-btn">整理賽程</span>`
+  },
+  {
+    title: "看出場，再匯出",
+    copy: "上面越早打。可以篩品勢或對打、搜姓名。需要帶走時再匯出 Excel，欄位可勾選。",
+    stage: `
+      <table class="demo-table">
+        <thead><tr><th>選手</th><th>場次</th><th>對手</th></tr></thead>
+        <tbody>
+          <tr><td>李晨希</td><td>326 青</td><td>吳禹靚</td></tr>
+          <tr><td>潘侑廷</td><td>341 青</td><td>輪空</td></tr>
+          <tr><td>黃宥豪</td><td>345 青</td><td>吳謙宥</td></tr>
+        </tbody>
+      </table>
+    `
+  }
+];
+let tourIndex = 0;
+
+function markTourSeen() {
+  try { localStorage.setItem(TOUR_SEEN_KEY, "1"); } catch (error) { /* ignore */ }
+}
+
+function renderTour() {
+  const step = TOUR_STEPS[tourIndex];
+  if (!step) return;
+  const title = document.getElementById("tourTitle");
+  const copy = document.getElementById("tourCopy");
+  const stage = document.getElementById("tourStage");
+  const label = document.getElementById("tourStepLabel");
+  const dots = document.getElementById("tourDots");
+  const prev = document.getElementById("tourPrevBtn");
+  const next = document.getElementById("tourNextBtn");
+  if (title) title.textContent = step.title;
+  if (copy) copy.textContent = step.copy;
+  if (stage) stage.innerHTML = step.stage;
+  if (label) label.textContent = `${tourIndex + 1} / ${TOUR_STEPS.length}`;
+  if (dots) {
+    dots.innerHTML = TOUR_STEPS.map((_, index) =>
+      `<button type="button" class="tour-dot ${index === tourIndex ? "active" : ""}" data-tour-step="${index}" aria-label="第 ${index + 1} 頁"></button>`
+    ).join("");
+    dots.querySelectorAll(".tour-dot").forEach((dot) => {
+      dot.addEventListener("click", () => {
+        tourIndex = Number(dot.dataset.tourStep) || 0;
+        renderTour();
+      });
+    });
+  }
+  if (prev) prev.disabled = tourIndex === 0;
+  if (next) next.textContent = tourIndex === TOUR_STEPS.length - 1 ? "我知道了" : "下一頁";
+}
+
+function openTour() {
+  tourIndex = 0;
+  renderTour();
+  document.getElementById("tourModal")?.classList.remove("hidden");
+}
+
+function closeTour() {
+  markTourSeen();
+  document.getElementById("tourModal")?.classList.add("hidden");
+}
+
+function maybeOpenTour() {
+  try {
+    if (localStorage.getItem(TOUR_SEEN_KEY) === "1") return;
+  } catch (error) { return; }
+  setTimeout(openTour, 500);
+}
+
+document.getElementById("openTourBtn")?.addEventListener("click", openTour);
+document.getElementById("openTourBtn2")?.addEventListener("click", openTour);
+document.getElementById("tourCloseBtn")?.addEventListener("click", closeTour);
+document.getElementById("tourBackdrop")?.addEventListener("click", closeTour);
+document.getElementById("tourPrevBtn")?.addEventListener("click", () => {
+  if (tourIndex > 0) {
+    tourIndex -= 1;
+    renderTour();
+  }
+});
+document.getElementById("tourNextBtn")?.addEventListener("click", () => {
+  if (tourIndex >= TOUR_STEPS.length - 1) {
+    closeTour();
+    return;
+  }
+  tourIndex += 1;
+  renderTour();
 });
 
 
@@ -3311,7 +3519,7 @@ function applyRosterToNames() {
     alert("請至少勾選一位選手，或改到下面的框自己貼名單");
     return;
   }
-  setDisplayMode("names");
+  setDisplayMode("auto");
   applyTidiedNames(names.join("\n"), false);
   closeModal();
 }

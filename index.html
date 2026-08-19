@@ -17,6 +17,7 @@
             </div>
           </div>
           <nav class="top-tabs" role="tablist">
+            <button type="button" class="tour-launch" id="openTourBtn">操作教學點我</button>
             <button class="top-tab active" type="button" data-tab="match" id="tabMatch">賽程整理</button>
             <button class="top-tab" type="button" data-tab="custom" id="tabCustom">客製化統計</button>
           </nav>
@@ -46,13 +47,14 @@
               </div>
             </li>
           </ol>
+          <p class="tour-inline">不確定怎麼用？<button type="button" class="text-link" id="openTourBtn2">操作教學點我</button></p>
 
           <section class="panel">
             <div class="step-head">
               <span class="step-num">1</span>
               <div>
                 <h2>先告訴系統要找誰</h2>
-                <p class="lead">秩序冊裡通常有幾百人。先填本館或學員名字，再用最下面的「顯示範圍」決定要看哪一種。</p>
+                <p class="lead">本館和學員名單通常一起填。先用本館找人；本館沒資料，才套用學員名單。</p>
               </div>
             </div>
             <div class="form-grid">
@@ -90,22 +92,22 @@
 
             <fieldset class="scope-box">
               <legend>顯示範圍</legend>
-              <p class="hint">館別和學員名單是兩種條件。請選一種看的方式；整理過檔案後改這裡會立刻換，不必重傳。</p>
+              <p class="hint">本館和學員名單通常一起填。先用本館找人；本館沒抓到，才改用學員名單。整理後改選會立刻換。</p>
               <label class="choice-row">
-                <input type="radio" name="displayMode" value="club" checked />
-                <span>只看本館<small>只顯示符合館別關鍵字的人。有填學員名單也不會拿來篩。</small></span>
+                <input type="radio" name="displayMode" value="auto" checked />
+                <span>本館為主，沒人再用學員<small>建議。先看館別關鍵字；本館沒資料，才套用學員名單。</small></span>
+              </label>
+              <label class="choice-row">
+                <input type="radio" name="displayMode" value="club" />
+                <span>只看本館<small>只看館別關鍵字，不用學員名單。</small></span>
               </label>
               <label class="choice-row">
                 <input type="radio" name="displayMode" value="names" />
-                <span>只看學員名單<small>只顯示框裡填的那些人。本館其他人不會出現。</small></span>
-              </label>
-              <label class="choice-row">
-                <input type="radio" name="displayMode" value="either" />
-                <span>本館或學員名單<small>兩種條件符合任一就顯示，等於把名單加進本館一起看。</small></span>
+                <span>只看學員名單<small>不管本館，只顯示框裡填的那些人。</small></span>
               </label>
               <label class="choice-row">
                 <input type="radio" name="displayMode" value="all" />
-                <span>全部選手<small>檔案裡所有人都列出來，不管館別和名單。</small></span>
+                <span>全部選手<small>檔案裡所有人都列出來。</small></span>
               </label>
             </fieldset>
           </section>
@@ -377,6 +379,29 @@
             <button class="btn gray" type="button" id="exportCancelBtn">取消</button>
             <button class="btn export" type="button" id="exportConfirmBtn">開始匯出</button>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="tourModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="tourTitle">
+      <div class="modal-backdrop" id="tourBackdrop"></div>
+      <div class="modal-card modal-card-tour">
+        <div class="modal-head">
+          <div>
+            <p class="modal-kicker">操作教學</p>
+            <h3 id="tourTitle">先告訴系統要找誰</h3>
+          </div>
+          <button class="btn gray modal-close" id="tourCloseBtn" type="button">關閉</button>
+        </div>
+        <div class="tour-progress">
+          <span id="tourStepLabel">1 / 5</span>
+          <div class="tour-dots" id="tourDots"></div>
+        </div>
+        <div class="tour-stage" id="tourStage"></div>
+        <p class="tour-copy" id="tourCopy"></p>
+        <div class="modal-actions tour-actions">
+          <button class="btn gray" type="button" id="tourPrevBtn">上一頁</button>
+          <button class="btn primary" type="button" id="tourNextBtn">下一頁</button>
         </div>
       </div>
     </div>
