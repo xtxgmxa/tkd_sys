@@ -17,6 +17,8 @@ const DEFAULT_CLUB_ROSTER = [
 ];
 let clubRoster = DEFAULT_CLUB_ROSTER.slice();
 const DEFAULT_CHECKED_SET = new Set(DEFAULT_CHECKED_ROSTER);
+let inferredCompetitionName = "";
+let competitionNameManual = false;
 const EXPORT_FIELDS = [
   { key: "選手", label: "選手" },
   { key: "項目", label: "項目" },
@@ -97,6 +99,10 @@ function loadSavedSettings() {
     if (saved.competitionName) {
       document.getElementById("competitionName").value = saved.competitionName;
     }
+    if (typeof saved.competitionNameManual === "boolean") {
+      competitionNameManual = saved.competitionNameManual;
+    }
+    if (saved.inferredCompetitionName) inferredCompetitionName = saved.inferredCompetitionName;
     if (saved.clubName) clubName.value = saved.clubName;
     if (Array.isArray(saved.keywords) && saved.keywords.length) {
       clubKeywords = saved.keywords;
@@ -123,6 +129,8 @@ function loadSavedSettings() {
 function saveSettings() {
   localStorage.setItem("tkd_sys_settings", JSON.stringify({
     competitionName: document.getElementById("competitionName").value,
+    competitionNameManual,
+    inferredCompetitionName,
     clubName: clubName.value,
     keywords: clubKeywords,
     playerNames: playerNamesEl ? playerNamesEl.value : "",
@@ -180,6 +188,14 @@ clubName.addEventListener("change", () => {
   applyViewFilter(true);
 });
 
+document.getElementById("competitionName").addEventListener("input", () => {
+  const el = document.getElementById("competitionName");
+  const current = el ? el.value.trim() : "";
+  competitionNameManual = Boolean(current) && current !== inferredCompetitionName;
+  const status = document.getElementById("competitionNameStatus");
+  if (status && competitionNameManual) status.textContent = "已改成自己輸入的名稱";
+  saveSettings();
+});
 document.getElementById("competitionName").addEventListener("change", saveSettings);
 
 loadSavedSettings();
@@ -289,17 +305,23 @@ analyzeBtn.addEventListener("click", async () => {
 
   try {
     const collected = [];
+    const sourceTexts = [];
 
     for (let i = 0; i < uploadedFiles.length; i++) {
       const file = uploadedFiles[i];
       setStatus(`正在解析（${i + 1}/${uploadedFiles.length}）：${file.name}`);
-      const items = await parseFile(file);
-      collected.push(...items);
+      const parsed = await parseFile(file);
+      collected.push(...parsed.items);
+      if (parsed.text) sourceTexts.push(parsed.text);
+      sourceTexts.push(file.name.replace(/\.[^.]+$/, ""));
     }
 
     if (raw) {
       collected.push(...parseInput(raw));
+      sourceTexts.push(raw);
     }
+
+    applyInferredCompetitionName(inferCompetitionName(sourceTexts.join("\n")));
 
     parsedAll = dedupeItems(collected.map(enrichItem)).filter((item) => item.player !== "輪空");
     attachGroups(parsedAll);
@@ -355,37 +377,135 @@ async function parseFile(file) {
     if (!text.trim()) {
       throw new Error(`${file.name} 幾乎沒有文字，可能是掃描檔`);
     }
-    return parseInput(text);
+    return { items: parseInput(text), text };
   }
 
   if (name.endsWith(".docx")) {
     if (!window.mammoth) throw new Error("Word 解析套件尚未載入，請確認網路連線");
     const result = await mammoth.extractRawText({ arrayBuffer: buffer });
-    return parseInput(result.value || "");
+    const text = result.value || "";
+    return { items: parseInput(text), text };
   }
 
   if (name.endsWith(".xlsx") || name.endsWith(".xls") || name.endsWith(".csv")) {
     if (!window.XLSX) throw new Error("Excel 解析套件尚未載入，請確認網路連線");
     if (name.endsWith(".csv")) {
       const text = new TextDecoder("utf-8").decode(buffer);
-      return parseInput(text);
+      return { items: parseInput(text), text };
     }
     const workbook = XLSX.read(buffer, { type: "array" });
     const items = [];
+    const chunks = [];
     workbook.SheetNames.forEach((sheetName) => {
+      chunks.push(sheetName);
       const sheet = workbook.Sheets[sheetName];
       const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "", raw: false });
+      rows.slice(0, 12).forEach((row) => chunks.push((Array.isArray(row) ? row : []).join(" ")));
       items.push(...parseGrid(rows));
     });
-    return items;
+    return { items, text: chunks.join("\n") };
   }
 
   if (name.endsWith(".txt")) {
     const text = new TextDecoder("utf-8").decode(buffer);
-    return parseInput(text);
+    return { items: parseInput(text), text };
   }
 
   throw new Error(`不支援的檔案：${file.name}`);
+}
+
+function tidyCompetitionTitle(raw) {
+  let text = String(raw || "")
+    .replace(/\\n/g, " ")
+    .replace(/={2,}\s*(?:PAGE\s*)?\d*\s*={2,}/gi, " ")
+    .replace(/\bPAGE\s*\d+\b/gi, " ")
+    .replace(/[|｜]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  text = text.split(/指導單位|主辦單位|承辦單位|比賽時間|比賽地點|比賽日期|場\s*次\s*:|日期\s*:/)[0];
+  text = text.replace(/\s*[-–—]?\s*(品勢賽程|對練賽程|對打賽程|時間表)\s*/g, " ");
+  text = text.replace(/(?:(?:\s*[-–—−－])?\s*跆拳道(?:對打|品勢|對練)?)+\s*$/g, "");
+  text = text.replace(/[。．.、，,]+$/g, "").replace(/\s*[-–—]\s*$/g, "").trim();
+  if (text.length > 42) text = text.slice(0, 42).replace(/[-\s]+$/g, "");
+  return text;
+}
+
+function isCompetitionTitle(text) {
+  const name = String(text || "").trim();
+  if (name.length < 6 || name.length > 42) return false;
+  if (/姓名|籤號|單位|場地|組別|公斤|護具|秩序冊|競賽規程|附件|隊職員|比賽資料/.test(name)) return false;
+  if (/報名|手續|請上|一律|依據|規定|辦法|過磅|檢錄|時間表/.test(name)) return false;
+  if (/^(品勢|對打|對練|第一場地|第二場地|第三場地|一、|二、)/.test(name)) return false;
+  return /(錦標賽|邀請賽|公開賽|選拔賽|運動會|盃)/.test(name);
+}
+
+function scoreCompetitionTitle(name, labeled) {
+  let score = labeled ? 40 : 0;
+  if (/^(第|\d{2,4})/.test(name)) score += 12;
+  if (/跆拳道/.test(name)) score += 8;
+  if (/錦標賽/.test(name)) score += 8;
+  if (/全國/.test(name)) score += 4;
+  if (/屆/.test(name) || /\d{2,4}\s*年/.test(name) || /^\d{2,3}年/.test(name)) score += 3;
+  score += Math.min(name.length, 28);
+  return score;
+}
+
+function inferCompetitionName(raw) {
+  const text = normalizeSourceText(raw)
+    .replace(/\\n/g, "\n")
+    .replace(/={2,}\s*(?:PAGE\s*)?\d*\s*={2,}/gi, "\n");
+  if (!text) return "";
+  const candidates = [];
+  let match;
+
+  const labeledHead = text.slice(0, 12000);
+  const labelRe = /(?:競賽名稱|比賽名稱|賽事名稱)\s*:\s*([^\n]+)/g;
+  while ((match = labelRe.exec(labeledHead))) {
+    const name = tidyCompetitionTitle(match[1]);
+    if (isCompetitionTitle(name)) candidates.push({ name, labeled: true });
+  }
+
+  const head = text.split(/\n/).slice(0, 20).join("\n").slice(0, 1800);
+  const freeRe = /(?:第[一二三四五六七八九十百零\d]+屆)?(?:\d{2,4}\s*年)?[^\n。]{0,28}(?:跆拳道)?(?:錦標賽|邀請賽|公開賽|選拔賽)/g;
+  while ((match = freeRe.exec(head))) {
+    const name = tidyCompetitionTitle(match[0]);
+    if (isCompetitionTitle(name)) candidates.push({ name, labeled: false });
+  }
+
+  const extraRe = /[^\n]{4,36}(?:運動會|盃)[^\n]{0,16}跆拳道[^\n]{0,10}/g;
+  while ((match = extraRe.exec(head))) {
+    const name = tidyCompetitionTitle(match[0]);
+    if (isCompetitionTitle(name)) candidates.push({ name, labeled: false });
+  }
+
+  if (!candidates.length) return "";
+  candidates.sort((a, b) => scoreCompetitionTitle(b.name, b.labeled) - scoreCompetitionTitle(a.name, a.labeled));
+  return candidates[0].name;
+}
+
+function applyInferredCompetitionName(found) {
+  const el = document.getElementById("competitionName");
+  const status = document.getElementById("competitionNameStatus");
+  if (!el) return;
+  const current = el.value.trim();
+  if (found) {
+    const canFill = !competitionNameManual || !current || current === inferredCompetitionName;
+    if (canFill) {
+      el.value = found;
+      inferredCompetitionName = found;
+      competitionNameManual = false;
+      if (status) status.textContent = "已從檔案帶入，可再自己改";
+      saveSettings();
+    } else if (status) {
+      status.textContent = "保留你自己輸入的名稱";
+    }
+    return;
+  }
+  if (status) {
+    status.textContent = current
+      ? "檔案沒寫比賽名稱，沿用目前欄位"
+      : "檔案沒寫比賽名稱，請自己填，也會用在匯出標題";
+  }
 }
 
 async function extractPdfText(buffer) {
