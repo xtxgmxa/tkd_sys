@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>跆拳道賽程整理工具</title>
-    <link rel="stylesheet" href="./sys.css">
+    <!-- 上傳前請改 v=，避免瀏覽器沿用舊的 CSS／JS -->
+    <link rel="stylesheet" href="./sys.css?v=20260820-9">
 </head>
 <body>
     <div class="app">
@@ -33,7 +34,7 @@
                 <span class="how-num">1</span>
                 <div>
                   <strong>寫要找誰</strong>
-                  <span class="how-desc">道館已填好。名單可先空著。</span>
+                  <span class="how-desc">道館名稱已填好。多數情況直接去選檔案。</span>
                   <span class="how-go">跳到這一步</span>
                 </div>
               </button>
@@ -67,75 +68,60 @@
               <span class="step-num">1</span>
               <div>
                 <h2>寫要找誰</h2>
-                <p class="lead">平常只要確認道館名稱。學員名單可以先空著，本館找不到人再填。</p>
-              </div>
-            </div>
-            <div class="form-grid">
-              <div class="field">
-                <label>比賽名稱</label>
-                <input type="text" id="competitionName" value="" placeholder="可留空，整理檔案後會自動帶入" />
-                <p class="field-note">匯出檔名會用到。可留空，整理檔案後通常會自動帶入。</p>
-                <p id="competitionNameStatus" class="name-status"></p>
-              </div>
-              <div class="field">
-                <label>我的道館</label>
-                <input type="text" id="clubName" value="金城土城" placeholder="例如：金城土城" />
-                <p class="field-note">用來找本館孩子，也用在匯出標題。</p>
+                <p class="lead">多數比賽選「報名單位」即可，關鍵字已填好。校隊用學校名報名，再改選「學員名字」。</p>
               </div>
             </div>
 
-            <div class="field keyword-field">
-              <label>館別關鍵字</label>
-              <p class="hint">檔案裡可能寫「金城土城」或「金城土城館」。要加字的話，打完按 Enter。</p>
+            <div class="who-skip">
+              <div>
+                <strong>平常不用改這裡</strong>
+                <p>已用報名單位找人，關鍵字也填好了。先去選檔案即可。找不到人，畫面會再帶你回來。</p>
+              </div>
+              <button type="button" class="btn primary" data-jump="stepFiles">先去選檔案</button>
+            </div>
+
+            <div class="field">
+              <label>我的道館</label>
+              <input type="text" id="clubName" value="金城土城" placeholder="例如：金城土城" />
+              <p class="field-note">用在匯出檔名、標題，以及畫面上的本館名稱。不拿來找人。</p>
+            </div>
+
+            <div class="find-block">
+              <p class="find-label">怎麼找人</p>
+              <div class="find-mode" role="group" aria-label="怎麼找人">
+                <button type="button" class="find-chip active" data-mode="auto">報名單位</button>
+                <button type="button" class="find-chip" data-mode="names">學員名字</button>
+                <button type="button" class="find-chip" data-mode="either">兩種都找</button>
+                <button type="button" class="find-chip" data-mode="all">全部選手</button>
+              </div>
+              <p class="find-mode-note" id="scopeSummary"></p>
+            </div>
+
+            <section class="find-card find-card-unit" id="findUnitCard">
+              <h3>用關鍵字篩選報名單位</h3>
+              <p>例如道館名、校名。秩序冊出現這些字，就算要找的人。已有金城土城、金城土城館。</p>
               <div class="keyword-box" id="keywordBox">
                 <div id="keywordTags" class="keyword-tags"></div>
                 <input type="text" id="keywordInput" placeholder="輸入後按 Enter，例如：金城土城館" autocomplete="off" />
               </div>
-            </div>
+            </section>
 
-            <div class="field keyword-field" id="playerNamesField">
-              <div class="field-label-row">
-                <label for="playerNames">學員名單（選用）</label>
-                <button type="button" class="text-link" id="openRosterBtn">點這裡選常用選手</button>
-              </div>
-              <p class="hint">本館找不到人再填。可點上面選人，也可以自己打名字。</p>
-              <p class="pulse-hint">從這裡填：點「點這裡選常用選手」，或在框裡貼名字</p>
-              <textarea id="playerNames" class="names-box" placeholder="在這裡貼上名字"></textarea>
-              <p id="playerNamesStatus" class="name-status"></p>
-            </div>
-
-            <section class="fold-panel scope-fold">
-              <button class="fold-toggle" type="button" id="scopeToggle" aria-expanded="false">
-                <span>找人的方式<span class="fold-note" id="scopeSummary">平常不用改｜目前：先看本館，沒抓到才改看學員</span></span>
-                <span class="fold-arrow">＋</span>
-              </button>
-              <div id="scopePanel" class="fold-body hidden">
-                <fieldset class="scope-box">
-                  <legend>顯示範圍</legend>
-                  <p class="hint">預設不是加總。有人掛學校名、又要連本館一起看時，再選「本館＋學員」。</p>
-                  <label class="choice-row">
-                    <input type="radio" name="displayMode" value="auto" checked />
-                    <span>先看本館，沒抓到才改看學員<small>建議。本館有人就只顯示本館；本館一個都沒有，才改顯示學員名單。</small></span>
-                  </label>
-                  <label class="choice-row">
-                    <input type="radio" name="displayMode" value="either" />
-                    <span>本館＋學員（加總）<small>兩邊符合任一就顯示。本館抓得到一部分，名單裡還有掛學校名的人，要一起看。</small></span>
-                  </label>
-                  <label class="choice-row">
-                    <input type="radio" name="displayMode" value="club" />
-                    <span>只看本館<small>只看館別關鍵字，不用學員名單。</small></span>
-                  </label>
-                  <label class="choice-row">
-                    <input type="radio" name="displayMode" value="names" />
-                    <span>只看學員名單<small>不管本館，只顯示框裡填的那些人。</small></span>
-                  </label>
-                  <label class="choice-row">
-                    <input type="radio" name="displayMode" value="all" />
-                    <span>全部選手<small>檔案裡所有人都列出來。</small></span>
-                  </label>
-                </fieldset>
+            <section class="find-card find-card-names hidden" id="findNamesCard">
+              <h3>用學員名字找</h3>
+              <p>校隊用學校名報名、秩序冊沒寫道館時再選這個。</p>
+              <div class="field" id="playerNamesField">
+                <div class="field-label-row">
+                  <label for="playerNames">學員名單</label>
+                  <button type="button" class="text-link" id="openRosterBtn">點這裡選常用選手</button>
+                </div>
+                <p class="hint">可點上面選人，也可以自己打名字。</p>
+                <p class="pulse-hint">從這裡填：點「點這裡選常用選手」，或在框裡貼名字</p>
+                <textarea id="playerNames" class="names-box" placeholder="在這裡貼上名字"></textarea>
+                <p id="playerNamesStatus" class="name-status"></p>
               </div>
             </section>
+
+            <p class="find-all-note hidden" id="findAllNote">會列出檔案裡所有選手，不篩報名單位，也不篩學員名字。</p>
           </section>
 
           <section class="panel panel-step panel-upload" id="stepFiles">
@@ -163,20 +149,6 @@
             <div id="parseStatus" class="parse-status hidden"></div>
           </section>
 
-          <section class="panel fold-panel">
-            <button class="fold-toggle" type="button" id="pasteToggle" aria-expanded="false">
-              <span>沒有檔案？改貼文字<span class="fold-note">選用，預設收合</span></span>
-              <span class="fold-arrow">＋</span>
-            </button>
-            <div id="pastePanel" class="fold-body hidden">
-              <p class="hint">適合貼手記。貼什麼就整理什麼，不必先勾篩選。</p>
-              <textarea id="sourceData" placeholder="1.黃羽希 幼兒白帶A 102紅103紅馬步正拳&#10;2.蔡葦儒 幼兒藍137紅138紅 三章&#10;3.張紘駿國小低年級藍帶B142紅144青"></textarea>
-              <div class="actions-small">
-                <button class="btn gray" id="loadSampleBtn" type="button">載入範例看看</button>
-              </div>
-            </div>
-          </section>
-
           <section class="panel panel-step panel-run" id="stepRun">
             <div class="run-row">
               <div class="step-head">
@@ -188,6 +160,20 @@
               </div>
               <div class="main-actions">
                 <button class="btn primary btn-lg" id="analyzeBtn" type="button">整理賽程</button>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel fold-panel">
+            <button class="fold-toggle" type="button" id="pasteToggle" aria-expanded="false">
+              <span>沒有檔案？改貼文字<span class="fold-note">很少用，預設收合</span></span>
+              <span class="fold-arrow">＋</span>
+            </button>
+            <div id="pastePanel" class="fold-body hidden">
+              <p class="hint">適合貼手記。貼完請按上面的「整理賽程」。貼什麼就整理什麼，不必先勾篩選。</p>
+              <textarea id="sourceData" placeholder="1.黃羽希 幼兒白帶A 102紅103紅馬步正拳&#10;2.蔡葦儒 幼兒藍137紅138紅 三章&#10;3.張紘駿國小低年級藍帶B142紅144青"></textarea>
+              <div class="actions-small">
+                <button class="btn gray" id="loadSampleBtn" type="button">載入範例看看</button>
               </div>
             </div>
           </section>
@@ -251,6 +237,15 @@
                     <button class="btn gray" id="exportWordBtn" type="button">匯出 Word</button>
                   </div>
                   <p class="save-note-inline">網頁不存檔，重整就沒了。看完請自己匯出。</p>
+                </div>
+              </div>
+
+              <div class="export-name">
+                <label for="competitionName">比賽名稱</label>
+                <div>
+                  <input type="text" id="competitionName" value="" placeholder="可留空，整理檔案後會自動帶入" />
+                  <p class="field-note">只用在匯出檔名和標題，不會用來找人。可留空，整理後通常會自動帶入。</p>
+                  <p id="competitionNameStatus" class="name-status"></p>
                 </div>
               </div>
 
@@ -490,6 +485,6 @@
     <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <script src="./sys.js"></script>
+    <script src="./sys.js?v=20260820-9"></script>
 </body>
 </html>

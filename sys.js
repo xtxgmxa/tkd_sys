@@ -190,7 +190,6 @@ keywordInput.addEventListener("keydown", (event) => {
 });
 
 clubName.addEventListener("change", () => {
-  addKeyword(clubName.value);
   saveSettings();
   applyViewFilter(true);
 });
@@ -1836,22 +1835,37 @@ function itemMatchesName(item, names) {
 }
 
 function getDisplayMode() {
-  return document.querySelector('input[name="displayMode"]:checked')?.value || "auto";
+  const mode = document.querySelector(".find-chip.active")?.dataset.mode;
+  if (mode === "club") return "auto";
+  return mode || "auto";
 }
 
 function setDisplayMode(mode) {
-  const input = document.querySelector(`input[name="displayMode"][value="${mode}"]`);
-  if (input) input.checked = true;
+  const mapped = mode === "club" ? "auto" : mode;
+  document.querySelectorAll(".find-chip").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.mode === mapped);
+  });
+  syncFindPanels();
   updateScopeSummary();
+}
+
+function syncFindPanels() {
+  const mode = getDisplayMode();
+  const unit = document.getElementById("findUnitCard");
+  const names = document.getElementById("findNamesCard");
+  const allNote = document.getElementById("findAllNote");
+  if (unit) unit.classList.toggle("hidden", !(mode === "auto" || mode === "either"));
+  if (names) names.classList.toggle("hidden", !(mode === "names" || mode === "either"));
+  if (allNote) allNote.classList.toggle("hidden", mode !== "all");
 }
 
 function updateScopeSummary() {
   const labels = {
-    auto: "平常不用改｜目前：先看本館，沒抓到才改看學員",
-    either: "目前：本館＋學員加總",
-    club: "目前：只看本館",
-    names: "目前：只看學員名單",
-    all: "目前：全部選手"
+    auto: "先用報名單位找。單位沒人、又有填學員名字時，會改用名字。",
+    either: "報名單位或學員名字，符合其中一個就列出。",
+    club: "先用報名單位找。單位沒人、又有填學員名字時，會改用名字。",
+    names: "只用學員名字找，不管報名單位。",
+    all: "列出檔案裡所有選手。"
   };
   const el = document.getElementById("scopeSummary");
   if (el) el.textContent = labels[getDisplayMode()] || labels.auto;
@@ -2768,11 +2782,9 @@ document.querySelectorAll("[data-jump]").forEach((btn) => {
 });
 
 function guideToPlayerNames() {
-  if (getDisplayMode() !== "auto" && getDisplayMode() !== "names") {
-    setDisplayMode("auto");
-    saveSettings();
-    applyViewFilter(true);
-  }
+  setDisplayMode("names");
+  saveSettings();
+  applyViewFilter(true);
   switchTab("match");
   const field = document.getElementById("playerNamesField");
   if (!field) return;
@@ -3041,44 +3053,64 @@ document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") closeModal();
 });
 
-const TOUR_SEEN_KEY = "tkd_sys_tutorial_seen_v4";
+const TOUR_SEEN_KEY = "tkd_sys_tutorial_seen_v6";
 const TOUR_STEPS = [
   {
     title: "平常只要三步",
-    copy: "確認道館名稱（已幫你填好）→ 點大方塊選檔案 → 按藍色「整理賽程」。也可以點最上面的 1、2、3 跳到那一步。學員名單可以先空著。本館沒找到人，再點「點這裡選常用選手」。",
+    copy: `
+      <p>多數比賽不用改「怎麼找人」。</p>
+      <ul>
+        <li>點「先去選檔案」，或點最上面的 1、2、3</li>
+        <li>選好檔案後，按藍色「整理賽程」</li>
+        <li>學員名單可以先空著</li>
+      </ul>
+    `,
     stage: `
       <ol class="demo-steps">
-        <li><span>1</span><div><b>確認道館</b><small>已填好金城土城</small></div></li>
+        <li><span>1</span><div><b>先去選檔案</b><small>找人已選報名單位，關鍵字也填好了</small></div></li>
         <li><span>2</span><div><b>點選檔案</b><small>點那個大方塊就可以</small></div></li>
         <li><span>3</span><div><b>按整理賽程</b><small>不按，下面不會出表</small></div></li>
       </ol>
     `
   },
   {
-    title: "找不到人時，點畫面上的提示",
-    copy: "本館有抓到人，就只看本館，不是加總。一個都沒有，畫面會出現藍色提示，點了會帶到上面填名單。常用選手下次用這台還在；換電腦或換手機就看不到新加的人。「找人的方式」平常不用改。",
+    title: "找不到人，改選學員名字",
+    copy: `
+      <ul>
+        <li><b class="mark-unit">報名單位</b>：用關鍵字找秩序冊上的道館名、校名</li>
+        <li><b>我的道館</b>：只是匯出檔名，不是拿來找人</li>
+        <li><b class="mark-names">學員名字</b>：校隊用學校報名、畫面沒人時再選</li>
+        <li>也可以點藍色提示，會帶你去填</li>
+      </ul>
+    `,
     stage: `
+      <div class="demo-find-chips">
+        <span class="on unit">報名單位</span>
+        <span class="names">學員名字</span>
+        <span>兩種都找</span>
+        <span>全部選手</span>
+      </div>
       <div class="demo-swap">
         <div class="demo-swap-scene a">
-          <div class="demo-card on">
-            <b>① 本館</b>
+          <div class="demo-card on demo-card-unit">
+            <b>報名單位</b>
             <small class="demo-ok">有抓到人 → 就用這份</small>
           </div>
           <div class="demo-arrow">→</div>
           <div class="demo-card dim">
-            <b>② 學員名單</b>
+            <b>學員名字</b>
             <small>先不用</small>
           </div>
         </div>
         <div class="demo-swap-scene b">
           <div class="demo-card dim">
-            <b>① 本館</b>
+            <b>報名單位</b>
             <small class="demo-miss">沒資料</small>
           </div>
           <div class="demo-arrow">→</div>
-          <div class="demo-card on demo-pulse">
-            <b>② 學員名單</b>
-            <small class="demo-ok">點提示，去上面填</small>
+          <div class="demo-card on demo-pulse demo-card-names">
+            <b>學員名字</b>
+            <small class="demo-ok">改選這個，或點提示</small>
           </div>
         </div>
       </div>
@@ -3086,7 +3118,13 @@ const TOUR_STEPS = [
   },
   {
     title: "點這裡選檔案",
-    copy: "點那個大方塊選檔案就可以，也可以拖進去。秩序冊、對打表、品勢表都可以。同一場比賽可以一次多選；不同比賽請分開整理。比賽名稱常會從檔案自動帶入。",
+    copy: `
+      <ul>
+        <li>點大方塊選檔案，也可以拖進去</li>
+        <li>秩序冊、對打表、品勢表都可以</li>
+        <li>同一場可一次多選；不同比賽請分開整理</li>
+      </ul>
+    `,
     stage: `
       <div class="demo-drop">
         <span class="demo-file">秩序冊.pdf</span>
@@ -3097,12 +3135,26 @@ const TOUR_STEPS = [
   },
   {
     title: "一定要按「整理賽程」",
-    copy: "檔案選好還不會出表。要按這個藍色按鈕，下面才會出現誰先上場、對上誰、下一場是誰。",
+    copy: `
+      <ul>
+        <li>選好檔案還不會出表</li>
+        <li>一定要按藍色「整理賽程」</li>
+        <li>沒檔案才用最下面貼文字，貼完一樣要按</li>
+      </ul>
+    `,
     stage: `<span class="demo-btn">整理賽程</span>`
   },
   {
     title: "品勢看順序，對打看青紅",
-    copy: "越上面越早打。品勢看「場次」和「第幾位」；對打看青紅和對手。要帶走請按「匯出 Excel」或「匯出 Word」，下載前會先給你看預覽。賽程表不會存在網頁裡，重整或關掉分頁就會消失。",
+    copy: `
+      <ul>
+        <li>越上面越早打</li>
+        <li>手機先看場次和項目，點卡片才展開</li>
+        <li><b>品勢</b>：看場次、青紅或出場順序</li>
+        <li><b>對打</b>：看護具和對手</li>
+        <li>要帶走請匯出；網頁不存檔，重整就沒了</li>
+      </ul>
+    `,
     stage: `
       <div class="demo-results">
         <div class="demo-mini-card">
@@ -3140,7 +3192,7 @@ function renderTour() {
   const prev = document.getElementById("tourPrevBtn");
   const next = document.getElementById("tourNextBtn");
   if (title) title.textContent = step.title;
-  if (copy) copy.textContent = step.copy;
+  if (copy) copy.innerHTML = step.copy;
   if (stage) stage.innerHTML = step.stage;
   if (label) label.textContent = `${tourIndex + 1} / ${TOUR_STEPS.length}`;
   if (dots) {
@@ -3787,7 +3839,6 @@ function setFoldOpen(toggleId, panelId, open) {
 
 bindFold("pasteToggle", "pastePanel");
 bindFold("groupToggle", "groupPanel");
-bindFold("scopeToggle", "scopePanel");
 bindFold("exportScopeToggle", "exportScopePanel");
 bindFold("exportSheetsToggle", "exportSheetsPanel");
 bindFold("exportFieldsToggle", "exportFieldsPanel");
@@ -3800,7 +3851,7 @@ document.getElementById("exportSheetsToggle")?.addEventListener("click", () => {
   }
 });
 updateScopeSummary();
-if (getDisplayMode() !== "auto") setFoldOpen("scopeToggle", "scopePanel", true);
+syncFindPanels();
 
 if (playerNamesEl) {
   playerNamesEl.addEventListener("change", () => {
@@ -3989,14 +4040,14 @@ function applyRosterToNames() {
   }
   rosterChecked = uniqueNameList(names);
   saveSettings();
-  setDisplayMode("auto");
+  setDisplayMode("names");
   applyTidiedNames(names.join("\n"), false);
   closeModal();
 }
-document.querySelectorAll('input[name="displayMode"]').forEach((input) => {
-  input.addEventListener("change", () => {
+document.querySelectorAll(".find-chip").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    setDisplayMode(btn.dataset.mode);
     saveSettings();
-    updateScopeSummary();
     applyViewFilter(true);
   });
 });
