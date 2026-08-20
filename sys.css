@@ -1045,7 +1045,20 @@ tbody tr:hover { background: #f8fafc; }
   overflow: auto;
   grid-template-columns: repeat(auto-fill, minmax(136px, 1fr));
 }
-#exportPreview { min-width: 0; max-width: 100%; }
+#exportPreview { min-width: 0; max-width: 100%; display: grid; gap: 16px; }
+.export-scope {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.export-scope-label {
+  font-size: 13px;
+  font-weight: 800;
+  color: #64748b;
+  margin-right: 4px;
+  word-break: keep-all;
+}
 .export-tabs {
   display: flex;
   flex-wrap: wrap;

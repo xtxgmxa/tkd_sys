@@ -3190,7 +3190,8 @@ function safeFileName(name) {
 function exportFileName(ext) {
   const competition = document.getElementById("competitionName").value.trim() || "賽程";
   const club = clubName.value.trim() || "本館";
-  return `${safeFileName(`${competition}-${club}`)}.${ext}`;
+  const extra = exportScope === "品勢" ? "-品勢" : exportScope === "對打" ? "-對打" : "";
+  return `${safeFileName(`${competition}-${club}${extra}`)}.${ext}`;
 }
 
 function downloadWorkbook(wb, filename) {
@@ -3264,6 +3265,7 @@ function rowsForExport(data) {
 
 let exportKind = "excel";
 let exportPreviewTab = "all";
+let exportScope = "both";
 const EXPORT_PREVIEW_LIMIT = 12;
 
 document.getElementById("exportExcelBtn").addEventListener("click", () => {
@@ -3289,6 +3291,9 @@ document.getElementById("exportWordBtn").addEventListener("click", () => {
 function openExportModal(kind) {
   exportKind = kind === "word" ? "word" : "excel";
   exportPreviewTab = "all";
+  exportScope = (currentFilter === "品勢" || currentFilter === "對打") ? currentFilter : "both";
+  if (!poomsaeItems(allData).length) exportScope = fightItems(allData).length ? "對打" : "both";
+  else if (!fightItems(allData).length) exportScope = "品勢";
   const box = document.getElementById("exportFieldList");
   const modal = document.getElementById("exportModal");
   if (!box || !modal) {
@@ -3304,8 +3309,8 @@ function openExportModal(kind) {
   if (title) title.textContent = "先看一下會匯出什麼";
   if (hint) {
     hint.textContent = exportKind === "word"
-      ? "Word 會帶出場表和組別細節。先看預覽，沒問題再下載。"
-      : "檔案裡會有不同工作表。詳細賽程欄位多、可勾選；簡表欄位少，給上場看。";
+      ? "Word 會依品勢、對打分開。先看預覽，沒問題再下載。"
+      : "詳細賽程不再把品勢跟對打混在同一張。可選只出一種，或兩種都出但分開。各依波次排序。";
   }
   document.getElementById("exportFieldsBlock")?.classList.toggle("hidden", exportKind === "word");
   if (confirm) confirm.textContent = exportKind === "word" ? "下載 Word" : "下載 Excel";
@@ -3315,6 +3320,7 @@ function openExportModal(kind) {
       <span>${escapeHTML(field.label)}</span>
     </label>
   `).join("");
+  renderExportScope();
   renderExportTabs();
   renderExportPreview();
   modal.classList.remove("hidden");
@@ -3334,20 +3340,47 @@ function liveExportFields() {
   return EXPORT_FIELDS.filter((field) => exportFields.includes(field.key));
 }
 
+function poomsaeItems(data) {
+  return (data || []).filter((item) => classifyType(item) === "品勢");
+}
+
+function fightItems(data) {
+  return (data || []).filter((item) => classifyType(item) === "對打");
+}
+
+function exportHasBothTypes() {
+  return poomsaeItems(allData).length > 0 && fightItems(allData).length > 0;
+}
+
+function exportItems() {
+  if (exportScope === "品勢") return poomsaeItems(allData);
+  if (exportScope === "對打") return fightItems(allData);
+  return allData.slice();
+}
+
+function renderExportScope() {
+  const box = document.getElementById("exportScopeBlock");
+  if (!box) return;
+  const show = exportHasBothTypes();
+  box.classList.toggle("hidden", !show);
+  if (!show) return;
+  box.querySelectorAll("[data-export-scope]").forEach((btn) => {
+    btn.classList.toggle("active", btn.getAttribute("data-export-scope") === exportScope);
+  });
+}
+
 function renderExportTabs() {
   const tabs = document.getElementById("exportTabs");
   if (!tabs) return;
-  const poomsae = allData.filter((item) => classifyType(item) === "品勢");
-  const fight = allData.filter((item) => classifyType(item) === "對打");
   const items = exportKind === "word"
     ? [
-        { id: "all", label: "出場表" },
+        { id: "all", label: exportScope === "both" ? "出場表（品勢／對打分開）" : "出場表" },
         { id: "groups", label: "組別細節" }
       ]
     : [
-        { id: "all", label: "詳細賽程" },
-        poomsae.length ? { id: "poomsae", label: "品勢簡表" } : null,
-        fight.length ? { id: "fight", label: "對打簡表" } : null
+        { id: "all", label: exportScope === "both" ? "詳細賽程（分開）" : "詳細賽程" },
+        (exportScope !== "對打" && poomsaeItems(exportItems()).length) ? { id: "poomsae", label: "品勢簡表" } : null,
+        (exportScope !== "品勢" && fightItems(exportItems()).length) ? { id: "fight", label: "對打簡表" } : null
       ].filter(Boolean);
   if (!items.some((item) => item.id === exportPreviewTab)) exportPreviewTab = items[0]?.id || "all";
   tabs.innerHTML = items.map((item) => `
@@ -3357,8 +3390,10 @@ function renderExportTabs() {
   if (note) {
     const notes = {
       all: exportKind === "word"
-        ? "出場表：一次看所有人的場次、對手、下一場。"
-        : "詳細賽程：欄位較多，上面勾的欄位只影響這張表。",
+        ? (exportScope === "both" ? "先品勢、後對打。各依波次排序，不會混在同一張表。" : "依波次排序。")
+        : (exportScope === "both"
+          ? "品勢、對打會拆成兩張工作表，各依波次排序。上面勾的欄位兩張都適用。"
+          : "這張詳細賽程依波次排序。上面勾的欄位只影響這張表。"),
       groups: "組別細節：同組還有誰、籤號、場次。",
       poomsae: "品勢簡表：給上場看的。只留姓名、組別、場次、品勢，欄位固定不能勾。",
       fight: "對打簡表：給上場看的。只留姓名、組別、場次＋青紅，欄位固定不能勾。"
@@ -3383,8 +3418,7 @@ function renderExportPreview() {
       return;
     }
     const headers = ["順序", "選手", "項目", "組別", "品勢或級別", "場地", "本場", "青紅／出場", "對手／順序", "下一場"];
-    const rows = rowsForExport(allData).map(wordPreviewRow);
-    host.innerHTML = previewTableHtml(headers, rows, `Word 出場表｜${club}`);
+    host.innerHTML = previewDetailBlocks(club, headers, (list) => rowsForExport(list).map(wordPreviewRow), "Word 出場表");
     return;
   }
   const selected = liveExportFields();
@@ -3394,23 +3428,40 @@ function renderExportPreview() {
       return;
     }
     const headers = selected.map((field) => field.label);
-    const rows = rowsForExport(allData).map((row) => selected.map((field) => row[field.key] ?? ""));
-    host.innerHTML = previewTableHtml(headers, rows, `${club}｜詳細賽程`);
+    host.innerHTML = previewDetailBlocks(
+      club,
+      headers,
+      (list) => rowsForExport(list).map((row) => selected.map((field) => row[field.key] ?? "")),
+      "詳細賽程"
+    );
     return;
   }
   if (exportPreviewTab === "poomsae") {
     host.innerHTML = previewTableHtml(
       ["姓名", "組別", "場次", "第一品勢", "第二品勢", "比賽品勢"],
-      poomsaeExportRows(),
+      poomsaeExportRows(exportItems()),
       `${club}｜品勢簡表`
     );
     return;
   }
   host.innerHTML = previewTableHtml(
     ["姓名", "體重／組別", "場次＋顏色"],
-    fightExportRows(),
+    fightExportRows(exportItems()),
     `${club}｜對打簡表`
   );
+}
+
+function previewDetailBlocks(club, headers, rowFn, kind) {
+  const poom = poomsaeItems(exportItems());
+  const fight = fightItems(exportItems());
+  if (exportScope !== "both") {
+    const label = exportScope === "品勢" ? "品勢" : exportScope === "對打" ? "對打" : "";
+    return previewTableHtml(headers, rowFn(exportItems()), `${club}｜${kind}${label ? "-" + label : ""}（依波次）`);
+  }
+  const parts = [];
+  if (poom.length) parts.push(previewTableHtml(headers, rowFn(poom), `${club}｜${kind}-品勢（依波次）`));
+  if (fight.length) parts.push(previewTableHtml(headers, rowFn(fight), `${club}｜${kind}-對打（依波次）`));
+  return parts.join("") || `<p class="export-preview-empty">沒有資料</p>`;
 }
 
 function previewTableHtml(headers, rows, caption) {
@@ -3435,7 +3486,7 @@ function wordPreviewRow(row) {
 }
 
 function wordGroupsPreviewHtml() {
-  const groups = getVisibleGroups(allData);
+  const groups = getVisibleGroups(exportItems());
   const shown = groups.slice(0, 8);
   const extra = groups.length > shown.length ? `<p class="export-preview-meta">後面還有 ${groups.length - shown.length} 組會寫進檔案</p>` : "";
   return `
@@ -3454,8 +3505,8 @@ function wordGroupsPreviewHtml() {
   `;
 }
 
-function poomsaeExportRows() {
-  return allData.filter((item) => classifyType(item) === "品勢").map((item) => [
+function poomsaeExportRows(data) {
+  return poomsaeItems(data || exportItems()).map((item) => [
     item.player || "",
     compactDivision(item),
     formatMatchExport(item),
@@ -3465,8 +3516,8 @@ function poomsaeExportRows() {
   ]);
 }
 
-function fightExportRows() {
-  return allData.filter((item) => classifyType(item) === "對打").map((item) => [
+function fightExportRows(data) {
+  return fightItems(data || exportItems()).map((item) => [
     item.player || "",
     compactDivision(item),
     formatColorSequence(item)
@@ -3476,31 +3527,42 @@ function fightExportRows() {
 function doExportExcel() {
   const club = clubName.value.trim() || "本館";
   const workbook = XLSX.utils.book_new();
-  const poomsae = allData.filter((item) => classifyType(item) === "品勢");
-  const fight = allData.filter((item) => classifyType(item) === "對打");
-  const other = allData.filter((item) => classifyType(item) !== "品勢" && classifyType(item) !== "對打");
+  const source = exportItems();
+  const poomsae = poomsaeItems(source);
+  const fight = fightItems(source);
+  const other = source.filter((item) => classifyType(item) !== "品勢" && classifyType(item) !== "對打");
   const selected = EXPORT_FIELDS.filter((field) => exportFields.includes(field.key));
   if (!selected.length) {
     alert("請至少勾選一個欄位");
     return;
   }
 
-  const allRows = [
-    [`${club}｜詳細賽程`],
-    selected.map((field) => field.label)
-  ];
-  rowsForExport(allData).forEach((row) => {
-    allRows.push(selected.map((field) => row[field.key] ?? ""));
-  });
-  const allSheet = XLSX.utils.aoa_to_sheet(allRows);
-  allSheet["!cols"] = selected.map(() => ({ wch: 16 }));
-  XLSX.utils.book_append_sheet(workbook, allSheet, "詳細賽程");
+  const addDetailSheet = (title, items) => {
+    if (!items.length) return;
+    const rows = [
+      [`${club}｜${title}`],
+      selected.map((field) => field.label)
+    ];
+    rowsForExport(items).forEach((row) => {
+      rows.push(selected.map((field) => row[field.key] ?? ""));
+    });
+    const sheet = XLSX.utils.aoa_to_sheet(rows);
+    sheet["!cols"] = selected.map(() => ({ wch: 16 }));
+    XLSX.utils.book_append_sheet(workbook, sheet, title.slice(0, 31));
+  };
+
+  if (exportScope === "both" && poomsae.length && fight.length) {
+    addDetailSheet("詳細賽程-品勢", poomsae);
+    addDetailSheet("詳細賽程-對打", fight);
+  } else {
+    addDetailSheet(poomsae.length && !fight.length ? "詳細賽程-品勢" : fight.length && !poomsae.length ? "詳細賽程-對打" : "詳細賽程", source);
+  }
 
   if (poomsae.length) {
     const poomRows = [
       [`${club}｜品勢簡表`],
       ["姓名", "組別", "場次", "第一品勢", "第二品勢", "比賽品勢"],
-      ...poomsaeExportRows()
+      ...poomsaeExportRows(poomsae)
     ];
     const poomSheet = XLSX.utils.aoa_to_sheet(poomRows);
     poomSheet["!cols"] = [12, 32, 16, 16, 16, 18].map((wch) => ({ wch }));
@@ -3511,7 +3573,7 @@ function doExportExcel() {
     const fightRows = [
       [`${club}｜對打簡表`],
       ["姓名", "體重／組別", "場次＋顏色"],
-      ...fightExportRows()
+      ...fightExportRows(fight)
     ];
     const fightSheet = XLSX.utils.aoa_to_sheet(fightRows);
     fightSheet["!cols"] = [12, 32, 18].map((wch) => ({ wch }));
@@ -3536,10 +3598,8 @@ function doExportExcel() {
   }
 }
 
-function doExportWord() {
-  const competition = document.getElementById("competitionName").value || "賽程";
-  const club = clubName.value || "本館";
-  const rows = rowsForExport(allData).map((row) => `
+function wordTableRows(list) {
+  return rowsForExport(list).map((row) => `
     <tr>
       <td>${escapeHTML(row.順序)}</td>
       <td>${escapeHTML(row.選手)}</td>
@@ -3553,8 +3613,10 @@ function doExportWord() {
       <td>${escapeHTML(row.下一場場次)}${row.下一場青紅 && row.下一場青紅 !== "－" && row.下一場青紅 !== "未提及" ? " " + escapeHTML(row.下一場青紅) : ""}</td>
     </tr>
   `).join("");
+}
 
-  const groupsHtml = getVisibleGroups(allData).map((group) => {
+function wordGroupsHtml(list) {
+  return getVisibleGroups(list).map((group) => {
     const people = (group.members.length ? group.members : group.ours).map((item) =>
       `<li>${escapeHTML(displayValue(item.player))}（${escapeHTML(displayValue(item.club))}）
        籤號${item.seed || "?"} ${escapeHTML(isOrderStyle(item) ? orderLabel(item) : (item.color || ""))} 場次${escapeHTML(displayValue(item.matchNo))}
@@ -3563,6 +3625,26 @@ function doExportWord() {
     ).join("");
     return `<h3>${escapeHTML(displayValue(group.type))} ｜ ${escapeHTML(displayValue(group.division))}</h3><ul>${people}</ul>`;
   }).join("");
+}
+
+function doExportWord() {
+  const competition = document.getElementById("competitionName").value || "賽程";
+  const club = clubName.value || "本館";
+  const source = exportItems();
+  const poom = poomsaeItems(source);
+  const fight = fightItems(source);
+  const tableHead = `
+          <tr>
+            <th>順序</th><th>選手</th><th>項目</th><th>組別</th>
+            <th>級別 / 品勢項目</th><th>場地</th><th>本場</th><th>青紅／出場</th><th>對手／順序</th><th>下一場</th>
+          </tr>`;
+  const tables = exportScope === "both" && poom.length && fight.length
+    ? `<h2>品勢（依波次）</h2><table>${tableHead}${wordTableRows(poom)}</table>
+        <h2>對打（依波次）</h2><table>${tableHead}${wordTableRows(fight)}</table>`
+    : `<table>${tableHead}${wordTableRows(source)}</table>`;
+  const groups = exportScope === "both" && poom.length && fight.length
+    ? `<h2>品勢組別</h2>${wordGroupsHtml(poom)}<h2>對打組別</h2>${wordGroupsHtml(fight)}`
+    : wordGroupsHtml(source);
 
   const html = `
     <html>
@@ -3579,16 +3661,10 @@ function doExportWord() {
       <body>
         <h1>${escapeHTML(competition)}</h1>
         <p>道館：${escapeHTML(club)}</p>
-        <p>本館選手 ${[...new Set(allData.map((item) => item.player))].length} 人，出場 ${allData.length} 場。</p>
-        <table>
-          <tr>
-            <th>順序</th><th>選手</th><th>項目</th><th>組別</th>
-            <th>級別 / 品勢項目</th><th>場地</th><th>本場</th><th>青紅／出場</th><th>對手／順序</th><th>下一場</th>
-          </tr>
-          ${rows}
-        </table>
+        <p>選手 ${[...new Set(source.map((item) => item.player))].length} 人，出場 ${source.length} 場。</p>
+        ${tables}
         <h2>組別細節</h2>
-        ${groupsHtml}
+        ${groups}
       </body>
     </html>
   `;
@@ -3715,6 +3791,15 @@ document.getElementById("exportNoneBtn")?.addEventListener("click", () => {
   renderExportPreview();
 });
 document.getElementById("exportFieldList")?.addEventListener("change", renderExportPreview);
+document.getElementById("exportScopeBlock")?.addEventListener("click", (event) => {
+  const btn = event.target.closest("[data-export-scope]");
+  if (!btn) return;
+  exportScope = btn.getAttribute("data-export-scope") || "both";
+  exportPreviewTab = "all";
+  renderExportScope();
+  renderExportTabs();
+  renderExportPreview();
+});
 document.getElementById("exportTabs")?.addEventListener("click", (event) => {
   const tab = event.target.closest("[data-export-tab]");
   if (!tab) return;

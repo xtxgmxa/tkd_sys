@@ -392,7 +392,15 @@
           <button class="btn gray modal-close" id="exportCloseBtn" type="button">關閉</button>
         </div>
         <div class="modal-body">
-          <p class="hint" id="exportHint">檔案裡會有不同工作表。詳細賽程欄位多、可勾選；簡表欄位少，給上場看。</p>
+          <p class="hint" id="exportHint">詳細賽程不再把品勢跟對打混在同一張。可選只出一種，或兩種都出但分開。各依波次排序。</p>
+          <div class="export-scope" id="exportScopeBlock">
+            <span class="export-scope-label">要匯出</span>
+            <button type="button" class="export-tab" data-export-scope="both">品勢＋對打（分開）</button>
+            <button type="button" class="export-tab" data-export-scope="品勢">只出品勢</button>
+            <button type="button" class="export-tab" data-export-scope="對打">只出對打</button>
+          </div>
+          <div class="export-tabs" id="exportTabs" role="tablist"></div>
+          <p class="export-tab-note" id="exportTabNote"></p>
           <div id="exportFieldsBlock">
             <div class="roster-toolbar">
               <button class="btn gray" type="button" id="exportAllBtn">全選</button>
@@ -400,8 +408,6 @@
             </div>
             <div id="exportFieldList" class="picker-grid"></div>
           </div>
-          <div class="export-tabs" id="exportTabs" role="tablist"></div>
-          <p class="export-tab-note" id="exportTabNote"></p>
           <div id="exportPreview"></div>
           <p class="export-file-hint" id="exportFileHint"></p>
           <div class="modal-actions">
