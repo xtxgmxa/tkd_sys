@@ -2848,6 +2848,11 @@ function renderMobileCard(item, index) {
   const detail = isFight(item)
     ? displayValue(item.detailLabel)
     : displayValue(formatPoomsaeLabel(item) || item.detailLabel);
+  const colorLabel = isFight(item) ? "護具" : "青紅";
+  const matchText = item.bye && !item.matchNo ? "輪空晉級" : displayValue(item.matchNo);
+  const summarySide = isOrderStyle(item)
+    ? `<span class="side order">${escapeHTML(orderLabel(item))}</span>`
+    : sideCell(item);
   const kpis = isOrderStyle(item)
     ? `<div class="card-kpis">
         <div class="kpi"><span>場次</span><strong>${escapeHTML(displayValue(item.matchNo))}</strong></div>
@@ -2855,10 +2860,10 @@ function renderMobileCard(item, index) {
       </div>
       <p class="card-note">品勢輪流出場：一個個上場打分，沒有對手、沒有青紅。</p>`
     : (item.bye && !item.matchNo
-      ? `<div class="card-kpis"><div class="kpi"><span>本場</span><strong>輪空晉級</strong></div><div class="kpi"><span>護具</span>${sideCell(item)}</div></div>`
+      ? `<div class="card-kpis"><div class="kpi"><span>本場</span><strong>輪空晉級</strong></div><div class="kpi"><span>${colorLabel}</span>${sideCell(item)}</div></div>`
       : `<div class="card-kpis">
           <div class="kpi"><span>場次</span><strong>${escapeHTML(displayValue(item.matchNo))}</strong></div>
-          <div class="kpi"><span>護具</span>${sideCell(item)}</div>
+          <div class="kpi"><span>${colorLabel}</span>${sideCell(item)}</div>
         </div>`);
   const vsRow = isOrderStyle(item)
     ? ""
@@ -2873,16 +2878,33 @@ function renderMobileCard(item, index) {
       <div class="card-player">${index + 1}. ${escapeHTML(item.player)}</div>
       <span class="type ${typeClass}">${escapeHTML(displayValue(item.type))}</span>
     </div>
-    ${kpis}
-    <div class="card-rows">
-      ${cardRow("場地", escapeHTML(displayValue(item.court)))}
-      ${cardRow("組別", `${escapeHTML(displayValue(item.division))}${item.groupSize ? "<small>同組 " + item.groupSize + " 人</small>" : ""}`)}
-      ${cardRow(isFight(item) ? "級別" : "品勢", escapeHTML(detail))}
-      ${vsRow}
-      ${nextRow}
+    <div class="card-summary">
+      <div class="card-match"><small>場次</small><strong>${escapeHTML(matchText)}</strong></div>
+      <div class="card-summary-side">${summarySide}</div>
+      <div class="card-court">${escapeHTML(displayValue(item.court))}</div>
+    </div>
+    <p class="card-hint">點開看詳情</p>
+    <div class="card-detail">
+      ${kpis}
+      <div class="card-rows">
+        ${cardRow("場地", escapeHTML(displayValue(item.court)))}
+        ${cardRow("組別", `${escapeHTML(displayValue(item.division))}${item.groupSize ? "<small>同組 " + item.groupSize + " 人</small>" : ""}`)}
+        ${cardRow(isFight(item) ? "級別" : "品勢", escapeHTML(detail))}
+        ${vsRow}
+        ${nextRow}
+      </div>
+      <button type="button" class="card-group-btn">看同組名單</button>
     </div>
   `;
-  card.addEventListener("click", () => openGroupModal(item.groupKey));
+  card.addEventListener("click", () => {
+    const open = card.classList.contains("open");
+    mobileCards.querySelectorAll(".match-card.open").forEach((el) => el.classList.remove("open"));
+    if (!open) card.classList.add("open");
+  });
+  card.querySelector(".card-group-btn")?.addEventListener("click", (event) => {
+    event.stopPropagation();
+    openGroupModal(item.groupKey);
+  });
   mobileCards.appendChild(card);
 }
 

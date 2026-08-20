@@ -814,17 +814,24 @@ tbody tr:hover { background: #f8fafc; }
 
 .missing { color: #94a3b8; font-weight: 600; }
 
-.mobile-cards { display: grid; gap: 12px; }
+.mobile-list-hint {
+  margin: 0 0 10px;
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 600;
+}
+.mobile-cards { display: grid; gap: 8px; }
 
 .match-card {
   border: 1px solid #e2e8f0;
-  border-radius: 16px;
-  padding: 16px;
+  border-radius: 14px;
+  padding: 12px 14px;
   cursor: pointer;
   background: #fff;
 }
 
 .match-card:hover { border-color: #2563eb; }
+.match-card.open { border-color: #93c5fd; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12); }
 .card-head {
   display: flex;
   justify-content: space-between;
@@ -833,10 +840,56 @@ tbody tr:hover { background: #f8fafc; }
 }
 .card-head .type { flex-shrink: 0; }
 .card-player {
-  font-size: 22px;
+  font-size: 18px;
   font-weight: 800;
   line-height: 1.25;
   word-break: keep-all;
+}
+.card-summary {
+  display: flex;
+  align-items: center;
+  gap: 10px 14px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+.card-match small {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+  letter-spacing: 0.04em;
+}
+.card-match strong {
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.1;
+}
+.card-court {
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 700;
+  word-break: keep-all;
+}
+.card-hint {
+  margin: 8px 0 0;
+  color: #94a3b8;
+  font-size: 13px;
+  font-weight: 600;
+}
+.match-card.open .card-hint { display: none; }
+.card-detail { display: none; }
+.match-card.open .card-detail { display: block; }
+.card-group-btn {
+  width: 100%;
+  margin-top: 12px;
+  border: 1px solid #bfdbfe;
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
 }
 .card-kpis {
   display: grid;
@@ -1585,6 +1638,7 @@ tbody tr:hover { background: #f8fafc; }
   .save-note-inline { text-align: left; max-width: none; }
   .desktop-only { display: none; }
   .mobile-only { display: grid; }
+  .mobile-list-hint.mobile-only { display: block; }
   table { min-width: 0; }
   .next-player { flex-direction: column; align-items: flex-start; }
   .btn-lg { width: 100%; }
