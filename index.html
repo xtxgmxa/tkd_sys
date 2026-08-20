@@ -387,29 +387,56 @@
         <div class="modal-head">
           <div>
             <p class="modal-kicker" id="exportKicker">匯出 Excel</p>
-            <h3 id="exportTitle">先看一下會匯出什麼</h3>
+            <h3 id="exportTitle">沒問題就下載</h3>
           </div>
           <button class="btn gray modal-close" id="exportCloseBtn" type="button">關閉</button>
         </div>
         <div class="modal-body">
-          <p class="hint" id="exportHint">詳細賽程不再把品勢跟對打混在同一張。可選只出一種，或兩種都出但分開。各依波次排序。</p>
-          <div class="export-scope" id="exportScopeBlock">
-            <span class="export-scope-label">要匯出</span>
-            <button type="button" class="export-tab" data-export-scope="both">品勢＋對打（分開）</button>
-            <button type="button" class="export-tab" data-export-scope="品勢">只出品勢</button>
-            <button type="button" class="export-tab" data-export-scope="對打">只出對打</button>
-          </div>
-          <div class="export-tabs" id="exportTabs" role="tablist"></div>
-          <p class="export-tab-note" id="exportTabNote"></p>
-          <div id="exportFieldsBlock">
-            <div class="roster-toolbar">
-              <button class="btn gray" type="button" id="exportAllBtn">全選</button>
-              <button class="btn gray" type="button" id="exportNoneBtn">全不選</button>
-            </div>
-            <div id="exportFieldList" class="picker-grid"></div>
-          </div>
+          <p class="export-summary" id="exportSummary">沒問題就按下載。</p>
           <div id="exportPreview"></div>
           <p class="export-file-hint" id="exportFileHint"></p>
+
+          <section class="fold-panel export-extra" id="exportScopeFold">
+            <button type="button" class="fold-toggle" id="exportScopeToggle" aria-expanded="false">
+              <span>只要品勢或只要對打<span class="fold-note" id="exportScopeNote">平常不用改</span></span>
+              <span class="fold-arrow">＋</span>
+            </button>
+            <div id="exportScopePanel" class="fold-body hidden">
+              <div class="export-scope" id="exportScopeBlock">
+                <button type="button" class="export-tab" data-export-scope="both">兩種都出（分開）</button>
+                <button type="button" class="export-tab" data-export-scope="品勢">只出品勢</button>
+                <button type="button" class="export-tab" data-export-scope="對打">只出對打</button>
+              </div>
+            </div>
+          </section>
+
+          <section class="fold-panel export-extra" id="exportSheetsFold">
+            <button type="button" class="fold-toggle" id="exportSheetsToggle" aria-expanded="false">
+              <span><span id="exportSheetsTitle">看簡表長什麼樣子</span><span class="fold-note" id="exportSheetsNote">檔案裡本來就有，這裡只是先看</span></span>
+              <span class="fold-arrow">＋</span>
+            </button>
+            <div id="exportSheetsPanel" class="fold-body hidden">
+              <div class="export-tabs" id="exportTabs" role="tablist"></div>
+              <p class="export-tab-note" id="exportTabNote"></p>
+            </div>
+          </section>
+
+          <section class="fold-panel export-extra" id="exportFieldsFold">
+            <button type="button" class="fold-toggle" id="exportFieldsToggle" aria-expanded="false">
+              <span>少勾一些欄位<span class="fold-note">進階，預設全選</span></span>
+              <span class="fold-arrow">＋</span>
+            </button>
+            <div id="exportFieldsPanel" class="fold-body hidden">
+              <div id="exportFieldsBlock">
+                <div class="roster-toolbar">
+                  <button class="btn gray" type="button" id="exportAllBtn">全選</button>
+                  <button class="btn gray" type="button" id="exportNoneBtn">全不選</button>
+                </div>
+                <div id="exportFieldList" class="picker-grid"></div>
+              </div>
+            </div>
+          </section>
+
           <div class="modal-actions">
             <button class="btn gray" type="button" id="exportCancelBtn">取消</button>
             <button class="btn export" type="button" id="exportConfirmBtn">下載 Excel</button>

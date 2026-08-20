@@ -3303,17 +3303,18 @@ function openExportModal(kind) {
   }
   const kicker = document.getElementById("exportKicker");
   const title = document.getElementById("exportTitle");
-  const hint = document.getElementById("exportHint");
   const confirm = document.getElementById("exportConfirmBtn");
   if (kicker) kicker.textContent = exportKind === "word" ? "匯出 Word" : "匯出 Excel";
-  if (title) title.textContent = "先看一下會匯出什麼";
-  if (hint) {
-    hint.textContent = exportKind === "word"
-      ? "Word 會依品勢、對打分開。先看預覽，沒問題再下載。"
-      : "詳細賽程不再把品勢跟對打混在同一張。可選只出一種，或兩種都出但分開。各依波次排序。";
-  }
-  document.getElementById("exportFieldsBlock")?.classList.toggle("hidden", exportKind === "word");
+  if (title) title.textContent = "沒問題就下載";
   if (confirm) confirm.textContent = exportKind === "word" ? "下載 Word" : "下載 Excel";
+  document.getElementById("exportFieldsFold")?.classList.toggle("hidden", exportKind === "word");
+  const sheetsTitle = document.getElementById("exportSheetsTitle");
+  if (sheetsTitle) sheetsTitle.textContent = exportKind === "word" ? "看組別細節" : "看簡表長什麼樣子";
+  const sheetsNote = document.getElementById("exportSheetsNote");
+  if (sheetsNote) sheetsNote.textContent = exportKind === "word" ? "點開可切換出場表和組別" : "檔案裡本來就有，這裡只是先看";
+  setFoldOpen("exportScopeToggle", "exportScopePanel", false);
+  setFoldOpen("exportSheetsToggle", "exportSheetsPanel", false);
+  setFoldOpen("exportFieldsToggle", "exportFieldsPanel", false);
   box.innerHTML = EXPORT_FIELDS.map((field) => `
     <label class="check-chip">
       <input type="checkbox" value="${escapeHTML(field.key)}" ${exportFields.includes(field.key) ? "checked" : ""} />
@@ -3359,14 +3360,39 @@ function exportItems() {
 }
 
 function renderExportScope() {
+  const fold = document.getElementById("exportScopeFold");
   const box = document.getElementById("exportScopeBlock");
-  if (!box) return;
   const show = exportHasBothTypes();
-  box.classList.toggle("hidden", !show);
-  if (!show) return;
+  fold?.classList.toggle("hidden", !show);
+  if (!box) return;
   box.querySelectorAll("[data-export-scope]").forEach((btn) => {
     btn.classList.toggle("active", btn.getAttribute("data-export-scope") === exportScope);
   });
+  const note = document.getElementById("exportScopeNote");
+  if (note) {
+    note.textContent = exportScope === "品勢"
+      ? "目前：只出品勢"
+      : exportScope === "對打"
+        ? "目前：只出對打"
+        : "平常不用改｜兩種都出（分開）";
+  }
+}
+
+function exportSummaryText() {
+  const n = exportItems().length;
+  const both = exportHasBothTypes() && exportScope === "both";
+  if (exportKind === "word") {
+    if (both) return `會匯出 ${n} 筆。品勢、對打分開，各依波次。沒問題就按下載。`;
+    return `會匯出 ${n} 筆，依波次排序。沒問題就按下載。`;
+  }
+  if (both) return `會匯出 ${n} 筆。品勢、對打各一張詳細表，另有上場用的簡表。沒問題就按下載。`;
+  if (exportScope === "品勢") return `只出品勢，共 ${n} 筆，依波次排序。`;
+  if (exportScope === "對打") return `只出對打，共 ${n} 筆，依波次排序。`;
+  return `會匯出 ${n} 筆，依波次排序。沒問題就按下載。`;
+}
+
+function exportSheetsOpen() {
+  return !document.getElementById("exportSheetsPanel")?.classList.contains("hidden");
 }
 
 function renderExportTabs() {
@@ -3400,20 +3426,19 @@ function renderExportTabs() {
     };
     note.textContent = notes[exportPreviewTab] || "";
   }
-  document.getElementById("exportFieldsBlock")?.classList.toggle(
-    "hidden",
-    exportKind === "word" || exportPreviewTab !== "all"
-  );
 }
 
 function renderExportPreview() {
   const host = document.getElementById("exportPreview");
   const fileHint = document.getElementById("exportFileHint");
+  const summary = document.getElementById("exportSummary");
+  if (summary) summary.textContent = exportSummaryText();
   if (fileHint) fileHint.textContent = `將下載：${exportFileName(exportKind === "word" ? "doc" : "xlsx")}`;
   if (!host) return;
   const club = clubName.value.trim() || "本館";
+  const tab = exportSheetsOpen() ? exportPreviewTab : "all";
   if (exportKind === "word") {
-    if (exportPreviewTab === "groups") {
+    if (tab === "groups") {
       host.innerHTML = wordGroupsPreviewHtml();
       return;
     }
@@ -3422,7 +3447,7 @@ function renderExportPreview() {
     return;
   }
   const selected = liveExportFields();
-  if (exportPreviewTab === "all") {
+  if (tab === "all") {
     if (!selected.length) {
       host.innerHTML = `<p class="export-preview-empty">請至少勾選一個欄位</p>`;
       return;
@@ -3436,7 +3461,7 @@ function renderExportPreview() {
     );
     return;
   }
-  if (exportPreviewTab === "poomsae") {
+  if (tab === "poomsae") {
     host.innerHTML = previewTableHtml(
       ["姓名", "組別", "場次", "第一品勢", "第二品勢", "比賽品勢"],
       poomsaeExportRows(exportItems()),
@@ -3726,6 +3751,17 @@ function setFoldOpen(toggleId, panelId, open) {
 bindFold("pasteToggle", "pastePanel");
 bindFold("groupToggle", "groupPanel");
 bindFold("scopeToggle", "scopePanel");
+bindFold("exportScopeToggle", "exportScopePanel");
+bindFold("exportSheetsToggle", "exportSheetsPanel");
+bindFold("exportFieldsToggle", "exportFieldsPanel");
+document.getElementById("exportSheetsToggle")?.addEventListener("click", () => {
+  if (!exportSheetsOpen()) {
+    exportPreviewTab = "all";
+    renderExportPreview();
+  } else {
+    renderExportPreview();
+  }
+});
 updateScopeSummary();
 if (getDisplayMode() !== "auto") setFoldOpen("scopeToggle", "scopePanel", true);
 

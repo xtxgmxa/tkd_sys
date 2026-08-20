@@ -1052,12 +1052,31 @@ tbody tr:hover { background: #f8fafc; }
   align-items: center;
   gap: 6px;
 }
-.export-scope-label {
-  font-size: 13px;
-  font-weight: 800;
-  color: #64748b;
-  margin-right: 4px;
-  word-break: keep-all;
+.export-summary {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #f8fafc;
+  color: #334155;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.65;
+}
+.export-extra {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.export-extra .fold-toggle {
+  font-size: 15px;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+.export-extra .fold-note {
+  display: inline;
+  margin-left: 8px;
 }
 .export-tabs {
   display: flex;
@@ -1101,7 +1120,7 @@ tbody tr:hover { background: #f8fafc; }
   border: 1px solid #e2e8f0;
   border-radius: 12px;
   overflow: auto;
-  max-height: 34vh;
+  max-height: 28vh;
   max-width: 100%;
   min-width: 0;
   background: #fff;
