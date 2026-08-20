@@ -50,6 +50,8 @@
             </li>
           </ol>
 
+          <p class="save-note">這個網頁不會把賽程存起來。重新整理或關掉分頁，整理結果就會消失。確認資料後，請按「匯出 Excel」存檔即可。</p>
+
           <section class="panel">
             <div class="step-head">
               <span class="step-num">1</span>
@@ -86,14 +88,15 @@
                 <label for="playerNames">學員名單（選用）</label>
                 <button type="button" class="text-link" id="openRosterBtn">點這裡選常用選手</button>
               </div>
-              <p class="hint">本館找不到人再填。可點上面勾選，也可以自己打或貼上。</p>
+              <p class="hint">本館找不到人再填。可點上面選人，也可以自己打名字。</p>
+              <p class="pulse-hint">從這裡填：點「點這裡選常用選手」，或在框裡貼名字</p>
               <textarea id="playerNames" class="names-box" placeholder="在這裡貼上名字"></textarea>
               <p id="playerNamesStatus" class="name-status"></p>
             </div>
 
             <section class="fold-panel scope-fold">
               <button class="fold-toggle" type="button" id="scopeToggle" aria-expanded="false">
-                <span>找人的方式<span class="fold-note" id="scopeSummary">目前：先看本館，沒抓到才改看學員</span></span>
+                <span>找人的方式<span class="fold-note" id="scopeSummary">平常不用改｜目前：先看本館，沒抓到才改看學員</span></span>
                 <span class="fold-arrow">＋</span>
               </button>
               <div id="scopePanel" class="fold-body hidden">
@@ -224,9 +227,12 @@
                     <p class="lead">越上面越早打。可先篩品勢或對打，也可搜尋姓名。</p>
                   </div>
                 </div>
-                <div class="export-group">
-                  <button class="btn export" id="exportExcelBtn" type="button">匯出 Excel</button>
-                  <button class="btn gray" id="exportWordBtn" type="button">匯出 Word</button>
+                <div class="export-block">
+                  <div class="export-group">
+                    <button class="btn export" id="exportExcelBtn" type="button">匯出 Excel</button>
+                    <button class="btn gray" id="exportWordBtn" type="button">匯出 Word</button>
+                  </div>
+                  <p class="save-note-inline">網頁不存檔，重整就沒了。看完請自己匯出。</p>
                 </div>
               </div>
 
@@ -269,7 +275,7 @@
                 <p id="emptyTitle">找不到符合條件的選手</p>
                 <p id="emptyNameHint" class="empty-action hidden">
                   檔案裡的單位常常是學校名，不是道館名，所以用館名會撈不到人。
-                  <button type="button" id="goPlayerNamesBtn">改用學員名單找人</button>
+                  <button type="button" id="goPlayerNamesBtn">點我去填學員名單</button>
                 </p>
               </div>
             </section>
@@ -286,7 +292,8 @@
                   <p class="lead">跟賽程無關。用來統計吃飯、報名費、出缺席，欄位可自己加。</p>
                 </div>
               </div>
-              <div class="export-group">
+              <div class="export-block">
+                <div class="export-group">
                 <select id="customTemplate">
                   <option value="meal">範本：吃飯統計</option>
                   <option value="signup">範本：報名收費</option>
@@ -294,6 +301,8 @@
                 </select>
                 <button class="btn gray" id="customApplyTpl" type="button">套用範本</button>
                 <button class="btn export" id="customExportBtn" type="button">匯出 Excel</button>
+                </div>
+                <p class="save-note-inline">這裡也不會存檔。要帶走請匯出。</p>
               </div>
             </div>
             <div class="form-grid">
@@ -349,7 +358,10 @@
           <button class="btn gray modal-close" id="rosterCloseBtn" type="button">關閉</button>
         </div>
         <div class="modal-body">
-          <p class="hint">勾選後按套用，會填進外面的學員名單。也可以不到這裡，直接在外面自己打或貼。</p>
+          <div class="roster-note">
+            <p class="roster-note-how"><b>怎麼用</b>勾要找的人，再按下面「套用到學員名單」。不要的人按名字旁的 ×。</p>
+            <p class="roster-note-warn"><b>請記得</b>下次用這台打開還在。換電腦或換手機，就看不到你新加的人，要再加一次。</p>
+          </div>
           <div class="roster-toolbar">
             <button class="btn gray" type="button" id="rosterAllBtn">全選</button>
             <button class="btn gray" type="button" id="rosterNoneBtn">全不選</button>
@@ -359,6 +371,7 @@
           <div class="inline-add">
             <input type="text" id="rosterAddName" placeholder="加入新名字" />
             <button class="btn gray" type="button" id="rosterAddBtn">加入</button>
+            <button class="btn gray" type="button" id="rosterResetBtn">恢復秩序冊名單</button>
           </div>
           <div class="modal-actions">
             <button class="btn gray" type="button" id="rosterCancelBtn">取消</button>

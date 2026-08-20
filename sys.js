@@ -3,7 +3,7 @@ let allData = [];
 let currentFilter = "all";
 let uploadedFiles = [];
 let clubKeywords = ["金城土城", "金城土城館"];
-const ROSTER_VERSION = 2;
+const ROSTER_VERSION = 3;
 const DEFAULT_CHECKED_ROSTER = [
   "李晨希", "潘侑廷", "黃宥豪", "黃靖允", "李宜霏",
   "黃家宥", "蔡葦霖", "陳昶亨", "賴芷涵", "謝唯甄", "黃郁婷", "盧俐彤", "張秩嘉", "張紘嘉", "黃國霖",
@@ -16,6 +16,7 @@ const DEFAULT_CLUB_ROSTER = [
   "李亦宸", "陳知禧"
 ];
 let clubRoster = DEFAULT_CLUB_ROSTER.slice();
+let rosterChecked = DEFAULT_CHECKED_ROSTER.slice();
 const DEFAULT_CHECKED_SET = new Set(DEFAULT_CHECKED_ROSTER);
 let inferredCompetitionName = "";
 let competitionNameManual = false;
@@ -107,10 +108,15 @@ function loadSavedSettings() {
     if (Array.isArray(saved.keywords) && saved.keywords.length) {
       clubKeywords = saved.keywords;
     }
-    if (saved.rosterVersion === ROSTER_VERSION && Array.isArray(saved.clubRoster) && saved.clubRoster.length) {
-      clubRoster = uniqueNameList([...DEFAULT_CLUB_ROSTER, ...saved.clubRoster]);
+    if (Array.isArray(saved.clubRoster) && saved.clubRoster.length) {
+      clubRoster = saved.rosterVersion >= 3
+        ? uniqueNameList(saved.clubRoster)
+        : uniqueNameList([...DEFAULT_CLUB_ROSTER, ...saved.clubRoster]);
     } else {
       clubRoster = DEFAULT_CLUB_ROSTER.slice();
+    }
+    if (Array.isArray(saved.rosterChecked) && saved.rosterChecked.length) {
+      rosterChecked = uniqueNameList(saved.rosterChecked);
     }
     if (Array.isArray(saved.exportFields) && saved.exportFields.length) {
       exportFields = saved.exportFields.filter((key) => EXPORT_FIELDS.some((item) => item.key === key));
@@ -135,6 +141,7 @@ function saveSettings() {
     keywords: clubKeywords,
     playerNames: playerNamesEl ? playerNamesEl.value : "",
     clubRoster,
+    rosterChecked,
     rosterVersion: ROSTER_VERSION,
     exportFields,
     displayMode: getDisplayMode(),
@@ -355,10 +362,27 @@ analyzeBtn.addEventListener("click", async () => {
   }
 });
 
-function setStatus(text, isError) {
+function shouldGuideToNames() {
+  return parsedAll.length > 0 && allData.length === 0 && getDisplayMode() !== "all";
+}
+
+function setStatus(text, isError, options) {
   parseStatus.classList.remove("hidden");
   parseStatus.classList.toggle("error", Boolean(isError));
-  parseStatus.textContent = text;
+  const guide = !isError && Boolean(options?.guideToNames);
+  parseStatus.classList.toggle("is-guide", guide);
+  parseStatus.replaceChildren();
+  if (guide) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "status-guide-btn";
+    const hint = document.createElement("small");
+    hint.textContent = "點這裡，去上面填學員名單";
+    btn.append(text, hint);
+    parseStatus.appendChild(btn);
+  } else {
+    parseStatus.textContent = text;
+  }
 }
 
 function getActiveKeywords() {
@@ -1776,7 +1800,7 @@ function rememberClubRoster() {
 }
 
 function getClubRoster() {
-  const all = uniqueNameList([...DEFAULT_CLUB_ROSTER, ...clubRoster]);
+  const all = uniqueNameList(clubRoster);
   const pinned = DEFAULT_CHECKED_ROSTER.filter((name) => all.includes(name));
   const rest = all
     .filter((name) => !DEFAULT_CHECKED_SET.has(name))
@@ -1823,7 +1847,7 @@ function setDisplayMode(mode) {
 
 function updateScopeSummary() {
   const labels = {
-    auto: "目前：先看本館，沒抓到才改看學員",
+    auto: "平常不用改｜目前：先看本館，沒抓到才改看學員",
     either: "目前：本館＋學員加總",
     club: "目前：只看本館",
     names: "目前：只看學員名單",
@@ -1901,7 +1925,7 @@ function applyViewFilter(updateStatus, forceAll) {
   resultArea.classList.remove("hidden");
   updateStats();
   render();
-  if (updateStatus) setStatus(viewStatusMessage());
+  if (updateStatus) setStatus(viewStatusMessage(), false, { guideToNames: shouldGuideToNames() });
 }
 
 function viewStatusMessage() {
@@ -2717,6 +2741,7 @@ function render() {
     }
   }
   if (emptyNameHint) emptyNameHint.classList.toggle("hidden", !showNameHint);
+  emptyMessage.classList.toggle("is-guide", showNameHint);
   if (data.length > 0) clearPlayerNamesPulse();
 
   renderGroupChips(data);
@@ -2728,14 +2753,18 @@ function render() {
 }
 
 function guideToPlayerNames() {
-  setDisplayMode("auto");
-  saveSettings();
-  applyViewFilter(true);
-  const field = document.getElementById("playerNamesField");
-  if (!field || !playerNamesEl) return;
+  if (getDisplayMode() !== "auto" && getDisplayMode() !== "names") {
+    setDisplayMode("auto");
+    saveSettings();
+    applyViewFilter(true);
+  }
   switchTab("match");
+  const field = document.getElementById("playerNamesField");
+  if (!field) return;
   field.classList.add("field-pulse");
-  field.scrollIntoView({ behavior: "smooth", block: "center" });
+  requestAnimationFrame(() => {
+    field.scrollIntoView({ behavior: "smooth", block: "center" });
+  });
 }
 
 function clearPlayerNamesPulse() {
@@ -3036,7 +3065,7 @@ const TOUR_STEPS = [
   },
   {
     title: "品勢看順序，對打看青紅",
-    copy: "越上面越早打。品勢多半一個個上場，看「場次」和「第幾位」；對打才有青紅和對手。手機上點卡片可看同組。要帶走再匯出 Excel，欄位可勾選。",
+    copy: "越上面越早打。品勢多半一個個上場，看「場次」和「第幾位」；對打才有青紅和對手。手機上點卡片可看同組。要帶走請按匯出 Excel。網頁不存檔，重整或關掉分頁，表就會消失。",
     stage: `
       <div class="demo-results">
         <div class="demo-mini-card">
@@ -3482,8 +3511,17 @@ if (playerNamesEl) {
     clearPlayerNamesPulse();
   });
 }
-document.getElementById("goPlayerNamesBtn")?.addEventListener("click", guideToPlayerNames);
-document.getElementById("openRosterBtn")?.addEventListener("click", openRosterModal);
+parseStatus?.addEventListener("click", () => {
+  if (parseStatus.classList.contains("is-guide")) guideToPlayerNames();
+});
+emptyMessage?.addEventListener("click", () => {
+  if (emptyMessage.classList.contains("is-guide")) guideToPlayerNames();
+});
+document.getElementById("playerNamesField")?.addEventListener("pointerdown", clearPlayerNamesPulse);
+document.getElementById("openRosterBtn")?.addEventListener("click", () => {
+  clearPlayerNamesPulse();
+  openRosterModal();
+});
 document.getElementById("rosterCloseBtn")?.addEventListener("click", closeModal);
 document.getElementById("rosterBackdrop")?.addEventListener("click", closeModal);
 document.getElementById("rosterCancelBtn")?.addEventListener("click", closeModal);
@@ -3491,6 +3529,14 @@ document.getElementById("rosterAllBtn")?.addEventListener("click", () => setRost
 document.getElementById("rosterNoneBtn")?.addEventListener("click", () => setRosterChecked(false));
 document.getElementById("rosterSearch")?.addEventListener("input", filterRosterList);
 document.getElementById("rosterAddBtn")?.addEventListener("click", addRosterName);
+document.getElementById("rosterResetBtn")?.addEventListener("click", resetRosterToDefault);
+document.getElementById("rosterList")?.addEventListener("click", (event) => {
+  const btn = event.target.closest(".chip-del");
+  if (!btn) return;
+  event.preventDefault();
+  event.stopPropagation();
+  removeRosterName(btn.getAttribute("data-name"));
+});
 document.getElementById("rosterAddName")?.addEventListener("keydown", (event) => {
   if (event.key === "Enter") {
     event.preventDefault();
@@ -3517,6 +3563,7 @@ document.getElementById("exportConfirmBtn")?.addEventListener("click", () => {
 });
 
 function openRosterModal() {
+  clearPlayerNamesPulse();
   const modal = document.getElementById("rosterModal");
   const title = document.getElementById("rosterTitle");
   if (title) title.textContent = `${clubName.value.trim() || "金城土城"}學員`;
@@ -3531,6 +3578,7 @@ function rosterChip(name, checked) {
     <label class="check-chip">
       <input type="checkbox" value="${escapeHTML(name)}" ${checked ? "checked" : ""} />
       <span>${escapeHTML(name)}</span>
+      <button type="button" class="chip-del" data-name="${escapeHTML(name)}" aria-label="從常用名單拿掉 ${escapeHTML(name)}">×</button>
     </label>
   `;
 }
@@ -3539,8 +3587,9 @@ function renderRosterList() {
   const box = document.getElementById("rosterList");
   if (!box) return;
   const names = getClubRoster();
-  box.innerHTML = names.map((name) => rosterChip(name, DEFAULT_CHECKED_SET.has(name))).join("")
-    || `<p class="hint">還沒有名單</p>`;
+  const checked = new Set(uniqueNameList(rosterChecked));
+  box.innerHTML = names.map((name) => rosterChip(name, checked.has(name))).join("")
+    || `<p class="hint">還沒有名單。可在下面加入，或按「恢復秩序冊名單」。</p>`;
   filterRosterList();
 }
 
@@ -3572,11 +3621,29 @@ function addRosterName() {
     return;
   }
   clubRoster = uniqueNameList([...clubRoster, name]);
+  rosterChecked = uniqueNameList([...rosterChecked, name]);
   saveSettings();
   if (input) input.value = "";
   renderRosterList();
   const added = document.querySelector(`#rosterList input[value="${CSS.escape(name)}"]`);
   if (added) added.checked = true;
+}
+
+function removeRosterName(name) {
+  const key = String(name || "").trim();
+  if (!key) return;
+  clubRoster = clubRoster.filter((item) => item !== key);
+  rosterChecked = rosterChecked.filter((item) => item !== key);
+  saveSettings();
+  renderRosterList();
+}
+
+function resetRosterToDefault() {
+  if (!confirm("恢復成秩序冊上的金城土城名單？你加過、拿掉過的都會重置。")) return;
+  clubRoster = DEFAULT_CLUB_ROSTER.slice();
+  rosterChecked = DEFAULT_CHECKED_ROSTER.slice();
+  saveSettings();
+  renderRosterList();
 }
 
 function applyRosterToNames() {
@@ -3585,6 +3652,8 @@ function applyRosterToNames() {
     alert("請至少勾選一位選手，或改到下面的框自己貼名單");
     return;
   }
+  rosterChecked = uniqueNameList(names);
+  saveSettings();
   setDisplayMode("auto");
   applyTidiedNames(names.join("\n"), false);
   closeModal();
