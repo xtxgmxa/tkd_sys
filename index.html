@@ -371,7 +371,7 @@
           <div class="inline-add">
             <input type="text" id="rosterAddName" placeholder="加入新名字" />
             <button class="btn gray" type="button" id="rosterAddBtn">加入</button>
-            <button class="btn gray" type="button" id="rosterResetBtn">恢復秩序冊名單</button>
+            <button class="btn gray" type="button" id="rosterResetBtn">恢復預設名單</button>
           </div>
           <div class="modal-actions">
             <button class="btn gray" type="button" id="rosterCancelBtn">取消</button>
@@ -383,24 +383,30 @@
 
     <div id="exportModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="exportTitle">
       <div class="modal-backdrop" id="exportBackdrop"></div>
-      <div class="modal-card modal-card-narrow">
+      <div class="modal-card modal-card-export">
         <div class="modal-head">
           <div>
-            <p class="modal-kicker">匯出 Excel</p>
-            <h3 id="exportTitle">選擇要顯示的欄位</h3>
+            <p class="modal-kicker" id="exportKicker">匯出 Excel</p>
+            <h3 id="exportTitle">先看一下會匯出什麼</h3>
           </div>
           <button class="btn gray modal-close" id="exportCloseBtn" type="button">關閉</button>
         </div>
         <div class="modal-body">
-          <p class="hint">預設全選。不需要的欄位取消勾選，只會影響「全部」工作表。</p>
-          <div class="roster-toolbar">
-            <button class="btn gray" type="button" id="exportAllBtn">全選</button>
-            <button class="btn gray" type="button" id="exportNoneBtn">全不選</button>
+          <p class="hint" id="exportHint">檔案裡會有不同工作表。詳細賽程欄位多、可勾選；簡表欄位少，給上場看。</p>
+          <div id="exportFieldsBlock">
+            <div class="roster-toolbar">
+              <button class="btn gray" type="button" id="exportAllBtn">全選</button>
+              <button class="btn gray" type="button" id="exportNoneBtn">全不選</button>
+            </div>
+            <div id="exportFieldList" class="picker-grid"></div>
           </div>
-          <div id="exportFieldList" class="picker-grid"></div>
+          <div class="export-tabs" id="exportTabs" role="tablist"></div>
+          <p class="export-tab-note" id="exportTabNote"></p>
+          <div id="exportPreview"></div>
+          <p class="export-file-hint" id="exportFileHint"></p>
           <div class="modal-actions">
             <button class="btn gray" type="button" id="exportCancelBtn">取消</button>
-            <button class="btn export" type="button" id="exportConfirmBtn">開始匯出</button>
+            <button class="btn export" type="button" id="exportConfirmBtn">下載 Excel</button>
           </div>
         </div>
       </div>

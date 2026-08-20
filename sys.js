@@ -3004,11 +3004,11 @@ document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") closeModal();
 });
 
-const TOUR_SEEN_KEY = "tkd_sys_tutorial_seen_v3";
+const TOUR_SEEN_KEY = "tkd_sys_tutorial_seen_v4";
 const TOUR_STEPS = [
   {
     title: "平常只要三步",
-    copy: "確認道館名稱（已幫你填好）→ 點大方塊選檔案 → 按藍色「整理賽程」。學員名單可以先空著。要用時再點「點這裡選常用選手」勾選即可。",
+    copy: "確認道館名稱（已幫你填好）→ 點大方塊選檔案 → 按藍色「整理賽程」。學員名單可以先空著。本館沒找到人，再點「點這裡選常用選手」。",
     stage: `
       <ol class="demo-steps">
         <li><span>1</span><div><b>確認道館</b><small>已填好金城土城</small></div></li>
@@ -3018,8 +3018,8 @@ const TOUR_STEPS = [
     `
   },
   {
-    title: "先看本館，找不到才改看名單",
-    copy: "這不是把兩邊加總。本館有抓到人，就只顯示本館；一個都沒有，才改看學員名單。有人掛學校名、又要連本館一起看時，再點「找人的方式」改成「本館＋學員」。",
+    title: "找不到人時，點畫面上的提示",
+    copy: "本館有抓到人，就只看本館，不是加總。一個都沒有，畫面會出現藍色提示，點了會帶到上面填名單。常用選手下次用這台還在；換電腦或換手機就看不到新加的人。「找人的方式」平常不用改。",
     stage: `
       <div class="demo-swap">
         <div class="demo-swap-scene a">
@@ -3041,7 +3041,7 @@ const TOUR_STEPS = [
           <div class="demo-arrow">→</div>
           <div class="demo-card on demo-pulse">
             <b>② 學員名單</b>
-            <small class="demo-ok">才改用這份</small>
+            <small class="demo-ok">點提示，去上面填</small>
           </div>
         </div>
       </div>
@@ -3065,7 +3065,7 @@ const TOUR_STEPS = [
   },
   {
     title: "品勢看順序，對打看青紅",
-    copy: "越上面越早打。品勢多半一個個上場，看「場次」和「第幾位」；對打才有青紅和對手。手機上點卡片可看同組。要帶走請按匯出 Excel。網頁不存檔，重整或關掉分頁，表就會消失。",
+    copy: "越上面越早打。品勢看「場次」和「第幾位」；對打看青紅和對手。要帶走請按「匯出 Excel」或「匯出 Word」，下載前會先給你看預覽。賽程表不會存在網頁裡，重整或關掉分頁就會消失。",
     stage: `
       <div class="demo-results">
         <div class="demo-mini-card">
@@ -3262,6 +3262,10 @@ function rowsForExport(data) {
   }));
 }
 
+let exportKind = "excel";
+let exportPreviewTab = "all";
+const EXPORT_PREVIEW_LIMIT = 12;
+
 document.getElementById("exportExcelBtn").addEventListener("click", () => {
   if (!window.XLSX) {
     alert("Excel 套件尚未載入，請確認網路連線");
@@ -3271,28 +3275,202 @@ document.getElementById("exportExcelBtn").addEventListener("click", () => {
     alert("沒有可匯出的資料。請先解析檔案，並確認畫面上有選手列。");
     return;
   }
-  openExportModal();
+  openExportModal("excel");
 });
 
-function openExportModal() {
+document.getElementById("exportWordBtn").addEventListener("click", () => {
+  if (!allData.length) {
+    alert("沒有可匯出的資料");
+    return;
+  }
+  openExportModal("word");
+});
+
+function openExportModal(kind) {
+  exportKind = kind === "word" ? "word" : "excel";
+  exportPreviewTab = "all";
   const box = document.getElementById("exportFieldList");
   const modal = document.getElementById("exportModal");
   if (!box || !modal) {
-    doExportExcel();
+    if (exportKind === "word") doExportWord();
+    else doExportExcel();
     return;
   }
+  const kicker = document.getElementById("exportKicker");
+  const title = document.getElementById("exportTitle");
+  const hint = document.getElementById("exportHint");
+  const confirm = document.getElementById("exportConfirmBtn");
+  if (kicker) kicker.textContent = exportKind === "word" ? "匯出 Word" : "匯出 Excel";
+  if (title) title.textContent = "先看一下會匯出什麼";
+  if (hint) {
+    hint.textContent = exportKind === "word"
+      ? "Word 會帶出場表和組別細節。先看預覽，沒問題再下載。"
+      : "檔案裡會有不同工作表。詳細賽程欄位多、可勾選；簡表欄位少，給上場看。";
+  }
+  document.getElementById("exportFieldsBlock")?.classList.toggle("hidden", exportKind === "word");
+  if (confirm) confirm.textContent = exportKind === "word" ? "下載 Word" : "下載 Excel";
   box.innerHTML = EXPORT_FIELDS.map((field) => `
     <label class="check-chip">
       <input type="checkbox" value="${escapeHTML(field.key)}" ${exportFields.includes(field.key) ? "checked" : ""} />
       <span>${escapeHTML(field.label)}</span>
     </label>
   `).join("");
+  renderExportTabs();
+  renderExportPreview();
   modal.classList.remove("hidden");
 }
 
 function collectExportFields() {
   const checked = [...document.querySelectorAll("#exportFieldList input[type=checkbox]:checked")].map((input) => input.value);
   return checked.filter((key) => EXPORT_FIELDS.some((item) => item.key === key));
+}
+
+function liveExportFields() {
+  const modal = document.getElementById("exportModal");
+  if (modal && !modal.classList.contains("hidden")) {
+    const checked = collectExportFields();
+    return EXPORT_FIELDS.filter((field) => checked.includes(field.key));
+  }
+  return EXPORT_FIELDS.filter((field) => exportFields.includes(field.key));
+}
+
+function renderExportTabs() {
+  const tabs = document.getElementById("exportTabs");
+  if (!tabs) return;
+  const poomsae = allData.filter((item) => classifyType(item) === "品勢");
+  const fight = allData.filter((item) => classifyType(item) === "對打");
+  const items = exportKind === "word"
+    ? [
+        { id: "all", label: "出場表" },
+        { id: "groups", label: "組別細節" }
+      ]
+    : [
+        { id: "all", label: "詳細賽程" },
+        poomsae.length ? { id: "poomsae", label: "品勢簡表" } : null,
+        fight.length ? { id: "fight", label: "對打簡表" } : null
+      ].filter(Boolean);
+  if (!items.some((item) => item.id === exportPreviewTab)) exportPreviewTab = items[0]?.id || "all";
+  tabs.innerHTML = items.map((item) => `
+    <button type="button" class="export-tab ${item.id === exportPreviewTab ? "active" : ""}" data-export-tab="${item.id}">${item.label}</button>
+  `).join("");
+  const note = document.getElementById("exportTabNote");
+  if (note) {
+    const notes = {
+      all: exportKind === "word"
+        ? "出場表：一次看所有人的場次、對手、下一場。"
+        : "詳細賽程：欄位較多，上面勾的欄位只影響這張表。",
+      groups: "組別細節：同組還有誰、籤號、場次。",
+      poomsae: "品勢簡表：給上場看的。只留姓名、組別、場次、品勢，欄位固定不能勾。",
+      fight: "對打簡表：給上場看的。只留姓名、組別、場次＋青紅，欄位固定不能勾。"
+    };
+    note.textContent = notes[exportPreviewTab] || "";
+  }
+  document.getElementById("exportFieldsBlock")?.classList.toggle(
+    "hidden",
+    exportKind === "word" || exportPreviewTab !== "all"
+  );
+}
+
+function renderExportPreview() {
+  const host = document.getElementById("exportPreview");
+  const fileHint = document.getElementById("exportFileHint");
+  if (fileHint) fileHint.textContent = `將下載：${exportFileName(exportKind === "word" ? "doc" : "xlsx")}`;
+  if (!host) return;
+  const club = clubName.value.trim() || "本館";
+  if (exportKind === "word") {
+    if (exportPreviewTab === "groups") {
+      host.innerHTML = wordGroupsPreviewHtml();
+      return;
+    }
+    const headers = ["順序", "選手", "項目", "組別", "品勢或級別", "場地", "本場", "青紅／出場", "對手／順序", "下一場"];
+    const rows = rowsForExport(allData).map(wordPreviewRow);
+    host.innerHTML = previewTableHtml(headers, rows, `Word 出場表｜${club}`);
+    return;
+  }
+  const selected = liveExportFields();
+  if (exportPreviewTab === "all") {
+    if (!selected.length) {
+      host.innerHTML = `<p class="export-preview-empty">請至少勾選一個欄位</p>`;
+      return;
+    }
+    const headers = selected.map((field) => field.label);
+    const rows = rowsForExport(allData).map((row) => selected.map((field) => row[field.key] ?? ""));
+    host.innerHTML = previewTableHtml(headers, rows, `${club}｜詳細賽程`);
+    return;
+  }
+  if (exportPreviewTab === "poomsae") {
+    host.innerHTML = previewTableHtml(
+      ["姓名", "組別", "場次", "第一品勢", "第二品勢", "比賽品勢"],
+      poomsaeExportRows(),
+      `${club}｜品勢簡表`
+    );
+    return;
+  }
+  host.innerHTML = previewTableHtml(
+    ["姓名", "體重／組別", "場次＋顏色"],
+    fightExportRows(),
+    `${club}｜對打簡表`
+  );
+}
+
+function previewTableHtml(headers, rows, caption) {
+  const shown = rows.slice(0, EXPORT_PREVIEW_LIMIT);
+  const extra = rows.length > shown.length ? `，後面還有 ${rows.length - shown.length} 筆會寫進檔案` : "";
+  return `
+    <p class="export-preview-meta">${escapeHTML(caption)}　預覽前 ${shown.length} 筆，共 ${rows.length} 筆${extra}</p>
+    <div class="export-preview-wrap">
+      <table class="export-preview-table">
+        <thead><tr>${headers.map((h) => `<th>${escapeHTML(h)}</th>`).join("")}</tr></thead>
+        <tbody>
+          ${shown.map((row) => `<tr>${row.map((cell) => `<td>${escapeHTML(String(cell ?? ""))}</td>`).join("")}</tr>`).join("") || `<tr><td colspan="${headers.length}">沒有資料</td></tr>`}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function wordPreviewRow(row) {
+  const next = `${row.下一場場次}${row.下一場青紅 && row.下一場青紅 !== "－" && row.下一場青紅 !== "未提及" ? " " + row.下一場青紅 : ""}`;
+  return [row.順序, row.選手, row.項目, row.組別, row.級別或品勢項目, row.場地, row.本場場次, row.青紅方, row.對手, next];
+}
+
+function wordGroupsPreviewHtml() {
+  const groups = getVisibleGroups(allData);
+  const shown = groups.slice(0, 8);
+  const extra = groups.length > shown.length ? `<p class="export-preview-meta">後面還有 ${groups.length - shown.length} 組會寫進檔案</p>` : "";
+  return `
+    <p class="export-preview-meta">Word 組別細節　預覽 ${shown.length} 組，共 ${groups.length} 組</p>
+    <div class="export-preview-wrap">
+      <div class="export-preview-groups">
+        ${shown.map((group) => {
+          const people = (group.members.length ? group.members : group.ours).slice(0, 8).map((item) =>
+            `<li>${escapeHTML(displayValue(item.player))}（${escapeHTML(displayValue(item.club))}）</li>`
+          ).join("");
+          return `<div><h4>${escapeHTML(displayValue(group.type))} ｜ ${escapeHTML(displayValue(group.division))}</h4><ul>${people || "<li>未提及</li>"}</ul></div>`;
+        }).join("") || `<p class="export-preview-empty">沒有組別</p>`}
+      </div>
+    </div>
+    ${extra}
+  `;
+}
+
+function poomsaeExportRows() {
+  return allData.filter((item) => classifyType(item) === "品勢").map((item) => [
+    item.player || "",
+    compactDivision(item),
+    formatMatchExport(item),
+    shortPoomsae(item.event1 || "") || (item.event2 ? "" : formatPoomsaeLabel(item, true)),
+    shortPoomsae(item.event2 || ""),
+    formatPoomsaeLabel(item, true)
+  ]);
+}
+
+function fightExportRows() {
+  return allData.filter((item) => classifyType(item) === "對打").map((item) => [
+    item.player || "",
+    compactDivision(item),
+    formatColorSequence(item)
+  ]);
 }
 
 function doExportExcel() {
@@ -3308,7 +3486,7 @@ function doExportExcel() {
   }
 
   const allRows = [
-    [`${club}｜全部賽程`],
+    [`${club}｜詳細賽程`],
     selected.map((field) => field.label)
   ];
   rowsForExport(allData).forEach((row) => {
@@ -3316,43 +3494,28 @@ function doExportExcel() {
   });
   const allSheet = XLSX.utils.aoa_to_sheet(allRows);
   allSheet["!cols"] = selected.map(() => ({ wch: 16 }));
-  XLSX.utils.book_append_sheet(workbook, allSheet, "全部");
+  XLSX.utils.book_append_sheet(workbook, allSheet, "詳細賽程");
 
   if (poomsae.length) {
     const poomRows = [
-      [`${club}｜比賽資料`],
-      ["姓名", "組別", "場次", "第一品勢", "第二品勢", "比賽品勢"]
+      [`${club}｜品勢簡表`],
+      ["姓名", "組別", "場次", "第一品勢", "第二品勢", "比賽品勢"],
+      ...poomsaeExportRows()
     ];
-    poomsae.forEach((item) => {
-      poomRows.push([
-        item.player || "",
-        compactDivision(item),
-        formatMatchExport(item),
-        shortPoomsae(item.event1 || "") || (item.event2 ? "" : formatPoomsaeLabel(item, true)),
-        shortPoomsae(item.event2 || ""),
-        formatPoomsaeLabel(item, true)
-      ]);
-    });
     const poomSheet = XLSX.utils.aoa_to_sheet(poomRows);
     poomSheet["!cols"] = [12, 32, 16, 16, 16, 18].map((wch) => ({ wch }));
-    XLSX.utils.book_append_sheet(workbook, poomSheet, "比賽資料");
+    XLSX.utils.book_append_sheet(workbook, poomSheet, "品勢簡表");
   }
 
   if (fight.length) {
     const fightRows = [
-      [`${club}｜對打比賽資料`],
-      ["姓名", "體重／組別", "場次＋顏色"]
+      [`${club}｜對打簡表`],
+      ["姓名", "體重／組別", "場次＋顏色"],
+      ...fightExportRows()
     ];
-    fight.forEach((item) => {
-      fightRows.push([
-        item.player || "",
-        compactDivision(item),
-        formatColorSequence(item)
-      ]);
-    });
     const fightSheet = XLSX.utils.aoa_to_sheet(fightRows);
     fightSheet["!cols"] = [12, 32, 18].map((wch) => ({ wch }));
-    XLSX.utils.book_append_sheet(workbook, fightSheet, "對打比賽資料");
+    XLSX.utils.book_append_sheet(workbook, fightSheet, "對打簡表");
   }
 
   if (other.length && !poomsae.length && !fight.length) {
@@ -3373,12 +3536,7 @@ function doExportExcel() {
   }
 }
 
-document.getElementById("exportWordBtn").addEventListener("click", () => {
-  if (!allData.length) {
-    alert("沒有可匯出的資料");
-    return;
-  }
-
+function doExportWord() {
   const competition = document.getElementById("competitionName").value || "賽程";
   const club = clubName.value || "本館";
   const rows = rowsForExport(allData).map((row) => `
@@ -3439,7 +3597,7 @@ document.getElementById("exportWordBtn").addEventListener("click", () => {
     new Blob(["\ufeff", html], { type: "application/msword" }),
     exportFileName("doc")
   );
-});
+}
 
 function formatColorSequence(item) {
   const parts = [];
@@ -3548,9 +3706,28 @@ document.getElementById("rosterApplyBtn")?.addEventListener("click", applyRoster
 document.getElementById("exportCloseBtn")?.addEventListener("click", closeModal);
 document.getElementById("exportBackdrop")?.addEventListener("click", closeModal);
 document.getElementById("exportCancelBtn")?.addEventListener("click", closeModal);
-document.getElementById("exportAllBtn")?.addEventListener("click", () => setExportChecked(true));
-document.getElementById("exportNoneBtn")?.addEventListener("click", () => setExportChecked(false));
+document.getElementById("exportAllBtn")?.addEventListener("click", () => {
+  setExportChecked(true);
+  renderExportPreview();
+});
+document.getElementById("exportNoneBtn")?.addEventListener("click", () => {
+  setExportChecked(false);
+  renderExportPreview();
+});
+document.getElementById("exportFieldList")?.addEventListener("change", renderExportPreview);
+document.getElementById("exportTabs")?.addEventListener("click", (event) => {
+  const tab = event.target.closest("[data-export-tab]");
+  if (!tab) return;
+  exportPreviewTab = tab.getAttribute("data-export-tab") || "all";
+  renderExportTabs();
+  renderExportPreview();
+});
 document.getElementById("exportConfirmBtn")?.addEventListener("click", () => {
+  if (exportKind === "word") {
+    closeModal();
+    doExportWord();
+    return;
+  }
   const selected = collectExportFields();
   if (!selected.length) {
     alert("請至少勾選一個欄位");

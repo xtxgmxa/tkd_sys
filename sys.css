@@ -1030,6 +1030,122 @@ tbody tr:hover { background: #f8fafc; }
 .text-link:hover { color: #1d4ed8; }
 
 .modal-card-narrow { width: min(640px, 100%); }
+.modal-card-export {
+  width: min(980px, calc(100% - 24px));
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+.modal-card-export .modal-body { min-width: 0; }
+#exportFieldsBlock { min-width: 0; max-width: 100%; }
+#exportFieldList {
+  max-height: 22vh;
+  min-width: 0;
+  max-width: 100%;
+  overflow: auto;
+  grid-template-columns: repeat(auto-fill, minmax(136px, 1fr));
+}
+#exportPreview { min-width: 0; max-width: 100%; }
+.export-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.export-tab {
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 800;
+  color: #475569;
+  cursor: pointer;
+  word-break: keep-all;
+}
+.export-tab.active {
+  background: #0f172a;
+  border-color: #0f172a;
+  color: #fff;
+}
+.export-tab-note {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1e3a8a;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.6;
+}
+.export-preview-meta {
+  margin: 0 0 8px;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 700;
+}
+.export-preview-wrap {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: auto;
+  max-height: 34vh;
+  max-width: 100%;
+  min-width: 0;
+  background: #fff;
+}
+.export-preview-table {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.export-preview-table th,
+.export-preview-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid #eef2f7;
+  text-align: left;
+  white-space: nowrap;
+}
+.export-preview-table th {
+  position: sticky;
+  top: 0;
+  background: #f1f5f9;
+  font-size: 12px;
+  font-weight: 800;
+  color: #475569;
+  z-index: 1;
+}
+.export-preview-empty {
+  margin: 0;
+  padding: 24px 16px;
+  text-align: center;
+  color: #64748b;
+  font-weight: 700;
+}
+.export-preview-groups {
+  margin: 0;
+  padding: 12px 14px;
+  display: grid;
+  gap: 10px;
+}
+.export-preview-groups h4 {
+  margin: 0 0 4px;
+  font-size: 14px;
+}
+.export-preview-groups ul {
+  margin: 0;
+  padding-left: 1.2em;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.6;
+}
+.export-file-hint {
+  margin: 0;
+  color: #0f766e;
+  font-size: 13px;
+  font-weight: 800;
+}
 .roster-toolbar {
   display: flex;
   gap: 8px;
@@ -1443,7 +1559,7 @@ tbody tr:hover { background: #f8fafc; }
   .how-guide li { padding: 14px 14px; }
   .fold-toggle { word-break: keep-all; }
   .modal { padding: 16px 12px; }
-  .modal-card, .modal-card-tour, .modal-card-narrow { padding: 20px 16px; }
+  .modal-card, .modal-card-tour, .modal-card-narrow, .modal-card-export { padding: 20px 16px; }
   .tour-copy { font-size: 15px; }
   .tour-stage { min-height: 0; padding: 12px; }
   .demo-steps b, .demo-mini-head b { word-break: keep-all; }
