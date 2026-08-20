@@ -26,37 +26,47 @@
         </header>
 
         <main id="matchApp">
+          <p class="how-lead">平常只要這三步。點了會跳到下面對應位置。</p>
           <ol class="how-guide">
             <li>
-              <span class="how-num">1</span>
-              <div>
-                <strong>寫要找誰</strong>
-                <span>道館名稱已幫你填好。名單可先不用填。</span>
-              </div>
+              <button type="button" class="how-jump" data-jump="stepWho">
+                <span class="how-num">1</span>
+                <div>
+                  <strong>寫要找誰</strong>
+                  <span class="how-desc">道館已填好。名單可先空著。</span>
+                  <span class="how-go">跳到這一步</span>
+                </div>
+              </button>
             </li>
             <li>
-              <span class="how-num">2</span>
-              <div>
-                <strong>點選檔案</strong>
-                <span>秩序冊、對打表、品勢表都可以。</span>
-              </div>
+              <button type="button" class="how-jump" data-jump="stepFiles">
+                <span class="how-num">2</span>
+                <div>
+                  <strong>點選檔案</strong>
+                  <span class="how-desc">秩序冊、對打表、品勢表都可以。</span>
+                  <span class="how-go">跳到這一步</span>
+                </div>
+              </button>
             </li>
             <li>
-              <span class="how-num">3</span>
-              <div>
-                <strong>按藍色按鈕</strong>
-                <span>一定要按「整理賽程」，下面才會出表。</span>
-              </div>
+              <button type="button" class="how-jump" data-jump="stepRun">
+                <span class="how-num">3</span>
+                <div>
+                  <strong>按整理賽程</strong>
+                  <span class="how-desc">一定要按這個藍色按鈕，下面才會出表。</span>
+                  <span class="how-go">跳到這一步</span>
+                </div>
+              </button>
             </li>
           </ol>
 
-          <p class="save-note">這個網頁不會把賽程存起來。重新整理或關掉分頁，整理結果就會消失。確認資料後，請按「匯出 Excel」存檔即可。</p>
+          <p class="save-note"><b>請記得</b>這個網頁不會把賽程存起來。重整或關掉分頁，結果就會消失。看完請按「匯出 Excel」存檔。</p>
 
-          <section class="panel">
+          <section class="panel panel-step" id="stepWho">
             <div class="step-head">
               <span class="step-num">1</span>
               <div>
-                <h2>先告訴系統要找誰</h2>
+                <h2>寫要找誰</h2>
                 <p class="lead">平常只要確認道館名稱。學員名單可以先空著，本館找不到人再填。</p>
               </div>
             </div>
@@ -128,12 +138,12 @@
             </section>
           </section>
 
-          <section class="panel panel-upload">
+          <section class="panel panel-step panel-upload" id="stepFiles">
             <div class="panel-title">
               <div class="step-head">
                 <span class="step-num">2</span>
                 <div>
-                  <h2>上傳秩序冊或對戰表</h2>
+                  <h2>點選檔案</h2>
                   <p class="lead">點下面大方塊選檔案。一次可以選多個。</p>
                 </div>
               </div>
@@ -151,10 +161,6 @@
             </div>
             <div id="fileList" class="file-list"></div>
             <div id="parseStatus" class="parse-status hidden"></div>
-            <div class="main-actions">
-              <button class="btn primary btn-lg" id="analyzeBtn" type="button">整理賽程</button>
-              <p class="action-hint">選好檔案後，請按這個藍色大按鈕。不按的話，下面不會出現出場表。</p>
-            </div>
           </section>
 
           <section class="panel fold-panel">
@@ -167,6 +173,21 @@
               <textarea id="sourceData" placeholder="1.黃羽希 幼兒白帶A 102紅103紅馬步正拳&#10;2.蔡葦儒 幼兒藍137紅138紅 三章&#10;3.張紘駿國小低年級藍帶B142紅144青"></textarea>
               <div class="actions-small">
                 <button class="btn gray" id="loadSampleBtn" type="button">載入範例看看</button>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel panel-step panel-run" id="stepRun">
+            <div class="run-row">
+              <div class="step-head">
+                <span class="step-num">3</span>
+                <div>
+                  <h2>按整理賽程</h2>
+                  <p class="lead">選好檔案後按這個藍色按鈕，下面才會出出場表。</p>
+                </div>
+              </div>
+              <div class="main-actions">
+                <button class="btn primary btn-lg" id="analyzeBtn" type="button">整理賽程</button>
               </div>
             </div>
           </section>
@@ -220,12 +241,9 @@
 
             <section class="panel table-panel">
               <div class="panel-title">
-                <div class="step-head">
-                  <span class="step-num">3</span>
-                  <div>
-                    <h2>出場順序</h2>
-                    <p class="lead">越上面越早打。可先篩品勢或對打，也可搜尋姓名。</p>
-                  </div>
+                <div>
+                  <h2>出場順序</h2>
+                  <p class="lead">越上面越早打。可先篩品勢或對打，也可搜尋姓名。</p>
                 </div>
                 <div class="export-block">
                   <div class="export-group">

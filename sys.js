@@ -2752,6 +2752,21 @@ function render() {
   });
 }
 
+function jumpToStep(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  document.querySelectorAll(".step-flash").forEach((node) => node.classList.remove("step-flash"));
+  el.scrollIntoView({ behavior: "smooth", block: "start" });
+  requestAnimationFrame(() => {
+    el.classList.add("step-flash");
+    window.setTimeout(() => el.classList.remove("step-flash"), 1700);
+  });
+}
+
+document.querySelectorAll("[data-jump]").forEach((btn) => {
+  btn.addEventListener("click", () => jumpToStep(btn.dataset.jump));
+});
+
 function guideToPlayerNames() {
   if (getDisplayMode() !== "auto" && getDisplayMode() !== "names") {
     setDisplayMode("auto");
@@ -3030,7 +3045,7 @@ const TOUR_SEEN_KEY = "tkd_sys_tutorial_seen_v4";
 const TOUR_STEPS = [
   {
     title: "平常只要三步",
-    copy: "確認道館名稱（已幫你填好）→ 點大方塊選檔案 → 按藍色「整理賽程」。學員名單可以先空著。本館沒找到人，再點「點這裡選常用選手」。",
+    copy: "確認道館名稱（已幫你填好）→ 點大方塊選檔案 → 按藍色「整理賽程」。也可以點最上面的 1、2、3 跳到那一步。學員名單可以先空著。本館沒找到人，再點「點這裡選常用選手」。",
     stage: `
       <ol class="demo-steps">
         <li><span>1</span><div><b>確認道館</b><small>已填好金城土城</small></div></li>
