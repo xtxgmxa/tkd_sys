@@ -1952,6 +1952,10 @@ function applyViewFilter(updateStatus, forceAll) {
   updateQuest();
 }
 
+function hideWhoUpdated() {
+  document.getElementById("whoUpdated")?.classList.add("hidden");
+}
+
 function showWhoUpdated() {
   const box = document.getElementById("whoUpdated");
   if (!box) return;
@@ -1962,23 +1966,24 @@ function showWhoUpdated() {
   box.classList.remove("hidden");
   box.classList.toggle("need-run", !has);
   if (has) {
-    if (title) title.textContent = "上面的出場表已換好";
-    if (text) text.textContent = `不用再按整理賽程。現在顯示 ${allData.length} 筆，點右邊回上面看。`;
+    if (title) title.textContent = "出場表已換好";
+    if (text) text.textContent = `現在 ${allData.length} 筆。可先改名單，改完再上去看。`;
     if (btn) btn.textContent = "去看出場表";
     box.dataset.jump = "resultArea";
   } else {
     if (title) title.textContent = "找人方式已記下";
-    if (text) text.textContent = "還沒整理過。請先回上面按「整理賽程」，表才會出來。";
+    if (text) text.textContent = "還沒整理過。可先改名單，再上去按「整理賽程」。";
     if (btn) btn.textContent = "去按整理賽程";
     box.dataset.jump = "stepRun";
   }
-  showQuestToast(has ? "表已更新，可回上面看" : "接著去按整理賽程");
 }
 
 document.getElementById("whoUpdatedGo")?.addEventListener("click", () => {
   const box = document.getElementById("whoUpdated");
+  hideWhoUpdated();
   jumpToStep(box?.dataset.jump || "resultArea");
 });
+document.getElementById("whoUpdatedStay")?.addEventListener("click", hideWhoUpdated);
 
 function updateResultNext() {
   const box = document.getElementById("resultNext");
@@ -4115,7 +4120,10 @@ if (playerNamesEl) {
     applyViewFilter(true);
     showWhoUpdated();
   });
-  playerNamesEl.addEventListener("focus", clearPlayerNamesPulse);
+  playerNamesEl.addEventListener("focus", () => {
+    clearPlayerNamesPulse();
+    hideWhoUpdated();
+  });
   playerNamesEl.addEventListener("pointerdown", clearPlayerNamesPulse);
   playerNamesEl.addEventListener("paste", (event) => {
     const text = event.clipboardData?.getData("text") || "";

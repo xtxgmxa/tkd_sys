@@ -793,49 +793,63 @@ main { padding: 24px 28px 0; }
 .find-card-names .field { margin-top: 0; }
 
 .who-updated {
-  position: sticky;
-  bottom: calc(72px + env(safe-area-inset-bottom, 0px));
-  z-index: 6;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  margin-top: 16px;
-  padding: 14px 16px;
-  border-radius: 16px;
+  gap: 10px 12px;
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: 12px;
   background: #ecfdf5;
-  border: 2px solid #34d399;
-  box-shadow: 0 10px 24px rgba(5, 150, 105, 0.18);
-  animation: resultPop .3s ease, questGlow 1.5s ease-in-out 3;
+  border: 1px solid #6ee7b7;
 }
 
 .who-updated.hidden { display: none; }
 
 .who-updated.need-run {
   background: #eff6ff;
-  border-color: #60a5fa;
-  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.16);
+  border-color: #93c5fd;
 }
+
+.who-updated-copy { min-width: 0; }
 
 .who-updated strong {
   display: block;
   color: #047857;
-  font-size: 16px;
+  font-size: 14px;
 }
 
 .who-updated.need-run strong { color: #1d4ed8; }
 
 .who-updated p {
-  margin: 4px 0 0;
+  margin: 2px 0 0;
   color: #065f46;
-  font-size: 14px;
-  font-weight: 700;
-  line-height: 1.45;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
 }
 
 .who-updated.need-run p { color: #1e3a8a; }
 
-.who-updated .btn { flex-shrink: 0; white-space: nowrap; }
+.who-updated-acts {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+.who-updated .btn { white-space: nowrap; }
+
+.who-updated-stay {
+  background: #fff;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+.who-updated.need-run .who-updated-stay {
+  color: #1d4ed8;
+  border-color: #bfdbfe;
+}
 .find-all-note {
   margin: 14px 0 0;
   padding: 12px 14px;
@@ -2412,9 +2426,9 @@ tbody tr:hover { background: #f8fafc; }
   .who-updated {
     flex-direction: column;
     align-items: stretch;
-    bottom: calc(64px + env(safe-area-inset-bottom, 0px));
   }
-  .who-updated .btn { width: 100%; min-height: 44px; }
+  .who-updated-acts { display: grid; grid-template-columns: 1fr 1fr; }
+  .who-updated .btn { width: 100%; min-height: 40px; }
   .quest-badge { right: 6px; top: -10px; font-size: 11px; }
   .quest-toast { top: 10px; font-size: 13px; }
   .how-jump { padding: 14px; }
