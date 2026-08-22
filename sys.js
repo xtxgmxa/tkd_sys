@@ -158,6 +158,7 @@ function renderKeywords() {
       saveSettings();
       renderKeywords();
       applyViewFilter(true);
+      showWhoUpdated();
     });
     keywordTagsEl.appendChild(tag);
   });
@@ -171,6 +172,7 @@ function addKeyword(raw) {
   saveSettings();
   renderKeywords();
   applyViewFilter(true);
+  showWhoUpdated();
 }
 
 keywordInput.addEventListener("keydown", (event) => {
@@ -184,6 +186,7 @@ keywordInput.addEventListener("keydown", (event) => {
     saveSettings();
     renderKeywords();
     applyViewFilter(true);
+    showWhoUpdated();
   }
 });
 
@@ -1825,6 +1828,7 @@ function applyTidiedNames(raw, mergeWithCurrent) {
   showNameTidyStatus(tidied.names.length);
   saveSettings();
   applyViewFilter(true);
+  showWhoUpdated();
   return true;
 }
 
@@ -1947,6 +1951,34 @@ function applyViewFilter(updateStatus, forceAll) {
   updateResultNext();
   updateQuest();
 }
+
+function showWhoUpdated() {
+  const box = document.getElementById("whoUpdated");
+  if (!box) return;
+  const has = parsedAll.length > 0;
+  const title = document.getElementById("whoUpdatedTitle");
+  const text = document.getElementById("whoUpdatedText");
+  const btn = document.getElementById("whoUpdatedGo");
+  box.classList.remove("hidden");
+  box.classList.toggle("need-run", !has);
+  if (has) {
+    if (title) title.textContent = "上面的出場表已換好";
+    if (text) text.textContent = `不用再按整理賽程。現在顯示 ${allData.length} 筆，點右邊回上面看。`;
+    if (btn) btn.textContent = "去看出場表";
+    box.dataset.jump = "resultArea";
+  } else {
+    if (title) title.textContent = "找人方式已記下";
+    if (text) text.textContent = "還沒整理過。請先回上面按「整理賽程」，表才會出來。";
+    if (btn) btn.textContent = "去按整理賽程";
+    box.dataset.jump = "stepRun";
+  }
+  showQuestToast(has ? "表已更新，可回上面看" : "接著去按整理賽程");
+}
+
+document.getElementById("whoUpdatedGo")?.addEventListener("click", () => {
+  const box = document.getElementById("whoUpdated");
+  jumpToStep(box?.dataset.jump || "resultArea");
+});
 
 function updateResultNext() {
   const box = document.getElementById("resultNext");
@@ -4081,6 +4113,7 @@ if (playerNamesEl) {
   playerNamesEl.addEventListener("change", () => {
     saveSettings();
     applyViewFilter(true);
+    showWhoUpdated();
   });
   playerNamesEl.addEventListener("focus", clearPlayerNamesPulse);
   playerNamesEl.addEventListener("pointerdown", clearPlayerNamesPulse);
@@ -4273,6 +4306,7 @@ document.querySelectorAll(".find-chip").forEach((btn) => {
     setDisplayMode(btn.dataset.mode);
     saveSettings();
     applyViewFilter(true);
+    showWhoUpdated();
   });
 });
 

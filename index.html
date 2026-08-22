@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>跆拳道賽程整理工具</title>
     <!-- 上傳前請改 v=，避免瀏覽器沿用舊的 CSS／JS -->
-    <link rel="stylesheet" href="./sys.css?v=20260822-5">
+    <link rel="stylesheet" href="./sys.css?v=20260822-6">
 </head>
 <body>
     <div class="app">
@@ -277,6 +277,14 @@
               </section>
 
               <p class="find-all-note hidden" id="findAllNote">會列出檔案裡所有選手，不篩報名單位，也不篩學員名字。</p>
+
+              <div class="who-updated hidden" id="whoUpdated">
+                <div>
+                  <strong id="whoUpdatedTitle">上面的出場表已換好</strong>
+                  <p id="whoUpdatedText">不用再按整理賽程。點右邊回上面看結果。</p>
+                </div>
+                <button type="button" class="btn primary" id="whoUpdatedGo">去看出場表</button>
+              </div>
             </div>
           </section>
 
@@ -494,6 +502,6 @@
     <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <script src="./sys.js?v=20260822-5"></script>
+    <script src="./sys.js?v=20260822-6"></script>
 </body>
 </html>
