@@ -156,10 +156,29 @@ main { padding: 24px 28px 0; }
   background: var(--card);
   border-radius: 16px;
   padding: 0;
-  overflow: hidden;
+  overflow: visible;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 10px 24px rgba(15, 23, 42, 0.04);
   border: 1px solid rgba(15, 23, 42, 0.04);
   border-left: 4px solid var(--primary);
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+
+.how-guide li.is-now {
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.22), 0 10px 24px rgba(37, 99, 235, 0.16);
+  animation: questGlow 1.4s ease-in-out infinite;
+}
+
+.how-guide li.is-done {
+  border-left-color: #059669;
+}
+
+.how-guide li.is-done .how-num {
+  background: #059669;
+}
+
+.how-guide li.is-now .how-go {
+  animation: questBob .9s ease-in-out infinite;
 }
 
 .how-jump {
@@ -237,6 +256,25 @@ main { padding: 24px 28px 0; }
   line-height: 1.65;
   box-shadow: 0 8px 20px rgba(234, 88, 12, 0.14);
 }
+
+.save-note-compact {
+  margin-bottom: 14px;
+  padding: 10px 14px;
+  font-size: 14px;
+  box-shadow: none;
+  position: relative;
+  overflow: hidden;
+  animation: notePulse 2.4s ease-in-out infinite;
+}
+
+.save-note-compact::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 -40%;
+  width: 28%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.55), transparent);
+  animation: noteShine 3.2s ease-in-out infinite;
+}
 .save-note b {
   display: inline-block;
   margin-right: 8px;
@@ -277,6 +315,328 @@ main { padding: 24px 28px 0; }
   scroll-margin-top: 16px;
   border-left: 4px solid var(--primary);
 }
+
+#resultArea,
+#resultSlot {
+  scroll-margin-top: 16px;
+}
+
+.result-wait {
+  margin: 0 0 18px;
+  padding: 18px 20px;
+  border-radius: 16px;
+  border: 2px dashed var(--primary-line);
+  background: #f8fbff;
+  color: #1e3a8a;
+  font-size: 15px;
+  font-weight: 700;
+  text-align: center;
+  animation: waitPulse 1.8s ease-in-out infinite;
+}
+
+.result-wait::after {
+  content: "↓";
+  display: block;
+  margin-top: 4px;
+  color: #2563eb;
+  animation: questBob .9s ease-in-out infinite;
+}
+
+.fold-quiet {
+  border-color: transparent;
+  box-shadow: none;
+  background: #f1f5f9;
+}
+
+.fold-quiet .fold-toggle {
+  color: #64748b;
+  font-weight: 700;
+}
+
+.to-top {
+  position: fixed;
+  right: 18px;
+  bottom: 22px;
+  z-index: 40;
+  border: 0;
+  border-radius: 999px;
+  padding: 12px 16px;
+  background: var(--ink);
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.28);
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(8px);
+  transition: opacity .18s ease, transform .18s ease;
+}
+
+.to-top.is-on {
+  opacity: 1;
+  pointer-events: auto;
+  transform: none;
+}
+
+.to-top:hover { background: #1e293b; }
+
+.quest-now {
+  position: relative;
+  z-index: 2;
+  animation: questGlow 1.4s ease-in-out infinite;
+}
+
+.quest-badge {
+  position: absolute;
+  top: -12px;
+  right: 10px;
+  z-index: 3;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #f59e0b;
+  color: #7c2d12;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.2;
+  box-shadow: 0 6px 14px rgba(245, 158, 11, 0.35);
+  animation: questBob .8s ease-in-out infinite;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+#analyzeBtn.quest-now,
+.btn.quest-now {
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.28), 0 8px 20px rgba(37, 99, 235, 0.28);
+}
+
+.drop-zone.quest-now {
+  border-color: #2563eb;
+}
+
+.drop-zone.quest-now .drop-icon {
+  animation: questBob .8s ease-in-out infinite;
+}
+
+.quest-toast {
+  position: fixed;
+  left: 50%;
+  top: 18px;
+  z-index: 60;
+  transform: translate(-50%, -12px);
+  margin: 0;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: #111c36;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 800;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.28);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s ease, transform .2s ease;
+  max-width: calc(100vw - 24px);
+  text-align: center;
+}
+
+.quest-toast.is-on {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.quest-chip {
+  position: fixed;
+  right: 14px;
+  bottom: 78px;
+  z-index: 45;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 4px 4px 4px;
+  border-radius: 999px;
+  background: #111c36;
+  color: #fff;
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.28);
+  animation: coachIn .3s ease;
+}
+
+.quest-chip.hidden { display: none; }
+
+.quest-chip-go {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  background: transparent;
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  padding: 4px 8px 4px 4px;
+  cursor: pointer;
+}
+
+.quest-chip-dot {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #f59e0b;
+  color: #7c2d12;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  font-weight: 900;
+  animation: questBob .9s ease-in-out infinite;
+}
+
+.quest-chip-x {
+  border: 0;
+  background: transparent;
+  color: #94a3b8;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.quest-chip-x:hover { color: #fff; background: #1e293b; }
+
+.quest-pointer {
+  position: fixed;
+  z-index: 46;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -100%);
+  border: 0;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: #f59e0b;
+  color: #7c2d12;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  box-shadow: 0 8px 18px rgba(245, 158, 11, 0.35);
+  cursor: pointer;
+  animation: pointerBob .85s ease-in-out infinite;
+  white-space: nowrap;
+}
+
+.quest-pointer.hidden { display: none; }
+
+.quest-pointer.is-on-target {
+  background: transparent;
+  box-shadow: none;
+  font-size: 28px;
+  padding: 0;
+  color: #2563eb;
+  filter: drop-shadow(0 4px 0 rgba(255,255,255,.85));
+}
+
+@keyframes questGlow {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18), 0 8px 20px rgba(37, 99, 235, 0.12); }
+  50% { box-shadow: 0 0 0 8px rgba(37, 99, 235, 0.08), 0 8px 24px rgba(37, 99, 235, 0.2); }
+}
+
+@keyframes questBob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+@keyframes notePulse {
+  0%, 100% { border-color: #fb923c; }
+  50% { border-color: #f59e0b; }
+}
+
+@keyframes noteShine {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(420%); }
+}
+
+@keyframes waitPulse {
+  0%, 100% { border-color: #93c5fd; background: #f8fbff; }
+  50% { border-color: #2563eb; background: #eff6ff; }
+}
+
+@keyframes coachIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes pointerBob {
+  0%, 100% { transform: translate(-50%, -100%); }
+  50% { transform: translate(-50%, calc(-100% - 8px)); }
+}
+
+@keyframes tourIn {
+  from { opacity: 0; transform: translateY(16px) scale(.96); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes resultPop {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: none; }
+}
+
+.result-next {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0 0 16px;
+  padding: 16px 18px;
+  border-radius: 16px;
+  border: 2px solid var(--primary-line);
+  background: var(--primary-soft);
+}
+
+.result-next.hidden { display: none; }
+
+.result-next strong {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 17px;
+}
+
+.result-next p {
+  margin: 0;
+  color: #1e3a8a;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.55;
+}
+
+.result-next.is-ok,
+.result-next.is-warn {
+  animation: resultPop .35s ease, questGlow 1.6s ease-in-out 2;
+}
+
+.result-next.is-ok {
+  background: #ecfdf5;
+  border-color: #6ee7b7;
+}
+
+.result-next.is-ok strong { color: #047857; }
+.result-next.is-ok p { color: #065f46; }
+
+.result-next.is-warn {
+  background: #fff7ed;
+  border-color: #fdba74;
+}
+
+.result-next.is-warn strong { color: #c2410c; }
+.result-next.is-warn p { color: #9a3412; }
+
+.result-next-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.result-next > .btn { flex-shrink: 0; }
 
 .panel-run {
   background: linear-gradient(180deg, var(--primary-soft), #fff 72%);
@@ -1531,7 +1891,10 @@ tbody tr:hover { background: #f8fafc; }
 .modal-head h3 { margin: 4px 0 0; font-size: 24px; font-weight: 800; }
 .modal-body { display: grid; gap: 16px; }
 
-.modal-card-tour { width: min(560px, 100%); }
+.modal-card-tour {
+  width: min(560px, 100%);
+  animation: tourIn .35s ease;
+}
 .tour-progress {
   display: flex;
   align-items: center;
@@ -1587,7 +1950,12 @@ tbody tr:hover { background: #f8fafc; }
   border: 1px solid #e2e8f0;
   font-weight: 700;
   line-height: 1.5;
+  animation: tourIn .35s ease both;
 }
+.tour-copy li:nth-child(2) { animation-delay: .06s; }
+.tour-copy li:nth-child(3) { animation-delay: .12s; }
+.tour-copy li:nth-child(4) { animation-delay: .18s; }
+.tour-copy li:nth-child(5) { animation-delay: .24s; }
 .tour-copy li b {
   margin-right: 6px;
   color: #0f172a;
@@ -1937,6 +2305,13 @@ tbody tr:hover { background: #f8fafc; }
   .next-player { flex-direction: column; align-items: flex-start; }
   .btn-lg { width: 100%; }
   .run-row { flex-direction: column; align-items: stretch; }
+  .result-next { flex-direction: column; align-items: stretch; }
+  .result-next-actions { width: 100%; }
+  .result-next-actions .btn, .result-next > .btn { width: 100%; }
+  .to-top { right: 14px; bottom: 16px; }
+  .quest-chip { right: 12px; bottom: 68px; }
+  .quest-badge { right: 6px; top: -10px; font-size: 11px; }
+  .quest-toast { top: 10px; font-size: 13px; }
   .how-jump { padding: 14px; }
   .who-skip { flex-direction: column; align-items: stretch; }
   .find-mode { grid-template-columns: 1fr 1fr; }
@@ -1949,4 +2324,30 @@ tbody tr:hover { background: #f8fafc; }
   .tour-stage { min-height: 0; padding: 12px; }
   .demo-find-chips { grid-template-columns: 1fr 1fr; }
   .demo-steps b, .demo-mini-head b { word-break: keep-all; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .quest-now,
+  .how-guide li.is-now,
+  .how-guide li.is-now .how-go,
+  .quest-badge,
+  .save-note-compact,
+  .save-note-compact::after,
+  .result-wait,
+  .result-wait::after,
+  .drop-zone.quest-now .drop-icon,
+  .quest-chip,
+  .quest-chip-dot,
+  .quest-pointer,
+  .quest-toast,
+  .result-next.is-ok,
+  .result-next.is-warn,
+  .modal-card-tour,
+  .tour-copy li,
+  .demo-btn,
+  .demo-pulse,
+  .demo-swap-scene.a,
+  .demo-swap-scene.b {
+    animation: none !important;
+  }
 }

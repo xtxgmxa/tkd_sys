@@ -2,18 +2,18 @@
 let allData = [];
 let currentFilter = "all";
 let uploadedFiles = [];
-let clubKeywords = ["金城土城", "金城土城館"];
+let clubKeywords = ["????", "????擗?];
 const ROSTER_VERSION = 3;
 const DEFAULT_CHECKED_ROSTER = [
-  "李晨希", "潘侑廷", "黃宥豪", "黃靖允", "李宜霏",
-  "黃家宥", "蔡葦霖", "陳昶亨", "賴芷涵", "謝唯甄", "黃郁婷", "盧俐彤", "張秩嘉", "張紘嘉", "黃國霖",
-  "李亦宸", "陳知禧", "趙翊軒", "黃振恩"
+  "?撣?, "瞏?撱?, "暺恭鞊?, "暺???, "????,
+  "暺振摰?, "?∟??, "?單鈭?, "鞈渲瘨?, "雓??, "暺?憍?, "?找?敶?, "撘萇妝??, "撘萇???, "暺???,
+  "?漲摰?, "?喟蝳?, "頞?頠?, "暺??
 ];
 const DEFAULT_CLUB_ROSTER = [
-  "江曼聿", "吳謙宥", "李宜霏", "李晨希", "柯允皓", "張秩嘉", "張紘嘉", "張紘駿", "陳昶亨", "游以彤",
-  "黃羽希", "黃宥豪", "黃郁婷", "黃家宥", "黃振恩", "黃國霖", "黃靖允", "劉家妘", "潘侑廷",
-  "蔡葦儒", "蔡葦霖", "盧俐彤", "盧祐希", "賴芷涵", "謝昕澂", "謝唯甄", "鍾昀蓁", "簡鈞浤", "蘇心甯",
-  "李亦宸", "陳知禧"
+  "瘙??, "?唾?摰?, "????, "?撣?, "?臬???, "撘萇妝??, "撘萇???, "撘萇?擏?, "?單鈭?, "皜訾誑敶?,
+  "暺噬撣?, "暺恭鞊?, "暺?憍?, "暺振摰?, "暺??, "暺???, "暺???, "?振憒?, "瞏?撱?,
+  "?∟??, "?∟??, "?找?敶?, "?抒?撣?, "鞈渲瘨?, "雓?瞉?, "雓??, "?暹???, "蝪⊿?瘚?, "????,
+  "?漲摰?, "?喟蝳?
 ];
 let clubRoster = DEFAULT_CLUB_ROSTER.slice();
 let rosterChecked = DEFAULT_CHECKED_ROSTER.slice();
@@ -21,50 +21,52 @@ const DEFAULT_CHECKED_SET = new Set(DEFAULT_CHECKED_ROSTER);
 let inferredCompetitionName = "";
 let competitionNameManual = false;
 const EXPORT_FIELDS = [
-  { key: "選手", label: "選手" },
-  { key: "項目", label: "項目" },
-  { key: "組別", label: "組別" },
-  { key: "年齡層", label: "年齡層" },
-  { key: "性別", label: "性別" },
-  { key: "級別或品勢項目", label: "品勢或級別" },
-  { key: "帶色段級", label: "帶色／段級" },
-  { key: "場地", label: "場地" },
-  { key: "本場場次", label: "本場場次" },
-  { key: "青紅方", label: "青紅／出場" },
-  { key: "對手", label: "對手／順序" },
-  { key: "對手道館", label: "對手道館" },
-  { key: "下一場場次", label: "下一場場次" },
-  { key: "下一場青紅", label: "下一場青紅" },
-  { key: "下一場對手", label: "下一場對手" },
-  { key: "籤號", label: "籤號" },
-  { key: "同組人數", label: "同組人數" },
-  { key: "本館", label: "單位／道館" }
+  { key: "?豢?", label: "?豢?" },
+  { key: "?", label: "?" },
+  { key: "蝯", label: "蝯" },
+  { key: "撟湧翩撅?, label: "撟湧翩撅? },
+  { key: "?批", label: "?批" },
+  { key: "蝝???ａ???, label: "????? },
+  { key: "撣嗉畾萇?", label: "撣嗉嚗挾蝝? },
+  { key: "?游", label: "?游" },
+  { key: "?砍?湔活", label: "?砍?湔活" },
+  { key: "????, label: "??嚗?? },
+  { key: "撠?", label: "撠?嚗?摨? },
+  { key: "撠??尹", label: "撠??尹" },
+  { key: "銝??游甈?, label: "銝??游甈? },
+  { key: "銝??湧?蝝?, label: "銝??湧?蝝? },
+  { key: "銝??游???, label: "銝??游??? },
+  { key: "蝐方?", label: "蝐方?" },
+  { key: "??鈭箸", label: "??鈭箸" },
+  { key: "?祇尹", label: "?桐?嚗?擗? }
 ];
 let exportFields = EXPORT_FIELDS.map((item) => item.key);
 let customState = {
-  title: "吃飯統計",
+  title: "?ㄞ蝯梯?",
   columns: [
-    { key: "name", label: "姓名" },
-    { key: "join", label: "參加" },
-    { key: "fee", label: "金額", money: true },
-    { key: "note", label: "備註" }
+    { key: "name", label: "憪?" },
+    { key: "join", label: "??" },
+    { key: "fee", label: "??", money: true },
+    { key: "note", label: "?酉" }
   ],
   rows: [{ name: "", join: "", fee: "", note: "" }]
 };
+
 const NAME_STOP = new Set([
-  "男子", "女子", "男生", "女生", "選手", "姓名", "道館", "單位",
-  "場次", "場地", "組別", "項目", "紅方", "藍方", "品勢", "對打",
-  "序號", "比賽", "錦標賽", "代表", "教練", "裁判", "個人", "團體",
-  "指定", "自選", "對練", "公開", "一般", "社會", "大專", "國小",
-  "國中", "高中", "幼兒", "量級", "黑帶", "紅帶", "級別", "青方"
+  "?瑕?", "憟喳?", "?瑞?", "憟喟?", "?豢?", "憪?", "?尹", "?桐?",
+  "?湔活", "?游", "蝯", "?", "蝝", "?", "?", "撠?",
+  "摨?", "瘥魚", "?行?鞈?, "隞?”", "?毀", "鋆", "?犖", "??",
+  "??", "?芷", "撠毀", "?祇?", "銝??, "蝷暹?", "憭批?", "??",
+  "?葉", "擃葉", "撟澆?", "??", "暺葆", "蝝葆", "蝝", "?"
 ]);
 
-const sampleData = `1.黃羽希 幼兒白帶A 102紅103紅馬步正拳
-2.蔡葦儒 幼兒藍137紅138紅 三章
-3.張紘駿國小低年級藍帶B142紅144青
-4.江曼聿 國小低年級藍帶A150青151紅 三章
-5.鍾昀蓁 國小低年級藍帶B 152紅154青三章
-6.簡鈞浤 國小幼兒黃帶A202紅203紅一章`;
+const sampleData = `1.暺噬撣?撟澆??賢葆A 102蝝?03蝝收甇交迤??
+2.?∟??撟澆???37蝝?38蝝?銝?
+3.撘萇?擏踹?撠?撟渡??葆B142蝝?44??
+4.瘙????雿僑蝝?撣詛150??51蝝?銝?
+5.?暹?????雿僑蝝?撣詐 152蝝?54??蝡?
+6.蝪⊿?瘚???撟澆?暺葆A202蝝?03蝝?蝡;
+
 
 const sourceData = document.getElementById("sourceData");
 const clubName = document.getElementById("clubName");
@@ -152,7 +154,7 @@ function renderKeywords() {
   clubKeywords.forEach((word, index) => {
     const tag = document.createElement("span");
     tag.className = "keyword-tag";
-    tag.innerHTML = `${escapeHTML(word)} <button type="button" aria-label="移除">×</button>`;
+    tag.innerHTML = `${escapeHTML(word)} <button type="button" aria-label="蝘駁">?</button>`;
     tag.querySelector("button").addEventListener("click", () => {
       clubKeywords.splice(index, 1);
       saveSettings();
@@ -197,7 +199,7 @@ document.getElementById("competitionName").addEventListener("input", () => {
   const current = el ? el.value.trim() : "";
   competitionNameManual = Boolean(current) && current !== inferredCompetitionName;
   const status = document.getElementById("competitionNameStatus");
-  if (status && competitionNameManual) status.textContent = "已改成自己輸入的名稱";
+  if (status && competitionNameManual) status.textContent = "撌脫?撌梯撓?亦??迂";
   saveSettings();
 });
 document.getElementById("competitionName").addEventListener("change", saveSettings);
@@ -218,12 +220,7 @@ document.getElementById("clearBtn").addEventListener("click", () => {
   allData = [];
   renderFileList();
   resultArea.classList.add("hidden");
-  document.getElementById("resultWait")?.classList.remove("hidden");
   parseStatus.classList.add("hidden");
-  lookQuestFinished = false;
-  mutedQuestKey = "";
-  lastQuestKey = "";
-  updateQuest();
 });
 
 
@@ -262,11 +259,11 @@ function addFiles(fileList) {
   const allowed = /\.(pdf|docx|xlsx|xls|csv|txt)$/i;
   Array.from(fileList || []).forEach((file) => {
     if (/\.doc$/i.test(file.name) && !/\.docx$/i.test(file.name)) {
-      alert("請把 Word（.doc）另存成 .docx 後再上傳，或改用複製貼上。");
+      alert(`?? Word嚗?doc嚗瘜?汗?函?亥圾?n隢摮? .docx嚗??摰寡票?唬??寞?摮??);
       return;
     }
     if (!allowed.test(file.name)) {
-      alert(`尚不支援這個檔案：${file.name}\n請改傳 PDF、Word(.docx) 或 Excel。`);
+      alert(`銝?渡?瑼?嚗?{file.name}\n隢蝙??PDF?ord(.docx) ??Excel?);
       return;
     }
     if (uploadedFiles.some((item) => item.name === file.name && item.size === file.size)) {
@@ -285,7 +282,7 @@ function renderFileList() {
     chip.innerHTML = `
       ${escapeHTML(file.name)}
       <small>${formatSize(file.size)}</small>
-      <button type="button" aria-label="移除">×</button>
+      <button type="button" aria-label="蝘駁">?</button>
     `;
     chip.querySelector("button").addEventListener("click", (event) => {
       event.stopPropagation();
@@ -294,7 +291,6 @@ function renderFileList() {
     });
     fileListEl.appendChild(chip);
   });
-  updateQuest();
 }
 
 function formatSize(bytes) {
@@ -307,12 +303,12 @@ function formatSize(bytes) {
 analyzeBtn.addEventListener("click", async () => {
   const raw = sourceData.value.trim();
   if (!raw && uploadedFiles.length === 0) {
-    alert("請先上傳檔案，或貼上賽程資料");
+    alert("隢?銝瑼?嚗?鞎潔?鞈賜?鞈?");
     return;
   }
 
   analyzeBtn.disabled = true;
-  setStatus("正在解析檔案，請稍候…");
+  setStatus("甇?閫??瑼?嚗?蝔?);
 
   try {
     const collected = [];
@@ -320,7 +316,7 @@ analyzeBtn.addEventListener("click", async () => {
 
     for (let i = 0; i < uploadedFiles.length; i++) {
       const file = uploadedFiles[i];
-      setStatus(`正在解析（${i + 1}/${uploadedFiles.length}）：${file.name}`);
+      setStatus(`甇?閫??嚗?{i + 1}/${uploadedFiles.length}嚗?${file.name}`);
       const parsed = await parseFile(file);
       collected.push(...parsed.items);
       if (parsed.text) sourceTexts.push(parsed.text);
@@ -334,7 +330,7 @@ analyzeBtn.addEventListener("click", async () => {
 
     applyInferredCompetitionName(inferCompetitionName(sourceTexts.join("\n")));
 
-    parsedAll = dedupeItems(collected.map(enrichItem)).filter((item) => item.player !== "輪空");
+    parsedAll = dedupeItems(collected.map(enrichItem)).filter((item) => item.player !== "頛芰征");
     attachGroups(parsedAll);
     inferOpponents(parsedAll);
     parsedAll.forEach((item) => {
@@ -355,16 +351,17 @@ analyzeBtn.addEventListener("click", async () => {
     jumpToStep("resultArea");
 
     const scannedHint = uploadedFiles.some((file) => /\.pdf$/i.test(file.name)) && parsedAll.length === 0
-      ? " 若是掃描型 PDF，裡面沒有可選文字，請改貼文字或用 Word/Excel。"
+      ? " ?交????PDF嚗ㄐ?Ｘ???豢?摮?隢鞎潭?摮???Word/Excel??
       : "";
     if (scannedHint) setStatus((parseStatus.textContent || "") + scannedHint);
   } catch (error) {
-    setStatus("解析失敗：" + error.message, true);
-    alert("資料無法解析：\n" + error.message);
+    setStatus("閫??憭望?嚗? + error.message, true);
+    alert("鞈??⊥?閫??嚗n" + error.message);
   } finally {
     analyzeBtn.disabled = false;
   }
 });
+
 function shouldGuideToNames() {
   return parsedAll.length > 0 && allData.length === 0 && getDisplayMode() !== "all";
 }
@@ -380,7 +377,7 @@ function setStatus(text, isError, options) {
     btn.type = "button";
     btn.className = "status-guide-btn";
     const hint = document.createElement("small");
-    hint.textContent = "點這裡，去下面改找人方式";
+    hint.textContent = "暺ㄐ嚗銝?寞鈭箸撘?;
     btn.append(text, hint);
     parseStatus.appendChild(btn);
   } else {
@@ -403,20 +400,20 @@ async function parseFile(file) {
   if (name.endsWith(".pdf")) {
     const text = await extractPdfText(buffer);
     if (!text.trim()) {
-      throw new Error(`${file.name} 幾乎沒有文字，可能是掃描檔`);
+      throw new Error(`${file.name} 撟曆?瘝???嚗?賣??瑼);
     }
     return { items: parseInput(text), text };
   }
 
   if (name.endsWith(".docx")) {
-    if (!window.mammoth) throw new Error("Word 解析套件尚未載入，請確認網路連線");
+    if (!window.mammoth) throw new Error("Word 閫??憟辣撠頛嚗?蝣箄?蝬脰楝???");
     const result = await mammoth.extractRawText({ arrayBuffer: buffer });
     const text = result.value || "";
     return { items: parseInput(text), text };
   }
 
   if (name.endsWith(".xlsx") || name.endsWith(".xls") || name.endsWith(".csv")) {
-    if (!window.XLSX) throw new Error("Excel 解析套件尚未載入，請確認網路連線");
+    if (!window.XLSX) throw new Error("Excel 閫??憟辣撠頛嚗?蝣箄?蝬脰楝???");
     if (name.endsWith(".csv")) {
       const text = new TextDecoder("utf-8").decode(buffer);
       return { items: parseInput(text), text };
@@ -439,7 +436,7 @@ async function parseFile(file) {
     return { items: parseInput(text), text };
   }
 
-  throw new Error(`不支援的檔案：${file.name}`);
+  throw new Error(`銝?渡?瑼?嚗?{file.name}`);
 }
 
 function tidyCompetitionTitle(raw) {
@@ -447,13 +444,13 @@ function tidyCompetitionTitle(raw) {
     .replace(/\\n/g, " ")
     .replace(/={2,}\s*(?:PAGE\s*)?\d*\s*={2,}/gi, " ")
     .replace(/\bPAGE\s*\d+\b/gi, " ")
-    .replace(/[|｜]/g, " ")
+    .replace(/[|嚚/g, " ")
     .replace(/\s+/g, " ")
     .trim();
-  text = text.split(/指導單位|主辦單位|承辦單位|比賽時間|比賽地點|比賽日期|場\s*次\s*:|日期\s*:/)[0];
-  text = text.replace(/\s*[-–—]?\s*(品勢賽程|對練賽程|對打賽程|時間表)\s*/g, " ");
-  text = text.replace(/(?:(?:\s*[-–—−－])?\s*跆拳道(?:對打|品勢|對練)?)+\s*$/g, "");
-  text = text.replace(/[。．.、，,]+$/g, "").replace(/\s*[-–—]\s*$/g, "").trim();
+  text = text.split(/???桐?|銝餉齒?桐?|?輯齒?桐?|瘥魚??|瘥魚?圈?|瘥魚?交?|?廄s*甈﹏s*:|?交?\s*:/)[0];
+  text = text.replace(/\s*[-??\s*(?鞈賜?|撠毀鞈賜?|撠?鞈賜?|??銵?\s*/g, " ");
+  text = text.replace(/(?:(?:\s*[-??嚗)?\s*頝???:撠?|?|撠毀)?)+\s*$/g, "");
+  text = text.replace(/[??.??,]+$/g, "").replace(/\s*[-?\s*$/g, "").trim();
   if (text.length > 42) text = text.slice(0, 42).replace(/[-\s]+$/g, "");
   return text;
 }
@@ -461,19 +458,19 @@ function tidyCompetitionTitle(raw) {
 function isCompetitionTitle(text) {
   const name = String(text || "").trim();
   if (name.length < 6 || name.length > 42) return false;
-  if (/姓名|籤號|單位|場地|組別|公斤|護具|秩序冊|競賽規程|附件|隊職員|比賽資料/.test(name)) return false;
-  if (/報名|手續|請上|一律|依據|規定|辦法|過磅|檢錄|時間表/.test(name)) return false;
-  if (/^(品勢|對打|對練|第一場地|第二場地|第三場地|一、|二、)/.test(name)) return false;
-  return /(錦標賽|邀請賽|公開賽|選拔賽|運動會|盃)/.test(name);
+  if (/憪?|蝐方?|?桐?|?游|蝯|?祆|霅瑕|蝘拙??蝡嗉魚閬?|?辣|??﹄瘥魚鞈?/.test(name)) return false;
+  if (/?勗?|??|隢?|銝敺靘?|閬?|颲行?|??|瑼ａ?|??銵?.test(name)) return false;
+  if (/^(?|撠?|撠毀|蝚砌??游|蝚砌??游|蝚砌??游|銝?鈭?/.test(name)) return false;
+  return /(?行?鞈罵?隢魚|?祇?鞈罵?豢?鞈罵?????/.test(name);
 }
 
 function scoreCompetitionTitle(name, labeled) {
   let score = labeled ? 40 : 0;
-  if (/^(第|\d{2,4})/.test(name)) score += 12;
-  if (/跆拳道/.test(name)) score += 8;
-  if (/錦標賽/.test(name)) score += 8;
-  if (/全國/.test(name)) score += 4;
-  if (/屆/.test(name) || /\d{2,4}\s*年/.test(name) || /^\d{2,3}年/.test(name)) score += 3;
+  if (/^(蝚洱\d{2,4})/.test(name)) score += 12;
+  if (/頝??.test(name)) score += 8;
+  if (/?行?鞈?.test(name)) score += 8;
+  if (/?典?/.test(name)) score += 4;
+  if (/撅?.test(name) || /\d{2,4}\s*撟?.test(name) || /^\d{2,3}撟?.test(name)) score += 3;
   score += Math.min(name.length, 28);
   return score;
 }
@@ -487,20 +484,20 @@ function inferCompetitionName(raw) {
   let match;
 
   const labeledHead = text.slice(0, 12000);
-  const labelRe = /(?:競賽名稱|比賽名稱|賽事名稱)\s*:\s*([^\n]+)/g;
+  const labelRe = /(?:蝡嗉魚?迂|瘥魚?迂|鞈賭??迂)\s*:\s*([^\n]+)/g;
   while ((match = labelRe.exec(labeledHead))) {
     const name = tidyCompetitionTitle(match[1]);
     if (isCompetitionTitle(name)) candidates.push({ name, labeled: true });
   }
 
   const head = text.split(/\n/).slice(0, 20).join("\n").slice(0, 1800);
-  const freeRe = /(?:第[一二三四五六七八九十百零\d]+屆)?(?:\d{2,4}\s*年)?[^\n。]{0,28}(?:跆拳道)?(?:錦標賽|邀請賽|公開賽|選拔賽)/g;
+  const freeRe = /(?:蝚架銝鈭????凋??思???跚d]+撅??(?:\d{2,4}\s*撟??[^\n?{0,28}(?:頝???(?:?行?鞈罵?隢魚|?祇?鞈罵?豢?鞈?/g;
   while ((match = freeRe.exec(head))) {
     const name = tidyCompetitionTitle(match[0]);
     if (isCompetitionTitle(name)) candidates.push({ name, labeled: false });
   }
 
-  const extraRe = /[^\n]{4,36}(?:運動會|盃)[^\n]{0,16}跆拳道[^\n]{0,10}/g;
+  const extraRe = /[^\n]{4,36}(?:?????[^\n]{0,16}頝?^\n]{0,10}/g;
   while ((match = extraRe.exec(head))) {
     const name = tidyCompetitionTitle(match[0]);
     if (isCompetitionTitle(name)) candidates.push({ name, labeled: false });
@@ -522,23 +519,23 @@ function applyInferredCompetitionName(found) {
       el.value = found;
       inferredCompetitionName = found;
       competitionNameManual = false;
-      if (status) status.textContent = "已從檔案帶入，可再自己改";
+      if (status) status.textContent = "撌脣?瑼?撣嗅嚗?撌望";
       saveSettings();
     } else if (status) {
-      status.textContent = "保留你自己輸入的名稱";
+      status.textContent = "靽?雿撌梯撓?亦??迂";
     }
     return;
   }
   if (status) {
     status.textContent = current
-      ? "檔案沒寫比賽名稱，沿用目前欄位"
-      : "檔案沒寫比賽名稱，請自己填，也會用在匯出標題";
+      ? "瑼?瘝神瘥魚?迂嚗窒?函??雿?
+      : "瑼?瘝神瘥魚?迂嚗??芸楛憛恬?銋??典?臬璅?";
   }
 }
 
 async function extractPdfText(buffer) {
   if (!window.pdfjsLib) {
-    throw new Error("PDF 解析套件尚未載入，請確認網路連線");
+    throw new Error("PDF 閫??憟辣撠頛嚗?蝣箄?蝬脰楝???");
   }
 
   const data = new Uint8Array(buffer);
@@ -557,7 +554,7 @@ async function extractPdfText(buffer) {
 
   const pages = [];
   for (let i = 1; i <= pdf.numPages; i++) {
-    setStatus(`正在讀取 PDF 第 ${i}/${pdf.numPages} 頁`);
+    setStatus(`甇?霈??PDF 蝚?${i}/${pdf.numPages} ?);
     const page = await pdf.getPage(i);
     const content = await page.getTextContent();
     pages.push(contentToText(content));
@@ -616,12 +613,12 @@ function normalizeSourceText(raw) {
   return String(raw || "")
     .normalize("NFKC")
     .replace(/\u00a0/g, " ")
-    .replace(/[：]/g, ":")
-    .replace(/舘/g, "館")
-    .replace(/籤\s*號/g, "籤號")
-    .replace(/單\s*位/g, "單位")
-    .replace(/姓\s*名/g, "姓名")
-    .replace(/(?:^|\n)\s*第\s*\n\s*([一二三四五六七八九十\d]+)\s*\n\s*場\s*\n\s*地\s*(?=\n|$)/g, "\n第$1場地\n")
+    .replace(/[嚗/g, ":")
+    .replace(/??g, "擗?)
+    .replace(/蝐么s*??g, "蝐方?")
+    .replace(/?娉s*雿?g, "?桐?")
+    .replace(/憪s*??g, "憪?")
+    .replace(/(?:^|\n)\s*蝚枯s*\n\s*([銝鈭????凋??思??d]+)\s*\n\s*?廄s*\n\s*?豹s*(?=\n|$)/g, "\n蝚?1?游\n")
     .trim();
 }
 
@@ -633,35 +630,35 @@ function parseInput(raw) {
     return parseCoachNotes(text);
   }
 
-  if (/比賽組別/.test(text) && /籤號/.test(text) && /編號/.test(text)) {
+  if (/瘥魚蝯/.test(text) && /蝐方?/.test(text) && /蝺刻?/.test(text)) {
     const booklet = parseOrderBooklet(text);
     if (booklet.length) return booklet;
   }
 
-  if (/MATCH LIST|組別量級/.test(text)) {
+  if (/MATCH LIST|蝯??/.test(text)) {
     const list = parseMatchList(text);
     if (list.length) return list;
   }
 
-  const sequentialPoomsae = /品勢出場順序表|第一品勢|第二品勢/.test(text)
-    || (/場\s*次/.test(text) && /籤號/.test(text) && /品勢/.test(text) && !/編號/.test(text));
-  const bracketPoomsae = /比賽組別:\s*P/i.test(text) && /編號/.test(text);
+  const sequentialPoomsae = /??箏??銵育蝚砌??|蝚砌??/.test(text)
+    || (/?廄s*甈?.test(text) && /蝐方?/.test(text) && /?/.test(text) && !/蝺刻?/.test(text));
+  const bracketPoomsae = /瘥魚蝯:\s*P/i.test(text) && /蝺刻?/.test(text);
   if (sequentialPoomsae && !bracketPoomsae) {
     const order = parsePoomsaeOrderTable(text);
     if (order.length) return order;
   }
 
-  if (/人數\s*:\s*\d+\s*人/.test(text) && /場次\s*:/.test(text) && /\d+-[1-4]\s/.test(text) && !/比賽組別/.test(text)) {
+  if (/鈭箸\s*:\s*\d+\s*鈭?.test(text) && /?湔活\s*:/.test(text) && /\d+-[1-4]\s/.test(text) && !/瘥魚蝯/.test(text)) {
     const chart = parseCompactPoomsaeChart(text);
     if (chart.length) return chart;
   }
 
-  if (/比賽組別/.test(text) && /籤號/.test(text) && /(公斤|量級|Kg)/i.test(text)) {
+  if (/瘥魚蝯/.test(text) && /蝐方?/.test(text) && /(?祆|??|Kg)/i.test(text)) {
     const loose = parseLooseBracket(text);
     if (loose.length) return loose;
   }
 
-  if (/比賽組別/.test(text) && /籤號/.test(text)) {
+  if (/瘥魚蝯/.test(text) && /蝐方?/.test(text)) {
     const booklet = parseOrderBooklet(text);
     if (booklet.length) return booklet;
   }
@@ -686,9 +683,9 @@ function parseOrderBooklet(raw) {
   const text = String(raw || "")
     .replace(/\r\n/g, "\n")
     .replace(/\u00a0/g, " ")
-    .replace(/[：]/g, ":")
-    .replace(/[（]/g, "(")
-    .replace(/[）]/g, ")");
+    .replace(/[嚗/g, ":")
+    .replace(/[嚗/g, "(")
+    .replace(/[嚗/g, ")");
 
   const lines = text.split(/\n/).map((line) => line.replace(/[ \t]+/g, " ").trim()).filter((line) => {
     return line && !/^=====/.test(line) && !/^-\s*\d+\s*-$/.test(line);
@@ -707,7 +704,7 @@ function parseOrderBooklet(raw) {
     }
     const tokens = [];
     buf.forEach((line) => {
-      if (/^(籤號|單位|姓名|編號)/.test(line)) return;
+      if (/^(蝐方?|?桐?|憪?|蝺刻?)/.test(line)) return;
       if (/^X$/i.test(line)) return;
       const playerLine = normalizePlayerLine(line);
       if (playerLine) {
@@ -724,12 +721,12 @@ function parseOrderBooklet(raw) {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
 
-    if (/^品勢$/.test(line)) {
-      sectionType = "品勢";
+    if (/^?$/.test(line)) {
+      sectionType = "?";
       continue;
     }
-    if (/^(對打|對練|競技)$/.test(line)) {
-      sectionType = "對打";
+    if (/^(撠?|撠毀|蝡嗆?)$/.test(line)) {
+      sectionType = "撠?";
       continue;
     }
 
@@ -745,10 +742,10 @@ function parseOrderBooklet(raw) {
       flush();
       header = nextHeader;
       if (!header.type) header.type = sectionType;
-      if (!header.type && /品勢/.test(line)) header.type = "品勢";
-      if (header.type === "對練" || header.type === "競技") header.type = "對打";
+      if (!header.type && /?/.test(line)) header.type = "?";
+      if (header.type === "撠毀" || header.type === "蝡嗆?") header.type = "撠?";
       header.court = court;
-      header.boutStyle = header.type === "品勢" ? "bracket" : (header.boutStyle || "bracket");
+      header.boutStyle = header.type === "?" ? "bracket" : (header.boutStyle || "bracket");
       continue;
     }
 
@@ -759,32 +756,32 @@ function parseOrderBooklet(raw) {
 }
 
 function parseGroupHeader(line) {
-  const src = String(line || "").replace(/^.*?(比賽組別:)/, "$1");
-  const withCode = src.match(/^比賽組別:\s*([A-Za-z]{1,3}\d{2})\s*(.+)$/);
-  const plain = src.match(/^比賽組別:\s*(.+)$/);
+  const src = String(line || "").replace(/^.*?(瘥魚蝯:)/, "$1");
+  const withCode = src.match(/^瘥魚蝯:\s*([A-Za-z]{1,3}\d{2})\s*(.+)$/);
+  const plain = src.match(/^瘥魚蝯:\s*(.+)$/);
   if (!withCode && !plain) return null;
 
   const groupCode = withCode ? withCode[1] : "";
   let rest = (withCode ? withCode[2] : plain[1]).trim();
-  const sizeMatch = rest.match(/(\d+)\s*人\s*$/);
+  const sizeMatch = rest.match(/(\d+)\s*鈭暝s*$/);
   const groupSize = sizeMatch ? parseInt(sizeMatch[1], 10) : 0;
-  rest = rest.replace(/(\d+)\s*人\s*$/, "").trim();
+  rest = rest.replace(/(\d+)\s*鈭暝s*$/, "").trim();
 
   let eventName = "";
   const dual = extractDualPoomsae(rest);
   if (dual.eventName) {
     eventName = dual.eventName;
-    rest = rest.replace(/第一品勢.*$/, "").replace(/品勢:\s*.+$/, "").trim();
+    rest = rest.replace(/蝚砌??.*$/, "").replace(/?:\s*.+$/, "").trim();
   } else {
-    const eventMatch = rest.match(/品勢:\s*(.+)$/);
+    const eventMatch = rest.match(/?:\s*(.+)$/);
     if (eventMatch) {
       eventName = eventMatch[1].trim();
-      rest = rest.replace(/品勢:\s*.+$/, "").trim();
+      rest = rest.replace(/?:\s*.+$/, "").trim();
     }
   }
 
-  let type = /^P/i.test(groupCode) ? "品勢" : /^K/i.test(groupCode) ? "對打" : "";
-  if (!type && /品勢/.test(String(line || "") + rest + eventName)) type = "品勢";
+  let type = /^P/i.test(groupCode) ? "?" : /^K/i.test(groupCode) ? "撠?" : "";
+  if (!type && /?/.test(String(line || "") + rest + eventName)) type = "?";
   return {
     groupCode,
     division: rest,
@@ -817,7 +814,7 @@ function parseCompactPoomsaeChart(raw) {
     }
     const seeds = { 1: null, 2: null, 3: null, 4: null };
     current.forEach((item) => {
-      item.type = "品勢";
+      item.type = "?";
       item.boutStyle = "bracket";
       item.court = item.court || header.court || court;
       item.division = header.division || item.division;
@@ -834,7 +831,7 @@ function parseCompactPoomsaeChart(raw) {
     present.forEach((item) => {
       if (!item.opponent) {
         item.bye = true;
-        item.opponent = "輪空";
+        item.opponent = "頛芰征";
       }
     });
     const top = [seeds[1], seeds[4]].filter(Boolean);
@@ -845,13 +842,13 @@ function parseCompactPoomsaeChart(raw) {
       top.forEach((item) => {
         if (!item.nextOpponentHint) {
           item.nextOpponentHint = topHint;
-          item.nextColor = "青方";
+          item.nextColor = "?";
         }
       });
       bot.forEach((item) => {
         if (!item.nextOpponentHint) {
           item.nextOpponentHint = botHint;
-          item.nextColor = "紅方";
+          item.nextColor = "蝝";
         }
       });
     }
@@ -866,12 +863,12 @@ function parseCompactPoomsaeChart(raw) {
       court = courtHit;
       return;
     }
-    const head = line.match(/([^:\n]*?)\s*人數:\s*(\d+)\s*人(?:\s*場次:\s*(\d{2,4})?)?$/);
-    if (head && !/比賽組別/.test(line) && /[\u4e00-\u9fff]/.test(head[1])) {
+    const head = line.match(/([^:\n]*?)\s*鈭箸:\s*(\d+)\s*鈭??:\s*?湔活:\s*(\d{2,4})?)?$/);
+    if (head && !/瘥魚蝯/.test(line) && /[\u4e00-\u9fff]/.test(head[1])) {
       flush();
       const division = head[1].replace(/.*=====\s*/, "").replace(/^-\s*\d+\s*-\s*/, "").trim();
       header = {
-        type: "品勢",
+        type: "?",
         division,
         groupSize: parseInt(head[2], 10),
         matchNo: head[3] || "",
@@ -884,8 +881,8 @@ function parseCompactPoomsaeChart(raw) {
       };
       return;
     }
-    if (/^(籤號|單位|姓名|編號)/.test(line) || !header) return;
-    const normalized = line.replace(/^(\d+)月(\d+)日\s+/, "$1-$2 ");
+    if (/^(蝐方?|?桐?|憪?|蝺刻?)/.test(line) || !header) return;
+    const normalized = line.replace(/^(\d+)??\d+)?功s+/, "$1-$2 ");
     const dashed = normalized.match(/^(\d+)-([1-4])\s+(.+)$/);
     const plain = normalized.match(/^([1-4])\s+(.+)$/);
     let seed = "";
@@ -893,7 +890,7 @@ function parseCompactPoomsaeChart(raw) {
     if (dashed && /[\u4e00-\u9fffA-Za-z]/.test(dashed[3])) {
       seed = dashed[2];
       rest = dashed[3];
-    } else if (plain && /[\u4e00-\u9fffA-Za-z]/.test(plain[2]) && !/^(人|公斤|量級)/.test(plain[2])) {
+    } else if (plain && /[\u4e00-\u9fffA-Za-z]/.test(plain[2]) && !/^(鈭漏?祆|??)/.test(plain[2])) {
       seed = plain[1];
       rest = plain[2];
     }
@@ -977,7 +974,7 @@ function splitClubPlayer(middle) {
   const cleaned = String(middle || "").normalize("NFKC").replace(/\*/g, "").replace(/\s+/g, " ").trim();
   if (!cleaned) return null;
 
-  const clubFirst = cleaned.match(/^(.+?(?:分館|中心|國小|國中|高中|小學|協會|跆訓|跆拳|道館|館|隊|團))\s+(.+)$/);
+  const clubFirst = cleaned.match(/^(.+?(?:?尹|銝剖?|??|?葉|擃葉|撠飛|??|頝?|頝|?尹|擗育???)\s+(.+)$/);
   if (clubFirst) {
     return {
       club: clubFirst[1].trim(),
@@ -995,11 +992,11 @@ function splitClubPlayer(middle) {
 
 function winnerHint(players, matchNo) {
   const list = (players || []).filter(Boolean);
-  if (!list.length) return "未提及";
-  if (list.length === 1) return `${list[0].player}（${list[0].club || "未提及"}）`;
-  const names = list.map((item) => item.player).join("／");
-  if (matchNo && matchNo !== "X") return `場次${matchNo}勝者（${names}）`;
-  return `${names} 勝者`;
+  if (!list.length) return "?芣???;
+  if (list.length === 1) return `${list[0].player}嚗?{list[0].club || "?芣???}嚗;
+  const names = list.map((item) => item.player).join("嚗?);
+  if (matchNo && matchNo !== "X") return `?湔活${matchNo}??${names}嚗;
+  return `${names} ?;
 }
 
 function applyPair(upper, lower, matchNo) {
@@ -1013,11 +1010,11 @@ function applyPair(upper, lower, matchNo) {
 
 function applySides(upper, lower) {
   if (!upper || !lower) return false;
-  upper.color = "青方";
+  upper.color = "?";
   upper.opponent = lower.player;
   upper.opponentClub = lower.club;
   upper.bye = false;
-  lower.color = "紅方";
+  lower.color = "蝝";
   lower.opponent = upper.player;
   lower.opponentClub = upper.club;
   lower.bye = false;
@@ -1051,15 +1048,15 @@ function applyBracketLogic(seeds, m14, m32, mFinal) {
   top.forEach((item) => {
     if (!item.matchNo && finalNo) {
       item.bye = true;
-      item.opponent = item.opponent || "輪空";
+      item.opponent = item.opponent || "頛芰征";
       item.nextMatchNo = finalNo;
-      item.nextColor = "青方";
+      item.nextColor = "?";
       item.nextOpponentHint = winnerHint(bot, m32);
       return;
     }
     if (finalNo) {
       item.nextMatchNo = finalNo;
-      item.nextColor = "青方";
+      item.nextColor = "?";
       item.nextOpponentHint = winnerHint(bot, m32);
     }
   });
@@ -1067,15 +1064,15 @@ function applyBracketLogic(seeds, m14, m32, mFinal) {
   bot.forEach((item) => {
     if (!item.matchNo && finalNo) {
       item.bye = true;
-      item.opponent = item.opponent || "輪空";
+      item.opponent = item.opponent || "頛芰征";
       item.nextMatchNo = finalNo;
-      item.nextColor = "紅方";
+      item.nextColor = "蝝";
       item.nextOpponentHint = winnerHint(top, m14);
       return;
     }
     if (finalNo) {
       item.nextMatchNo = finalNo;
-      item.nextColor = "紅方";
+      item.nextColor = "蝝";
       item.nextOpponentHint = winnerHint(top, m14);
     }
   });
@@ -1087,7 +1084,7 @@ function parseJSON(raw) {
   if (Array.isArray(json)) list = json;
   else if (Array.isArray(json.matches)) list = json.matches;
   else if (Array.isArray(json.players)) list = json.players;
-  else throw new Error("JSON 找不到 matches 或 players");
+  else throw new Error("JSON ?曆???matches ??players");
   return list.map(normalizeItem);
 }
 
@@ -1114,7 +1111,7 @@ function parseGrid(rows) {
 
 function parseTable(raw) {
   const lines = raw.split(/\r?\n/).filter((line) => line.trim() !== "");
-  if (lines.length < 2) throw new Error("資料至少需要標題列與一筆資料");
+  if (lines.length < 2) throw new Error("鞈??喳??閬?憿???蝑???);
 
   const delimiter = lines[0].includes("\t") ? "\t" : ",";
   const headers = splitCSVLine(lines[0], delimiter);
@@ -1140,7 +1137,7 @@ function splitLoose(line) {
 
 function looksLikeHeader(cells) {
   const joined = cells.join(" ");
-  return /(選手|姓名|道館|單位|組別|場次|對手|player|name|club|division)/i.test(joined);
+  return /(?豢?|憪?|?尹|?桐?|蝯|?湔活|撠?|player|name|club|division)/i.test(joined);
 }
 
 function splitCSVLine(line, delimiter) {
@@ -1177,12 +1174,12 @@ function parseSmartText(raw) {
   let pendingRed = null;
 
   lines.forEach((line) => {
-    if (/^(姓名|選手|道館|單位|場次|序|紅方|藍方)$/.test(line)) return;
+    if (/^(憪?|?豢?|?尹|?桐?|?湔活|摨蝝|?)$/.test(line)) return;
 
     applyContextFromLine(line, ctx);
 
-    const red = line.match(/紅方\s*[:：]?\s*(.+)/);
-    const blue = line.match(/藍方\s*[:：]?\s*(.+)/);
+    const red = line.match(/蝝\s*[:嚗?\s*(.+)/);
+    const blue = line.match(/?\s*[:嚗?\s*(.+)/);
 
     if (red && !blue) {
       pendingRed = personFromFragment(red[1], ctx);
@@ -1237,16 +1234,16 @@ function preprocessText(raw) {
   return String(raw || "")
     .replace(/\r\n/g, "\n")
     .replace(/\u00a0/g, " ")
-    .replace(/[（]/g, "(")
-    .replace(/[）]/g, ")")
-    .replace(/[／]/g, "/")
-    .replace(/[：]/g, ":")
-    .replace(/[【]/g, "\n【")
-    .replace(/(組別\s*:)/g, "\n$1")
-    .replace(/(場地\s*:)/g, "\n$1")
-    .replace(/(場次\s*:?)/g, "\n$1")
-    .replace(/(紅方)/g, "\n$1")
-    .replace(/(藍方)/g, "\n$1");
+    .replace(/[嚗/g, "(")
+    .replace(/[嚗/g, ")")
+    .replace(/[嚗/g, "/")
+    .replace(/[嚗/g, ":")
+    .replace(/[?/g, "\n??)
+    .replace(/(蝯\s*:)/g, "\n$1")
+    .replace(/(?游\s*:)/g, "\n$1")
+    .replace(/(?湔活\s*:?)/g, "\n$1")
+    .replace(/(蝝)/g, "\n$1")
+    .replace(/(?)/g, "\n$1");
 }
 
 function emptyContext() {
@@ -1264,10 +1261,10 @@ function emptyContext() {
 }
 
 function applyContextFromLine(line, ctx) {
-  if (/品勢/.test(line) && !/選手/.test(line)) ctx.type = "品勢";
-  if (/對打|競技對打|Kyorugi|sparring/i.test(line)) ctx.type = "對打";
-  if (ctx.type === "對打") ctx.eventName = "";
-  if (ctx.type === "品勢") ctx.weightClass = "";
+  if (/?/.test(line) && !/?豢?/.test(line)) ctx.type = "?";
+  if (/撠?|蝡嗆?撠?|Kyorugi|sparring/i.test(line)) ctx.type = "撠?";
+  if (ctx.type === "撠?") ctx.eventName = "";
+  if (ctx.type === "?") ctx.weightClass = "";
 
   const division = extractDivision(line);
   if (division && division !== ctx.division) {
@@ -1281,20 +1278,20 @@ function applyContextFromLine(line, ctx) {
     ctx.gender = "";
   }
 
-  const court = line.match(/(?:場地|場別)\s*:?\s*([^\s，,]+)|(\d+\s*號場)|([A-Ha-h]場)/);
+  const court = line.match(/(?:?游|?游)\s*:?\s*([^\s嚗?]+)|(\d+\s*?)|([A-Ha-h]??/);
   if (court) ctx.court = (court[1] || court[2] || court[3] || "").replace(/\s+/g, "");
 
-  const matchNo = line.match(/(?:場次|第)\s*:?\s*(\d+)\s*場?/);
-  if (matchNo && !/年級/.test(line)) ctx.matchNo = matchNo[1];
+  const matchNo = line.match(/(?:?湔活|蝚?\s*:?\s*(\d+)\s*??/);
+  if (matchNo && !/撟渡?/.test(line)) ctx.matchNo = matchNo[1];
 
   const weight = extractWeight(line);
-  if (weight && ctx.type !== "品勢") ctx.weightClass = weight;
+  if (weight && ctx.type !== "?") ctx.weightClass = weight;
 
   const belt = extractBelt(line);
   if (belt) ctx.belt = belt;
 
   const eventName = extractPoomsaeEvent(line);
-  if (eventName && ctx.type !== "對打") ctx.eventName = eventName;
+  if (eventName && ctx.type !== "撠?") ctx.eventName = eventName;
 
   const age = extractAgeGroup(line);
   if (age) ctx.ageGroup = age;
@@ -1305,27 +1302,27 @@ function applyContextFromLine(line, ctx) {
 
 function pushPeople(list, ...people) {
   people.forEach((item) => {
-    if (!item || !item.player || item.player === "輪空") return;
+    if (!item || !item.player || item.player === "頛芰征") return;
     list.push(item);
   });
 }
 
 function extractDivision(line) {
   const cleaned = line
-    .replace(/【|】/g, "")
-    .replace(/品勢|對打/g, " ")
-    .replace(/場地.+$/, "")
-    .replace(/場次.+$/, "")
+    .replace(/???g, "")
+    .replace(/?|撠?/g, " ")
+    .replace(/?游.+$/, "")
+    .replace(/?湔活.+$/, "")
     .trim();
 
-  if (!/(幼兒|國小|國中|高中|大專|一般|社會|公開|成年)/.test(cleaned)) return "";
-  if (!/(男|女|混合|團體|個人|黑帶|紅帶|白帶|黃帶|綠帶|藍帶|kg|公斤|量級)/.test(cleaned)) {
+  if (!/(撟澆?|??|?葉|擃葉|憭批?|銝?洱蝷暹?|?祇?|?僑)/.test(cleaned)) return "";
+  if (!/(?會憟逖瘛瑕?|??|?犖|暺葆|蝝葆|?賢葆|暺葆|蝬葆|?葆|kg|?祆|??)/.test(cleaned)) {
     return "";
   }
 
   return cleaned
     .replace(/\s+/g, " ")
-    .replace(/^[:：\-\s]+/, "")
+    .replace(/^[:嚗-\s]+/, "")
     .slice(0, 40);
 }
 
@@ -1346,13 +1343,13 @@ function extractPersonClubPairs(line) {
 
   const reParen = /([\u4e00-\u9fff]{2,4})\s*\(\s*([^)]{2,30})\s*\)/g;
   const reSlash = /([\u4e00-\u9fff]{2,4})\s*\/\s*([\u4e00-\u9fffA-Za-z0-9]{2,20})/g;
-  const reSpace = /([\u4e00-\u9fff]{2,4})[\s　]{1,6}([\u4e00-\u9fff]{2,12}(?:跆拳道)?(?:館|隊|協會)?)/g;
+  const reSpace = /([\u4e00-\u9fff]{2,4})[\s?]{1,6}([\u4e00-\u9fff]{2,12}(?:頝???(?:擗育???)?)/g;
 
   let match;
   while ((match = reParen.exec(line))) push(match[1], match[2]);
   while ((match = reSlash.exec(line))) push(match[1], match[2]);
   while ((match = reSpace.exec(line))) {
-    if (NAME_STOP.has(match[2]) || /場|組|級/.test(match[2])) continue;
+    if (NAME_STOP.has(match[2]) || /?揉蝯蝝?.test(match[2])) continue;
     push(match[1], match[2]);
   }
 
@@ -1362,8 +1359,8 @@ function extractPersonClubPairs(line) {
 function personFromFragment(fragment, ctx) {
   const text = String(fragment || "").trim();
   if (!text) return null;
-  if (/輪空|BYE|bye/i.test(text)) {
-    return makeItem({ player: "輪空", club: "" }, ctx);
+  if (/頛芰征|BYE|bye/i.test(text)) {
+    return makeItem({ player: "頛芰征", club: "" }, ctx);
   }
 
   const pairs = extractPersonClubPairs(text);
@@ -1395,8 +1392,8 @@ function guessPlayerFromKeywordLine(line, ctx) {
 }
 
 function splitVs(line) {
-  if (!/(?:vs|VS|對戰)/.test(line)) return null;
-  const parts = line.split(/\s*(?:vs|VS|Vs|對戰)\s*/);
+  if (!/(?:vs|VS|撠)/.test(line)) return null;
+  const parts = line.split(/\s*(?:vs|VS|Vs|撠)\s*/);
   if (parts.length === 2 && parts[0].trim() && parts[1].trim()) {
     if (parts[0].length < 40 && parts[1].length < 40) return parts;
   }
@@ -1424,13 +1421,13 @@ function makeItem(pair, ctx) {
 
 function linkOpponents(a, b) {
   if (!a || !b) return;
-  if (b.player && b.player !== "輪空") {
+  if (b.player && b.player !== "頛芰征") {
     a.opponent = a.opponent || b.player;
     a.opponentClub = a.opponentClub || b.club;
-  } else if (b.player === "輪空") {
-    a.opponent = "輪空";
+  } else if (b.player === "頛芰征") {
+    a.opponent = "頛芰征";
   }
-  if (a.player && a.player !== "輪空") {
+  if (a.player && a.player !== "頛芰征") {
     b.opponent = b.opponent || a.player;
     b.opponentClub = b.opponentClub || a.club;
   }
@@ -1443,35 +1440,35 @@ function assignChungHong(a, b) {
   b.color = normalizeColor(b.color) || b.color;
   if (a.color && b.color) return;
   if (!a.color && !b.color) {
-    a.color = "青方";
-    b.color = "紅方";
+    a.color = "?";
+    b.color = "蝝";
     return;
   }
-  if (!a.color) a.color = /紅/.test(b.color) ? "青方" : "紅方";
-  if (!b.color) b.color = /紅/.test(a.color) ? "青方" : "紅方";
+  if (!a.color) a.color = /蝝?.test(b.color) ? "?" : "蝝";
+  if (!b.color) b.color = /蝝?.test(a.color) ? "?" : "蝝";
 }
 
 function isFightContext(ctx) {
-  return (ctx.type || "").includes("對打");
+  return (ctx.type || "").includes("撠?");
 }
 
 
 function normalizeItem(item) {
   const row = {
-    player: getField(item, ["player", "name", "選手", "姓名", "選手姓名"]),
-    type: getField(item, ["type", "event", "項目", "種類"]),
-    division: getField(item, ["division", "group", "組別", "級別", "量級"]),
-    club: getField(item, ["club", "dojo", "道館", "單位", "代表隊"]),
-    court: getField(item, ["court", "venue", "場地", "場別"]),
-    matchNo: getField(item, ["matchNo", "match", "場次", "序號"]),
-    opponent: getField(item, ["opponent", "對手", "對戰選手"]),
-    opponentClub: getField(item, ["opponentClub", "對手道館", "對方單位"]),
-    weightClass: getField(item, ["weightClass", "weight", "公斤級"]),
-    belt: getField(item, ["belt", "帶色", "段級"]),
-    eventName: getField(item, ["eventName", "品勢項目", "指定品勢"]),
-    ageGroup: getField(item, ["ageGroup", "年齡組"]),
-    gender: getField(item, ["gender", "性別"]),
-    color: getField(item, ["color", "紅藍方", "邊"])
+    player: getField(item, ["player", "name", "?豢?", "憪?", "?豢?憪?"]),
+    type: getField(item, ["type", "event", "?", "蝔桅?"]),
+    division: getField(item, ["division", "group", "蝯", "蝝", "??"]),
+    club: getField(item, ["club", "dojo", "?尹", "?桐?", "隞?”??]),
+    court: getField(item, ["court", "venue", "?游", "?游"]),
+    matchNo: getField(item, ["matchNo", "match", "?湔活", "摨?"]),
+    opponent: getField(item, ["opponent", "撠?", "撠?豢?"]),
+    opponentClub: getField(item, ["opponentClub", "撠??尹", "撠?桐?"]),
+    weightClass: getField(item, ["weightClass", "weight", "?祆蝝?]),
+    belt: getField(item, ["belt", "撣嗉", "畾萇?"]),
+    eventName: getField(item, ["eventName", "??", "???"]),
+    ageGroup: getField(item, ["ageGroup", "撟湧翩蝯?]),
+    gender: getField(item, ["gender", "?批"]),
+    color: getField(item, ["color", "蝝???, "??])
   };
 
   if (!row.club && row.player) {
@@ -1498,12 +1495,12 @@ function enrichItem(item) {
   splitStuckPlayerClub(item);
   const blob = [item.division, item.type, item.eventName, item.player, item.club].join(" ");
   if (!item.type) item.type = detectType(blob);
-  if (item.type === "對練" || item.type === "競技") item.type = "對打";
+  if (item.type === "撠毀" || item.type === "蝡嗆?") item.type = "撠?";
   if (!item.weightClass) item.weightClass = extractWeight(blob);
   if (!item.belt) item.belt = extractBelt(blob);
   if (!item.eventName && isPoomsae(item)) item.eventName = extractPoomsaeEvent(blob);
   if (isPoomsae(item) && (item.event1 || item.event2)) {
-    item.eventName = [item.event1, item.event2].filter(Boolean).join("、") || item.eventName;
+    item.eventName = [item.event1, item.event2].filter(Boolean).join("??) || item.eventName;
   }
   if (!item.gender) item.gender = extractGender(blob);
   if (!item.ageGroup) item.ageGroup = extractAgeGroup(blob);
@@ -1532,75 +1529,75 @@ function splitStuckPlayerClub(item) {
 }
 
 function detectType(text) {
-  if (/品勢|Poomsae|指定品勢|自選品勢|基本動作|[一二三四五六七八]章|高麗|金剛/i.test(text)) return "品勢";
-  if (/對打|競技對打|Kyorugi|對練/i.test(text)) return "對打";
-  if (/kg|公斤|量級/.test(text) && !/品勢/.test(text)) return "對打";
+  if (/?|Poomsae|???|?芷?|?箸??|[銝鈭????凋??侷蝡擃?|??/i.test(text)) return "?";
+  if (/撠?|蝡嗆?撠?|Kyorugi|撠毀/i.test(text)) return "撠?";
+  if (/kg|?祆|??/.test(text) && !/?/.test(text)) return "撠?";
   return "";
 }
 
 function extractWeight(text) {
-  const match = String(text || "").match(/[+＋\-－]?\s*\d+(?:\.\d+)?\s*(?:kg|KG|公斤)/i);
+  const match = String(text || "").match(/[+嚗-嚗?\s*\d+(?:\.\d+)?\s*(?:kg|KG|?祆)/i);
   if (match) return match[0].replace(/\s+/g, "");
-  const named = String(text || "").match(/([最]?[輕中重]量級|羽量級|蠅量級)/);
+  const named = String(text || "").match(/([?]?[頛葉???|蝢賡?蝝??蝝?/);
   return named ? named[1] : "";
 }
 
 function extractBelt(text) {
-  const match = String(text || "").match(/((?:白|黃|綠|藍|紅|紅黑|黑)帶(?:\s*[一二三四五六七八九十\d]段)?|[一二三四五六七八九十\d]段)/);
+  const match = String(text || "").match(/((?:?罵暺蝬?蝝蝝?|暺?撣??:\s*[銝鈭????凋??思??d]畾??|[銝鈭????凋??思??d]畾?/);
   return match ? match[1].replace(/\s+/g, "") : "";
 }
 
 function extractPoomsaeEvent(text) {
   const dual = extractDualPoomsae(text);
   if (dual.eventName) return dual.eventName;
-  const match = String(text || "").match(/(指定品勢|自選品勢|團體品勢|個人品勢|自由品勢|基本動作|對練|太極[一二三四五六七八]章|[一二三四五六七八]章|馬步正拳[、，,]?前抬[腳腿]?[、，,]?前踢|馬步正拳|前抬腳|前踢|高麗|金剛)/);
+  const match = String(text || "").match(/(???|?芷?|???|?犖?|?芰?|?箸??|撠毀|憭芣扔[銝鈭????凋??侷蝡[銝鈭????凋??侷蝡擐祆郊甇?[??,]??[?唾]?[??,]??腺|擐祆郊甇?|??逖?腺|擃?|??)/);
   return match ? match[1] : "";
 }
 
 function extractDualPoomsae(text) {
-  const src = String(text || "").replace(/[：]/g, ":").replace(/\|/g, " ");
-  if (!/第一品勢|第二品勢/.test(src)) {
+  const src = String(text || "").replace(/[嚗/g, ":").replace(/\|/g, " ");
+  if (!/蝚砌??|蝚砌??/.test(src)) {
     return { event1: "", event2: "", eventName: "" };
   }
   let first = "";
   let second = "";
-  const dual = src.match(/第一品勢\s*:\s*(.*?)第二品勢\s*:\s*(.*)$/);
+  const dual = src.match(/蝚砌??\s*:\s*(.*?)蝚砌??\s*:\s*(.*)$/);
   if (dual) {
     first = dual[1];
     second = dual[2];
   } else {
-    first = (src.match(/第一品勢\s*:\s*(.+)$/) || [])[1] || "";
-    second = (src.match(/第二品勢\s*:\s*(.+)$/) || [])[1] || "";
+    first = (src.match(/蝚砌??\s*:\s*(.+)$/) || [])[1] || "";
+    second = (src.match(/蝚砌??\s*:\s*(.+)$/) || [])[1] || "";
   }
   first = completeWrappedPoomsae(first);
   second = completeWrappedPoomsae(second);
   return {
     event1: first,
     event2: second,
-    eventName: [first, second].filter(Boolean).join("、")
+    eventName: [first, second].filter(Boolean).join("??)
   };
 }
 
 function normalizePoomsaeName(text) {
   return String(text || "")
-    .replace(/籤號.*$/g, "")
-    .replace(/單位.*$/g, "")
-    .replace(/姓名.*$/g, "")
-    .replace(/總分.*$/g, "")
-    .replace(/名次.*$/g, "")
-    .replace(/比賽(?:組別|人數).*$/g, "")
+    .replace(/蝐方?.*$/g, "")
+    .replace(/?桐?.*$/g, "")
+    .replace(/憪?.*$/g, "")
+    .replace(/蝮賢?.*$/g, "")
+    .replace(/?活.*$/g, "")
+    .replace(/瘥魚(?:蝯|鈭箸).*$/g, "")
     .replace(/[|]/g, " ")
     .replace(/\s+/g, "")
-    .replace(/[，]/g, "、")
-    .replace(/、+/g, "、")
-    .replace(/^、|、$/g, "")
+    .replace(/[嚗/g, "??)
+    .replace(/??/g, "??)
+    .replace(/^???/g, "")
     .trim();
 }
 
 function completeWrappedPoomsae(text) {
   let name = normalizePoomsaeName(text);
-  if (/馬步正拳/.test(name) && /前抬[腳腿]/.test(name) && !/前踢/.test(name)) {
-    name = `${name}、前踢`;
+  if (/擐祆郊甇?/.test(name) && /?[?唾]/.test(name) && !/?腺/.test(name)) {
+    name = `${name}??頦瓩;
   }
   return name;
 }
@@ -1608,31 +1605,31 @@ function completeWrappedPoomsae(text) {
 function formatPoomsaeLabel(item, compact) {
   const a = item.event1 || "";
   const b = item.event2 || "";
-  const joined = item.eventName || [a, b].filter(Boolean).join("、") || item.detailLabel || "";
+  const joined = item.eventName || [a, b].filter(Boolean).join("??) || item.detailLabel || "";
   if (!joined) return "";
   if (compact) return shortPoomsae(joined);
-  if (a && b) return `第一：${a}　第二：${b}`;
+  if (a && b) return `蝚砌?嚗?{a}?蝚砌?嚗?{b}`;
   return joined;
 }
 
 function extractGender(text) {
-  if (/女子|女生|\(女\)|組\(女\)/.test(text)) return "女子";
-  if (/男子|男生|\(男\)|組\(男\)/.test(text)) return "男子";
-  if (/混合/.test(text)) return "混合";
+  if (/憟喳?|憟喟?|\(憟許)|蝯(憟許)/.test(text)) return "憟喳?";
+  if (/?瑕?|?瑞?|\(?愧)|蝯(?愧)/.test(text)) return "?瑕?";
+  if (/瘛瑕?/.test(text)) return "瘛瑕?";
   return "";
 }
 
 function extractAgeGroup(text) {
-  const match = String(text || "").match(/(幼兒|兒童|國小低年級|國小中年級|國小高年級|國小|國中|高中|大專|一般|社會|公開|成年)/);
+  const match = String(text || "").match(/(撟澆?|?咱|??雿僑蝝??銝剖僑蝝??擃僑蝝??|?葉|擃葉|憭批?|銝?洱蝷暹?|?祇?|?僑)/);
   return match ? match[1] : "";
 }
 
 function isPoomsae(item) {
-  return (item.type || "").includes("品勢");
+  return (item.type || "").includes("?");
 }
 
 function isFight(item) {
-  return /對打|對練|競技/.test(item.type || "");
+  return /撠?|撠毀|蝡嗆?/.test(item.type || "");
 }
 
 function isOrderStyle(item) {
@@ -1666,12 +1663,12 @@ function normalizeText(text) {
   return String(text || "")
     .normalize("NFKC")
     .replace(/\s+/g, "")
-    .replace(/舘/g, "館")
-    .replace(/跆拳道館/g, "")
-    .replace(/跆拳道/g, "")
-    .replace(/道館/g, "")
-    .replace(/館/g, "")
-    .replace(/－/g, "")
+    .replace(/??g, "擗?)
+    .replace(/頝?尹/g, "")
+    .replace(/頝??g, "")
+    .replace(/?尹/g, "")
+    .replace(/擗?g, "")
+    .replace(/嚗?g, "")
     .replace(/-/g, "")
     .toLowerCase();
 }
@@ -1700,30 +1697,30 @@ function getPlayerNames() {
 
 const NAME_HEADER_SKIP = new Set([
   ...NAME_STOP,
-  "參加", "金額", "備註", "電話", "班級", "年級", "學校", "性別",
-  "是否", "出勤", "報名", "繳費", "家長", "聯絡", "名字", "編號",
-  "序號", "備住", "出席", "午餐", "晚餐", "素食", "葷食"
+  "??", "??", "?酉", "?餉店", "?剔?", "撟渡?", "摮豢", "?批",
+  "?臬", "?箏", "?勗?", "蝜唾祥", "摰園", "?舐窗", "??", "蝺刻?",
+  "摨?", "??", "?箏葉", "??", "??", "蝝?", "?琿?"
 ]);
 
 function isLikelyPersonName(text) {
   const name = String(text || "").replace(/\s+/g, "");
   if (!/^[\u4e00-\u9fff]{2,4}$/.test(name)) return false;
   if (NAME_HEADER_SKIP.has(name)) return false;
-  if (/(國小|國中|高中|小學|道館|協會|跆拳|年級|公斤|品勢|對打|場地|場次|護具)$/.test(name)) return false;
-  if (/^(白|黃|綠|藍|紅|黑)帶/.test(name)) return false;
-  if (/^[一二三四五六七八九十]+章$/.test(name)) return false;
+  if (/(??|?葉|擃葉|撠飛|?尹|??|頝|撟渡?|?祆|?|撠?|?游|?湔活|霅瑕)$/.test(name)) return false;
+  if (/^(?罵暺蝬?蝝暺?撣?.test(name)) return false;
+  if (/^[銝鈭????凋??思??+蝡?/.test(name)) return false;
   return true;
 }
 
 function pickNameFromToken(token) {
-  let text = String(token || "").replace(/[()（）\[\]【】*＊]/g, " ").trim();
-  text = text.replace(/^\d+[\.．、)\s]+/, "").replace(/\s+/g, "");
+  let text = String(token || "").replace(/[()嚗?\[\]??嚗/g, " ").trim();
+  text = text.replace(/^\d+[\.嚗?\s]+/, "").replace(/\s+/g, "");
   if (!text) return "";
   const cleaned = cleanName(text);
   if (cleaned && isLikelyPersonName(cleaned)) return cleaned;
-  const clubName = text.match(/(?:國小|國中|高中|小學|道館|館|隊|團)([\u4e00-\u9fff]{2,4})$/);
+  const clubName = text.match(/(?:??|?葉|擃葉|撠飛|?尹|擗育???([\u4e00-\u9fff]{2,4})$/);
   if (clubName && isLikelyPersonName(clubName[1])) return clubName[1];
-  const leading = text.match(/^([\u4e00-\u9fff]{2,4})(?:\d|[A-Za-z]|白帶|黃帶|綠帶|藍帶|紅帶|黑帶|幼兒|國小|國中)/);
+  const leading = text.match(/^([\u4e00-\u9fff]{2,4})(?:\d|[A-Za-z]|?賢葆|暺葆|蝬葆|?葆|蝝葆|暺葆|撟澆?|??|?葉)/);
   if (leading && isLikelyPersonName(leading[1])) return leading[1];
   return isLikelyPersonName(text) ? text : "";
 }
@@ -1746,7 +1743,7 @@ function harvestNamesFromPiece(piece) {
   if (one) return [one];
 
   const glued = text.replace(/[^\u4e00-\u9fff]/g, "");
-  if (glued.length >= 4 && glued.length <= 24 && !/(國小|國中|高中|道館|館)/.test(glued)) {
+  if (glued.length >= 4 && glued.length <= 24 && !/(??|?葉|擃葉|?尹|擗?/.test(glued)) {
     if (glued.length % 3 === 0) {
       const chunks = glued.match(/[\u4e00-\u9fff]{3}/g) || [];
       if (chunks.length && chunks.every(isLikelyPersonName)) return chunks;
@@ -1771,9 +1768,9 @@ function tidyPlayerNameList(raw) {
 
   String(raw || "").split(/\r?\n/).forEach((line) => {
     const compact = line.replace(/\s+/g, "");
-    if (!compact || /^(姓名|名字|選手|單位|道館|序|編號|學校|年級)$/.test(compact)) return;
+    if (!compact || /^(憪?|??|?豢?|?桐?|?尹|摨蝺刻?|摮豢|撟渡?)$/.test(compact)) return;
     line.split(/\t/).forEach((cell) => {
-      cell.split(/[,，、;；|/／]+/).forEach((piece) => {
+      cell.split(/[,嚗?嚗/嚗+/).forEach((piece) => {
         harvestNamesFromPiece(piece).forEach(add);
       });
     });
@@ -1785,7 +1782,7 @@ function tidyPlayerNameList(raw) {
 function showNameTidyStatus(count) {
   const el = document.getElementById("playerNamesStatus");
   if (!el) return;
-  el.textContent = count ? `已整理成 ${count} 人` : "";
+  el.textContent = count ? `撌脫?? ${count} 鈭槁 : "";
 }
 
 function uniqueNameList(list) {
@@ -1799,7 +1796,7 @@ function uniqueNameList(list) {
 }
 
 function rememberClubRoster() {
-  /* 範本名單以秩序冊為準，不再從其他檔案自動塞人 */
+  /* 蝭?隞亦妝摨??箸?嚗????嗡?瑼??芸?憛犖 */
 }
 
 function getClubRoster() {
@@ -1818,7 +1815,7 @@ function applyTidiedNames(raw, mergeWithCurrent) {
   if (!tidied.names.length) {
     showNameTidyStatus(0);
     const el = document.getElementById("playerNamesStatus");
-    if (el) el.textContent = "沒辨識到姓名，請改貼中文名字";
+    if (el) el.textContent = "瘝儘霅憪?嚗??寡票銝剜???";
     return false;
   }
   playerNamesEl.value = tidied.text;
@@ -1865,15 +1862,16 @@ function syncFindPanels() {
 
 function updateScopeSummary() {
   const labels = {
-    auto: "已用報名單位找。名單有人也不會先用學員名字。找不到再改這個。",
-    either: "報名單位或學員名字對到其中一種就會出來。",
-    club: "已用報名單位找。名單有人也不會先用學員名字。找不到再改這個。",
-    names: "只用學員名字，不管報名單位。",
-    all: "列出檔案裡所有選手。"
+    auto: "??勗??桐??整雿?鈭箝??‵摮詨??????典?摮?,
+    either: "?勗??桐??飛?∪?摮?蝚血??嗡葉銝?停???,
+    club: "??勗??桐??整雿?鈭箝??‵摮詨??????典?摮?,
+    names: "?芰摮詨???橘?銝恣?勗??桐???,
+    all: "?瑼?鋆⊥????
   };
   const el = document.getElementById("scopeSummary");
   if (el) el.textContent = labels[getDisplayMode()] || labels.auto;
 }
+
 let lastFilterSource = "club";
 
 function clubRowsFromParsed() {
@@ -1940,12 +1938,10 @@ function applyViewFilter(updateStatus, forceAll) {
   allData = rowsForDisplayMode(forceAll);
   allData.sort(sortMatches);
   resultArea.classList.remove("hidden");
-  document.getElementById("resultWait")?.classList.add("hidden");
   updateStats();
   render();
   if (updateStatus) setStatus(viewStatusMessage(), false, { guideToNames: shouldGuideToNames() });
   updateResultNext();
-  updateQuest();
 }
 
 function updateResultNext() {
@@ -1956,10 +1952,10 @@ function updateResultNext() {
     box.className = "result-next is-warn";
     box.innerHTML = `
       <div>
-        <strong>下一步：改找人方式</strong>
-        <p>檔案裡有資料，但用報名單位沒對到人。校隊常用學校名報名，請改選「學員名字」再對一次。</p>
+        <strong>銝?甇伐??寞鈭箸撘?/strong>
+        <p>瑼?????雿??隞嗆?撠鈭箝?摮豢?勗????寥?飛?∪?摮?/p>
       </div>
-      <button type="button" class="btn primary" id="resultNextFindBtn">去改找人方式</button>
+      <button type="button" class="btn primary" id="resultNextFindBtn">?餅?曆犖?孵?</button>
     `;
     box.querySelector("#resultNextFindBtn")?.addEventListener("click", () => {
       setDisplayMode("names");
@@ -1971,12 +1967,12 @@ function updateResultNext() {
   box.className = "result-next is-ok";
   box.innerHTML = `
     <div>
-      <strong>表已經出來了</strong>
-      <p>先看出場順序。看完請匯出存檔。網頁不會保存。找不到人，可改找人方式。</p>
+      <strong>銵典歇蝬靘?</strong>
+      <p>頞??Ｚ??拇???摰??臬摮?嚗??游停??憭晞銝?犖嚗?寞鈭箸撘?/p>
     </div>
     <div class="result-next-actions">
-      <button type="button" class="btn export" id="resultNextExportBtn">匯出 Excel</button>
-      <button type="button" class="btn gray" id="resultNextFindBtn">改找人方式</button>
+      <button type="button" class="btn export" id="resultNextExportBtn">?臬 Excel</button>
+      <button type="button" class="btn gray" id="resultNextFindBtn">?寞鈭箸撘?/button>
     </div>
   `;
   box.querySelector("#resultNextExportBtn")?.addEventListener("click", () => {
@@ -1992,30 +1988,30 @@ function viewStatusMessage() {
   const mode = getDisplayMode();
   const total = parsedAll.length;
   const shown = allData.length;
-  if (!total) return "還沒找到選手。請先上傳檔案並按「整理賽程」。";
-  if (mode === "all") return `完成：檔案裡共 ${total} 筆，目前顯示全部 ${shown} 筆。`;
+  if (!total) return "???曉?豢??????單?獢蒂??魚蝔?;
+  if (mode === "all") return `摰?嚗?獢ㄐ??${total} 蝑??桀?憿舐內?券 ${shown} 蝑;
   if (mode === "names") {
-    if (!getPlayerNames().length) return `學員名單還是空的，所以沒人可顯示。請先填名單，或改選「報名單位」。`;
-    if (!shown) return `檔案裡有 ${total} 筆，但學員名字沒對到人。可改選「報名單位」或檢查姓名。`;
-    return `完成：檔案裡共 ${total} 筆，只顯示學員名字裡的 ${shown} 筆。`;
+    if (!getPlayerNames().length) return `摮詨??舐征???隞交?鈭箏憿舐內???‵?嚗??寥???擗具;
+    if (!shown) return `瑼?鋆⊥? ${total} 蝑?雿飛?∪??格?撠鈭箝?寥??擗具?瑼Ｘ憪??;
+    return `摰?嚗?獢ㄐ??${total} 蝑??芷＊蝷箏飛?∪??株ㄐ??${shown} 蝑;
   }
   if (mode === "auto") {
     if (lastFilterSource === "namesFallback") {
-      return `報名單位沒抓到人，已改用學員名字，顯示 ${shown} 筆（檔案共 ${total} 筆）。建議到下面確認名單。`;
+      return `?祇尹瘝??唬犖嚗歇?孵憿舐內摮詨? ${shown} 蝑?瑼???${total} 蝑????舀??拚??銝韏瑯;
     }
     if (!shown) {
       return getPlayerNames().length
-        ? `檔案裡有 ${total} 筆，報名單位和學員名字都沒對到人。`
-        : `檔案裡有 ${total} 筆，報名單位沒對到人。可改選「學員名字」再整理。`;
+        ? `瑼?鋆⊥? ${total} 蝑??祇尹?飛?∪??桅瘝??唬犖?
+        : `瑼?鋆⊥? ${total} 蝑??祇尹瘝??唬犖?憟摮詨???;
     }
-    return `完成：檔案裡共 ${total} 筆，依報名單位顯示 ${shown} 筆。`;
+    return `摰?嚗?獢ㄐ??${total} 蝑?靘擗券＊蝷?${shown} 蝑;
   }
   if (mode === "either") {
-    if (!shown) return `檔案裡有 ${total} 筆，報名單位和學員名字都沒對到人。`;
-    return `完成：檔案裡共 ${total} 筆，報名單位或學員名字對到 ${shown} 筆。`;
+    if (!shown) return `瑼?鋆⊥? ${total} 蝑??祇尹?飛?∪??桅瘝??唬犖?;
+    return `摰?嚗?獢ㄐ??${total} 蝑??祇尹嚗飛?∪?蝮賡＊蝷?${shown} 蝑;
   }
-  if (!shown) return `檔案裡有 ${total} 筆，但用館別關鍵字沒對到人。可改選「學員名字」，或檢查關鍵字與姓名。`;
-  return `完成：檔案裡共 ${total} 筆，依館別關鍵字顯示 ${shown} 筆。`;
+  if (!shown) return `瑼?鋆⊥? ${total} 蝑?雿擗典?摮?撠鈭箝?寥???擗剁?瘝??唳??寧?摮詨?????典飛?∪??柴;
+  return `摰?嚗?獢ㄐ??${total} 蝑?靘尹?仿??萄?憿舐內 ${shown} 蝑;
 }
 
 function itemMatchesFilter(item) {
@@ -2039,26 +2035,26 @@ function itemMatchesFilter(item) {
 function looksLikeCoachNotes(text) {
   const lines = String(text).split(/\n/).map((line) => line.trim()).filter(Boolean);
   if (!lines.length) return false;
-  const hits = lines.filter((line) => /^\d+[\.．、)]?\s*[\u4e00-\u9fff]{2,4}.+\d{2,4}\s*(紅|青|藍)/.test(line));
+  const hits = lines.filter((line) => /^\d+[\.嚗?]?\s*[\u4e00-\u9fff]{2,4}.+\d{2,4}\s*(蝝???/.test(line));
   return hits.length >= 1 && hits.length >= lines.length * 0.5;
 }
 
 function normalizeColor(color) {
   const text = String(color || "");
-  if (/紅/.test(text)) return "紅方";
-  if (/青|藍/.test(text)) return "青方";
+  if (/蝝?.test(text)) return "蝝";
+  if (/???.test(text)) return "?";
   return "";
 }
 
 function shortColor(color) {
-  if (/紅/.test(color || "")) return "紅";
-  if (/青|藍/.test(color || "")) return "青";
+  if (/蝝?.test(color || "")) return "蝝?;
+  if (/???.test(color || "")) return "??;
   return "";
 }
 
 function parseCoachNotes(raw) {
   return String(raw || "").split(/\n/).map((line) => {
-    const stripped = line.trim().replace(/^\d+[\.．、)]\s*/, "");
+    const stripped = line.trim().replace(/^\d+[\.嚗?]\s*/, "");
     if (!stripped) return null;
     let player = "";
     let rest = "";
@@ -2066,7 +2062,7 @@ function parseCoachNotes(raw) {
       const name = stripped.slice(0, len);
       if (!/^[\u4e00-\u9fff]+$/.test(name)) continue;
       const after = stripped.slice(len);
-      if (/^(國小|國中|幼兒|幼幼|高中|一般|白帶|黃帶|藍帶|紅帶|黑帶|\s|\d)/.test(after)) {
+      if (/^(??|?葉|撟澆?|撟澆匱|擃葉|銝?洱?賢葆|暺葆|?葆|蝝葆|暺葆|\s|\d)/.test(after)) {
         player = name;
         rest = after.trim();
         break;
@@ -2074,7 +2070,7 @@ function parseCoachNotes(raw) {
     }
     if (!player) return null;
     const bouts = [];
-    rest = rest.replace(/(\d{2,4})\s*(紅方|青方|藍方|紅|青|藍)/g, (_, no, color) => {
+    rest = rest.replace(/(\d{2,4})\s*(蝝|?|?|蝝???/g, (_, no, color) => {
       bouts.push({ no, color: normalizeColor(color) });
       return " ";
     });
@@ -2083,9 +2079,9 @@ function parseCoachNotes(raw) {
     const division = leftover.replace(eventName, "").trim();
     const first = bouts[0] || {};
     const next = bouts[1] || {};
-    const type = (eventName || /章|馬步|品勢/.test(leftover))
-      ? "品勢"
-      : (/公斤|對打/.test(leftover) ? "對打" : (bouts.length ? "品勢" : ""));
+    const type = (eventName || /蝡擐祆郊|?/.test(leftover))
+      ? "?"
+      : (/?祆|撠?/.test(leftover) ? "撠?" : (bouts.length ? "?" : ""));
     return enrichItem({
       player,
       club: clubName.value || "",
@@ -2102,13 +2098,13 @@ function parseCoachNotes(raw) {
       nextOpponentHint: "",
       bye: false,
       source: "notes",
-      boutStyle: bouts.length ? "bracket" : (type === "品勢" ? "order" : "bracket")
+      boutStyle: bouts.length ? "bracket" : (type === "?" ? "order" : "bracket")
     });
   }).filter(Boolean);
 }
 
 function parseMatchList(raw) {
-  const text = String(raw || "").replace(/[：]/g, ":").replace(/\|/g, " ");
+  const text = String(raw || "").replace(/[嚗/g, ":").replace(/\|/g, " ");
   const lines = text.split(/\n/).map((line) => line.replace(/\s+/g, " ").trim()).filter(Boolean);
   const chunks = [];
   let court = "";
@@ -2127,7 +2123,7 @@ function parseMatchList(raw) {
       court = courtHit;
       return;
     }
-    if (/^(MATCH LIST|組別量級)/.test(line)) {
+    if (/^(MATCH LIST|蝯??)/.test(line)) {
       flushChunk();
       current.push(line);
       return;
@@ -2139,12 +2135,12 @@ function parseMatchList(raw) {
   const items = [];
   chunks.forEach((chunk) => {
     const joined = chunk.lines.join("\n");
-    if (/敗部/.test(joined)) return;
-    const headerLine = joined.match(/([A-Z]{1,3}\d{2}[^\n]{0,40}?)比賽人數:\s*(\d+)\s*人/)
-      || joined.match(/([^\n]{4,40}?)比賽人數:\s*(\d+)\s*人/);
-    const division = (headerLine ? headerLine[1] : "").replace(/組別量級:/, "").trim();
+    if (/?/.test(joined)) return;
+    const headerLine = joined.match(/([A-Z]{1,3}\d{2}[^\n]{0,40}?)瘥魚鈭箸:\s*(\d+)\s*鈭?)
+      || joined.match(/([^\n]{4,40}?)瘥魚鈭箸:\s*(\d+)\s*鈭?);
+    const division = (headerLine ? headerLine[1] : "").replace(/蝯??:/, "").trim();
     const size = headerLine ? parseInt(headerLine[2], 10) : 0;
-    const type = /品勢/.test(joined) ? "品勢" : "對打";
+    const type = /?/.test(joined) ? "?" : "撠?";
     const header = {
       type,
       division,
@@ -2155,12 +2151,12 @@ function parseMatchList(raw) {
       ageGroup: extractAgeGroup(division),
       gender: extractGender(division),
       groupCode: (division.match(/^[A-Z]{2}\d{2}/) || [""])[0],
-      boutStyle: type === "品勢" ? detectPoomsaeStyleFromText(joined) : "bracket"
+      boutStyle: type === "?" ? detectPoomsaeStyleFromText(joined) : "bracket"
     };
 
     const tokens = [];
     chunk.lines.forEach((line) => {
-      if (/^(No|單位|姓名|籤號|護具|比賽名稱|比賽地點|比賽日期|MATCH LIST|組別量級)/.test(line)) return;
+      if (/^(No|?桐?|憪?|蝐方?|霅瑕|瘥魚?迂|瘥魚?圈?|瘥魚?交?|MATCH LIST|蝯??)/.test(line)) return;
       const playerLine = normalizePlayerLine(line);
       if (playerLine) {
         tokens.push({ kind: "p", line: playerLine });
@@ -2176,39 +2172,39 @@ function parseMatchList(raw) {
 
 function detectPoomsaeStyleFromText(text) {
   const src = String(text || "");
-  if (/品勢出場順序表|第一品勢|第二品勢/.test(src) && !/編號/.test(src)) return "order";
-  if (/比賽組別:\s*P/i.test(src) && /編號/.test(src)) return "bracket";
-  if (/VS|對\s*戰/.test(src)) return "bracket";
+  if (/??箏??銵育蝚砌??|蝚砌??/.test(src) && !/蝺刻?/.test(src)) return "order";
+  if (/瘥魚蝯:\s*P/i.test(src) && /蝺刻?/.test(src)) return "bracket";
+  if (/VS|撠s*??.test(src)) return "bracket";
   return "order";
 }
 
 function normalizePlayerLine(line) {
   const t = String(line || "").replace(/\|/g, " ").replace(/\s+/g, " ").trim()
-    .replace(/^(\d+)月(\d+)日\s+/, "$1-$2 ");
-  if (!t || /^(籤號|單位|姓名|No|護具|量級|比賽)/.test(t)) return "";
+    .replace(/^(\d+)??\d+)?功s+/, "$1-$2 ");
+  if (!t || /^(蝐方?|?桐?|憪?|No|霅瑕|??|瘥魚)/.test(t)) return "";
   const dashed = t.match(/^(\d+)-([1-4])\s+(.+)$/);
   if (dashed && /[\u4e00-\u9fffA-Za-z]/.test(dashed[3])) {
     return `${dashed[2]} ${dashed[3]}`;
   }
   const start = t.match(/^([1-9]\d?)\s+(.+)$/);
-  if (start && /[\u4e00-\u9fff]{2,}/.test(start[2]) && !/^(籤號|單位|姓名|公斤|量級|人)/.test(start[2])) {
-    if (!/^\d{2,4}(?:-\d+)?$/.test(start[2]) && !/^(公斤級?|量級)$/.test(start[2].replace(/\s/g, ""))) {
+  if (start && /[\u4e00-\u9fff]{2,}/.test(start[2]) && !/^(蝐方?|?桐?|憪?|?祆|??|鈭?/.test(start[2])) {
+    if (!/^\d{2,4}(?:-\d+)?$/.test(start[2]) && !/^(?祆蝝?|??)$/.test(start[2].replace(/\s/g, ""))) {
       return `${start[1]} ${start[2]}`;
     }
   }
   const end = t.match(/^(.+?)\s+([1-9]\d?)$/);
-  if (end && /[\u4e00-\u9fff]{2,}/.test(end[1]) && !/^(比賽人數|組別|量級|公斤)/.test(end[1])) {
+  if (end && /[\u4e00-\u9fff]{2,}/.test(end[1]) && !/^(瘥魚鈭箸|蝯|??|?祆)/.test(end[1])) {
     return `${end[2]} ${end[1]}`;
   }
   return "";
 }
 
 function parsePoomsaeOrderTable(raw) {
-  const text = String(raw || "").replace(/[：]/g, ":").replace(/\|/g, " ");
+  const text = String(raw || "").replace(/[嚗/g, ":").replace(/\|/g, " ");
   const lines = text.split(/\n/).map((line) => line.replace(/\s+/g, " ").trim()).filter(Boolean);
   const items = [];
   let court = "";
-  let header = { type: "品勢", division: "", matchNo: "", eventName: "", event1: "", event2: "", groupSize: 0, court: "" };
+  let header = { type: "?", division: "", matchNo: "", eventName: "", event1: "", event2: "", groupSize: 0, court: "" };
   let current = [];
 
   function stampCurrent() {
@@ -2217,7 +2213,7 @@ function parsePoomsaeOrderTable(raw) {
       item.groupMembers = current;
       item.event1 = header.event1 || item.event1 || "";
       item.event2 = header.event2 || item.event2 || "";
-      item.eventName = header.eventName || [item.event1, item.event2].filter(Boolean).join("、");
+      item.eventName = header.eventName || [item.event1, item.event2].filter(Boolean).join("??);
       item.detailLabel = item.eventName || item.detailLabel;
       item.court = item.court || header.court || court;
     });
@@ -2238,12 +2234,12 @@ function parsePoomsaeOrderTable(raw) {
       header.court = court;
       return;
     }
-    const title = line.match(/^(\d{2,4})\s*-?\s*(?:自由)?品勢出場順序表/);
-    const matchHit = line.match(/場\s*次\s*:\s*(\d{2,4})/) || title;
+    const title = line.match(/^(\d{2,4})\s*-?\s*(?:?芰)???箏??銵?);
+    const matchHit = line.match(/?廄s*甈﹏s*:\s*(\d{2,4})/) || title;
     if (matchHit) {
       flush();
       header = {
-        type: "品勢",
+        type: "?",
         division: "",
         matchNo: matchHit[1],
         eventName: "",
@@ -2253,31 +2249,31 @@ function parsePoomsaeOrderTable(raw) {
         court
       };
     }
-    const divHit = line.match(/比賽組別:\s*(.+?)(?:\s+比賽人數:\s*(\d+)\s*人)?$/)
-      || line.match(/組\s*別\s*:\s*(.+)$/);
+    const divHit = line.match(/瘥魚蝯:\s*(.+?)(?:\s+瘥魚鈭箸:\s*(\d+)\s*鈭??$/)
+      || line.match(/蝯s*?功s*:\s*(.+)$/);
     if (divHit) {
-      header.division = divHit[1].replace(/第一品勢.*$/, "").replace(/第二品勢.*$/, "").trim();
+      header.division = divHit[1].replace(/蝚砌??.*$/, "").replace(/蝚砌??.*$/, "").trim();
       if (divHit[2]) header.groupSize = parseInt(divHit[2], 10);
     }
-    const sizeHit = line.match(/人\s*數\s*:\s*(\d+)/);
+    const sizeHit = line.match(/鈭暝s*?稞s*:\s*(\d+)/);
     if (sizeHit) header.groupSize = parseInt(sizeHit[1], 10);
-    if (/第一品勢|第二品勢/.test(line) && !/^籤號/.test(line) && !/姓名/.test(line)) {
+    if (/蝚砌??|蝚砌??/.test(line) && !/^蝐方?/.test(line) && !/憪?/.test(line)) {
       const dual = extractDualPoomsae(line);
       if (dual.event1) header.event1 = dual.event1;
       if (dual.event2) header.event2 = dual.event2;
       header.event1 = completeWrappedPoomsae(header.event1);
       if (header.event1 || header.event2) {
-        header.eventName = [header.event1, header.event2].filter(Boolean).join("、");
+        header.eventName = [header.event1, header.event2].filter(Boolean).join("??);
       }
-    } else if (header.event1 && /[、，]$/.test(header.event1) && !/組\s*別|籤號|場\s*次|人\s*數/.test(line)) {
+    } else if (header.event1 && /[??]$/.test(header.event1) && !/蝯s*?四蝐方?|?廄s*甈﹄鈭暝s*??.test(line)) {
       const extra = normalizePoomsaeName(line);
       if (extra && extra.length <= 12) {
         header.event1 = completeWrappedPoomsae(header.event1 + extra);
-        header.eventName = [header.event1, header.event2].filter(Boolean).join("、");
+        header.eventName = [header.event1, header.event2].filter(Boolean).join("??);
       }
     }
-    if (/^(籤號|單位|姓名)/.test(line) && !/^\d/.test(line)) return;
-    const person = line.match(/^(\d{1,2})\s+(.+?)\s+([\u4e00-\u9fff]{2,6}(?:\s*[\/／]\s*[\u4e00-\u9fff]{2,6})*)(?:\s+(\d{3,8}))?\s*$/);
+    if (/^(蝐方?|?桐?|憪?)/.test(line) && !/^\d/.test(line)) return;
+    const person = line.match(/^(\d{1,2})\s+(.+?)\s+([\u4e00-\u9fff]{2,6}(?:\s*[\/嚗\s*[\u4e00-\u9fff]{2,6})*)(?:\s+(\d{3,8}))?\s*$/);
     const playerLine = person
       ? `${person[1]} ${person[2]} ${person[3]}`.trim()
       : normalizePlayerLine(line);
@@ -2298,7 +2294,7 @@ function parsePoomsaeOrderTable(raw) {
         item.opponentClub = "";
         item.event1 = header.event1 || "";
         item.event2 = header.event2 || "";
-        item.eventName = header.eventName || [item.event1, item.event2].filter(Boolean).join("、");
+        item.eventName = header.eventName || [item.event1, item.event2].filter(Boolean).join("??);
         current.push(item);
       }
     }
@@ -2308,7 +2304,7 @@ function parsePoomsaeOrderTable(raw) {
 }
 
 function parseLooseBracket(raw) {
-  const text = String(raw || "").replace(/[：]/g, ":").replace(/\|/g, " ");
+  const text = String(raw || "").replace(/[嚗/g, ":").replace(/\|/g, " ");
   const lines = text.split(/\n/).map((line) => line.replace(/\s+/g, " ").trim()).filter(Boolean);
   const chunks = [];
   let court = "";
@@ -2327,9 +2323,9 @@ function parseLooseBracket(raw) {
       court = courtHit;
       return;
     }
-    if (/^比賽組別/.test(line)) {
+    if (/^瘥魚蝯/.test(line)) {
       flushChunk();
-      buf.push(line.replace(/^比賽組別\s*:?\s*/, ""));
+      buf.push(line.replace(/^瘥魚蝯\s*:?\s*/, ""));
       return;
     }
     if (buf.length) buf.push(line);
@@ -2339,25 +2335,25 @@ function parseLooseBracket(raw) {
   const items = [];
   chunks.forEach((entry) => {
     const chunk = entry.text;
-    if (/敗部/.test(chunk)) return;
+    if (/?/.test(chunk)) return;
     const head = chunk.split(/\n/)[0] || "";
-    const weightRaw = extractWeight(chunk) || (chunk.match(/(\d+)\s*公斤/) || [])[1] || "";
-    const weightDigits = String(weightRaw).replace(/[^\d.+＋\-－]/g, "");
-    let division = (head.replace(/量級.*$/, "").replace(/比賽人數.*$/, "").trim() || head.trim()).replace(/\s+/g, "");
-    if (weightDigits && !/公斤/.test(division)) division += `${weightDigits}公斤級`;
+    const weightRaw = extractWeight(chunk) || (chunk.match(/(\d+)\s*?祆/) || [])[1] || "";
+    const weightDigits = String(weightRaw).replace(/[^\d.+嚗-嚗/g, "");
+    let division = (head.replace(/??.*$/, "").replace(/瘥魚鈭箸.*$/, "").trim() || head.trim()).replace(/\s+/g, "");
+    if (weightDigits && !/?祆/.test(division)) division += `${weightDigits}?祆蝝;
     const header = {
-      type: /品勢/.test(chunk) ? "品勢" : "對打",
+      type: /?/.test(chunk) ? "?" : "撠?",
       division,
       court: entry.court,
-      weightClass: weightDigits ? `${weightDigits}公斤` : "",
-      groupSize: parseInt((chunk.match(/(\d+)\s*人/) || [])[1] || "0", 10),
-      boutStyle: /品勢/.test(chunk) ? detectPoomsaeStyleFromText(chunk) : "bracket"
+      weightClass: weightDigits ? `${weightDigits}?祆` : "",
+      groupSize: parseInt((chunk.match(/(\d+)\s*鈭?) || [])[1] || "0", 10),
+      boutStyle: /?/.test(chunk) ? detectPoomsaeStyleFromText(chunk) : "bracket"
     };
     const weightNum = parseInt(String(weightRaw || "").replace(/\D/g, ""), 10) || 0;
     const chunkLines = chunk.split(/\n/).map((line) => line.replace(/\s+/g, " ").trim()).filter(Boolean);
     const tokens = [];
     chunkLines.forEach((line) => {
-      if (/^(籤號|單位|姓名|取\d|敗部|量級|X)$/.test(line)) return;
+      if (/^(蝐方?|?桐?|憪?|?d|?|??|X)$/.test(line)) return;
       const playerLine = normalizePlayerLine(line);
       if (playerLine) {
         tokens.push({ kind: "p", line: playerLine });
@@ -2456,11 +2452,11 @@ function linkBracketSides(leftNodes, rightNodes, matchNo) {
 
   if (left.length === 1 && !left[0].matchNo) {
     left[0].bye = true;
-    if (!left[0].opponent) left[0].opponent = "輪空";
+    if (!left[0].opponent) left[0].opponent = "頛芰征";
   }
   if (right.length === 1 && !right[0].matchNo) {
     right[0].bye = true;
-    if (!right[0].opponent) right[0].opponent = "輪空";
+    if (!right[0].opponent) right[0].opponent = "頛芰征";
   }
 
   const leftHint = winnerHint(left, left.length === 1 && !left[0].matchNo ? "" : subtreeExitMatch(leftNodes));
@@ -2469,13 +2465,13 @@ function linkBracketSides(leftNodes, rightNodes, matchNo) {
   left.forEach((item) => {
     if (item.nextMatchNo) return;
     item.nextMatchNo = matchNo;
-    item.nextColor = "青方";
+    item.nextColor = "?";
     item.nextOpponentHint = rightHint;
   });
   right.forEach((item) => {
     if (item.nextMatchNo) return;
     item.nextMatchNo = matchNo;
-    item.nextColor = "紅方";
+    item.nextColor = "蝝";
     item.nextOpponentHint = leftHint;
   });
 }
@@ -2495,7 +2491,7 @@ function pairSequentialMatches(nodes) {
     item.bye = true;
     if (leftover[0] && !item.nextMatchNo) {
       item.nextMatchNo = leftover.shift();
-      item.nextColor = "青方";
+      item.nextColor = "?";
     }
   });
 }
@@ -2543,19 +2539,19 @@ function matchWave(n) {
 
 function waveLabel(item) {
   const w = matchWave(getNumber(item.matchNo || item.nextMatchNo));
-  return w === 999999 ? "—" : String(w).padStart(2, "0");
+  return w === 999999 ? "嚗? : String(w).padStart(2, "0");
 }
 
 function courtNameFromIndex(n) {
-  const cn = ["", "一", "二", "三", "四", "五", "六", "七", "八", "九"];
-  if (n >= 1 && n <= 9) return `第${cn[n]}場地`;
-  if (n > 9) return `第${n}場地`;
+  const cn = ["", "銝", "鈭?, "銝?, "??, "鈭?, "??, "銝?, "??, "銋?];
+  if (n >= 1 && n <= 9) return `蝚?{cn[n]}?游`;
+  if (n > 9) return `蝚?{n}?游`;
   return "";
 }
 
 function readCourtLine(line) {
   const t = String(line || "").replace(/\s+/g, "").trim();
-  const m = t.match(/^(第[一二三四五六七八九十\d]+(?:[、，,][一二三四五六七八九十\d]+)*場地)$/);
+  const m = t.match(/^(蝚架銝鈭????凋??思??d]+(?:[??,][銝鈭????凋??思??d]+)*?游)$/);
   return m ? m[1] : "";
 }
 
@@ -2585,7 +2581,7 @@ function resolveCourt(item) {
     return;
   }
   if (s.length === 4) {
-    if (pdfIdx && (pdfIdx === first || pdfIdx === second) && !/[、，,]/.test(item.court || "")) {
+    if (pdfIdx && (pdfIdx === first || pdfIdx === second) && !/[??,]/.test(item.court || "")) {
       item.court = courtNameFromIndex(pdfIdx);
       return;
     }
@@ -2598,19 +2594,19 @@ function resolveCourt(item) {
 }
 
 function courtIndex(court) {
-  const map = { 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8 };
+  const map = { 銝: 1, 鈭? 2, 銝? 3, ?? 4, 鈭? 5, ?? 6, 銝? 7, ?? 8 };
   const text = String(court || "");
-  const cn = text.match(/第([一二三四五六七八])/);
+  const cn = text.match(/蝚?[銝鈭????凋??侷)/);
   if (cn) return map[cn[1]] || 0;
   const num = text.match(/(\d+)/);
   return num ? parseInt(num[1], 10) : 0;
 }
 
 function groupKey(item) {
-  if (item.groupCode) return `${item.type || ""}｜${item.groupCode}`;
-  const type = item.type || "未提及項目";
-  const division = item.division || "未提及組別";
-  return `${type}｜${division}`;
+  if (item.groupCode) return `${item.type || ""}嚚?{item.groupCode}`;
+  const type = item.type || "?芣?????;
+  const division = item.division || "?芣?????;
+  return `${type}嚚?{division}`;
 }
 
 function attachGroups(items) {
@@ -2658,7 +2654,7 @@ function inferOpponents(items) {
     if (isFight(item) || isOrderStyle(item)) return;
     if (item.boutStyle !== "bracket") return;
     const others = item.groupMembers.filter((row) => {
-      return row.player && row.player !== item.player && row.player !== "輪空";
+      return row.player && row.player !== item.player && row.player !== "頛芰征";
     });
     if (others.length === 1) {
       item.opponent = others[0].player;
@@ -2679,19 +2675,19 @@ function dedupeItems(items) {
 
 function displayValue(value) {
   const text = String(value ?? "").trim();
-  return text ? text : "未提及";
+  return text ? text : "?芣???;
 }
 
 function orderLabel(item) {
   const n = item.orderNo || item.seed;
   const size = item.groupSize;
-  if (n && size) return `第${n}位／共${size}人`;
-  if (n) return `第${n}位上場`;
-  return "輪流出場";
+  if (n && size) return `蝚?{n}雿???{size}鈭槁;
+  if (n) return `蝚?{n}雿??循;
+  return "頛芣??箏";
 }
 
 function sideCell(item) {
-  if (isOrderStyle(item)) return `<span class="side order">輪流出場</span>`;
+  if (isOrderStyle(item)) return `<span class="side order">頛芣??箏</span>`;
   return sideBadge(item.bye && !item.matchNo ? item.nextColor : item.color);
 }
 
@@ -2720,28 +2716,28 @@ function updateStats() {
 }
 
 function updateNextPlayer() {
-  const item = getFilteredData()[0];
+  const item = allData[0];
   if (!item) {
-    document.getElementById("nextPlayerName").textContent = "無資料";
-    document.getElementById("nextPlayerInfo").textContent = "－";
-    document.getElementById("nextMatchNo").textContent = "－";
+    document.getElementById("nextPlayerName").textContent = "?∟???;
+    document.getElementById("nextPlayerInfo").textContent = "嚗?;
+    document.getElementById("nextMatchNo").textContent = "嚗?;
     return;
   }
 
   document.getElementById("nextPlayerName").textContent = item.player;
   let first;
   if (isOrderStyle(item)) {
-    first = `場次 ${displayValue(item.matchNo)} ｜ ${orderLabel(item)}`;
+    first = `?湔活 ${displayValue(item.matchNo)} 嚚?${orderLabel(item)}`;
   } else if (item.bye && !item.matchNo) {
-    first = `輪空晉級 ｜ 下一場 ${item.nextMatchNo || ""} ${item.nextColor || ""}`;
+    first = `頛芰征?? 嚚?銝???${item.nextMatchNo || ""} ${item.nextColor || ""}`;
   } else {
-    first = `${item.color || ""} ｜ 場次 ${displayValue(item.matchNo)}`;
+    first = `${item.color || ""} 嚚??湔活 ${displayValue(item.matchNo)}`;
   }
   document.getElementById("nextPlayerInfo").textContent =
-    `${displayValue(item.type)} ｜ ${first} ｜ ${displayValue(item.court)} ｜ ${displayValue(item.division)}`;
+    `${displayValue(item.type)} 嚚?${first} 嚚?${displayValue(item.court)} 嚚?${displayValue(item.division)}`;
   document.getElementById("nextMatchNo").textContent = isOrderStyle(item)
     ? (item.matchNo || orderLabel(item))
-    : (item.matchNo || item.nextMatchNo || "未提及");
+    : (item.matchNo || item.nextMatchNo || "?芣???);
 }
 
 
@@ -2800,18 +2796,18 @@ function render() {
   if (emptyTitle) {
     if (parsedAll.length && allData.length === 0 && mode === "names") {
       emptyTitle.textContent = getPlayerNames().length
-        ? "檔案裡找不到學員名單上的人"
-        : "學員名單還是空的，請先填人或改選「報名單位」";
+        ? "瑼?鋆⊥銝摮詨?銝?鈭?
+        : "摮詨??蝛箇?嚗??‵鈭箸??寥???擗具?;
     } else if (parsedAll.length && allData.length === 0 && mode === "auto") {
       emptyTitle.textContent = getPlayerNames().length
-        ? "報名單位和學員名字都沒對到人"
-        : "報名單位沒找到人，可改選「學員名字」再整理";
+        ? "?祇尹?飛?∪??桅瘝??唬犖"
+        : "?祇尹瘝?唬犖嚗憟摮詨????;
     } else if (showNameHint) {
-      emptyTitle.textContent = "用報名單位沒找到人";
+      emptyTitle.textContent = "?券?擗典?蝔望??曉鈭?;
     } else if (allData.length === 0) {
-      emptyTitle.textContent = "還沒找到選手。請確認已按「整理賽程」。";
+      emptyTitle.textContent = "???曉?豢???蝣箄?撌脫???魚蝔?;
     } else {
-      emptyTitle.textContent = "目前篩選條件下沒有人。可改按「全部」，或清掉搜尋框。";
+      emptyTitle.textContent = "?桀?蝭拚璇辣銝??犖??寞???具?????撠???;
     }
   }
   if (emptyNameHint) emptyNameHint.classList.toggle("hidden", !showNameHint);
@@ -2841,171 +2837,6 @@ document.querySelectorAll("[data-jump]").forEach((btn) => {
   btn.addEventListener("click", () => jumpToStep(btn.dataset.jump));
 });
 
-const toTopBtn = document.getElementById("toTopBtn");
-const syncToTopBtn = () => {
-  toTopBtn?.classList.toggle("is-on", window.scrollY > 280);
-};
-window.addEventListener("scroll", syncToTopBtn, { passive: true });
-syncToTopBtn();
-toTopBtn?.addEventListener("click", () => {
-  window.scrollTo({ top: 0, behavior: "smooth" });
-});
-
-let lastQuestKey = "";
-let mutedQuestKey = "";
-let lookQuestFinished = false;
-
-function questInputReady() {
-  return uploadedFiles.length > 0 || Boolean(sourceData?.value?.trim());
-}
-
-function currentQuest() {
-  const tourOpen = !document.getElementById("tourModal")?.classList.contains("hidden");
-  const onCustom = !document.getElementById("customApp")?.classList.contains("hidden");
-  if (tourOpen || onCustom) return null;
-  if (!parsedAll.length && !questInputReady()) {
-    return { key: "file", how: 0, step: "1", text: "選檔案", target: dropZone, jump: "stepFiles", badge: "點這裡" };
-  }
-  if (!parsedAll.length && questInputReady()) {
-    return { key: "run", how: 1, step: "2", text: "按整理", target: analyzeBtn, jump: "stepRun", badge: "接著按" };
-  }
-  if (shouldGuideToNames()) {
-    return { key: "find", how: 2, step: "!", text: "改找人", target: document.getElementById("resultNext") || document.getElementById("stepWho"), jump: "resultArea", badge: "改找人" };
-  }
-  if (lookQuestFinished) {
-    return { key: "done", how: 3, step: "", text: "", target: null, jump: "", badge: "" };
-  }
-  return { key: "look", how: 2, step: "3", text: "看出場表", target: document.getElementById("resultNext") || document.getElementById("exportExcelBtn"), jump: "resultArea", badge: "看這裡" };
-}
-
-function showQuestToast(text) {
-  const el = document.getElementById("questToast");
-  if (!el || !text) return;
-  el.textContent = text;
-  el.classList.add("is-on");
-  window.clearTimeout(showQuestToast._timer);
-  showQuestToast._timer = window.setTimeout(() => el.classList.remove("is-on"), 2400);
-}
-
-function setQuestTarget(el, badgeText) {
-  document.querySelectorAll(".quest-now").forEach((node) => node.classList.remove("quest-now"));
-  document.querySelectorAll(".quest-badge").forEach((node) => node.remove());
-  if (!el) return;
-  el.classList.add("quest-now");
-  if (!badgeText) return;
-  const badge = document.createElement("span");
-  badge.className = "quest-badge";
-  badge.textContent = badgeText;
-  el.appendChild(badge);
-}
-
-function placeQuestPointer(el) {
-  const ptr = document.getElementById("questPointer");
-  if (!ptr) return;
-  if (!el || mutedQuestKey === lastQuestKey) {
-    ptr.classList.add("hidden");
-    return;
-  }
-  const box = el.getBoundingClientRect();
-  const vh = window.innerHeight;
-  const inView = box.bottom > 88 && box.top < vh - 88;
-  ptr.classList.remove("hidden");
-  if (inView) {
-    ptr.classList.add("is-on-target");
-    ptr.textContent = "👇";
-    ptr.style.left = `${box.left + box.width / 2}px`;
-    ptr.style.top = `${Math.max(18, box.top - 4)}px`;
-    return;
-  }
-  ptr.classList.remove("is-on-target");
-  if (box.top >= vh - 88) {
-    ptr.textContent = "往下滑 ↓";
-    ptr.style.left = "50%";
-    ptr.style.top = `${vh - 118}px`;
-  } else {
-    ptr.textContent = "↑ 回到上面";
-    ptr.style.left = "50%";
-    ptr.style.top = "78px";
-  }
-}
-
-function updateQuest() {
-  const quest = currentQuest();
-  document.querySelectorAll(".how-guide li").forEach((li) => {
-    const index = Number(li.dataset.how);
-    const now = Boolean(quest && quest.key !== "done" && quest.how === index);
-    const done = Boolean(quest && (quest.key === "done" || quest.how > index));
-    li.classList.toggle("is-now", now);
-    li.classList.toggle("is-done", done);
-    const go = li.querySelector(".how-go");
-    if (go) go.textContent = now ? "現在做這步" : done ? "完成" : "跳到這一步";
-  });
-
-  const hud = document.getElementById("coachHud");
-  const hideChrome = !quest || quest.key === "done" || mutedQuestKey === quest.key;
-  if (!quest || quest.key === "done") {
-    setQuestTarget(null);
-    hud?.classList.add("hidden");
-    placeQuestPointer(null);
-    return;
-  }
-
-  setQuestTarget(quest.target, quest.badge);
-  const title = document.getElementById("coachHudTitle");
-  const text = document.getElementById("coachHudText");
-  if (title) title.textContent = quest.step;
-  if (text) text.textContent = quest.text;
-  hud?.classList.toggle("hidden", hideChrome);
-  placeQuestPointer(hideChrome ? null : quest.target);
-
-  if (lastQuestKey && lastQuestKey !== quest.key) {
-    const tips = {
-      run: "檔案已選好，已幫你滑到整理賽程",
-      look: "表出來了，已幫你滑到出場表",
-      find: "沒對到人，已幫你滑到提示"
-    };
-    if (quest.jump) jumpToStep(quest.jump);
-    if (tips[quest.key]) showQuestToast(tips[quest.key]);
-    if (quest.key === "look") {
-      window.clearTimeout(updateQuest._lookTimer);
-      updateQuest._lookTimer = window.setTimeout(() => {
-        lookQuestFinished = true;
-        mutedQuestKey = "look";
-        updateQuest();
-      }, 2800);
-    }
-  }
-  lastQuestKey = quest.key;
-}
-
-document.getElementById("coachHudGo")?.addEventListener("click", () => {
-  const quest = currentQuest();
-  if (quest?.jump) jumpToStep(quest.jump);
-});
-document.getElementById("coachHudClose")?.addEventListener("click", (event) => {
-  event.stopPropagation();
-  mutedQuestKey = lastQuestKey;
-  document.getElementById("coachHud")?.classList.add("hidden");
-  placeQuestPointer(null);
-  showQuestToast("提示已關掉。上面 1 2 3 還可以點");
-});
-document.getElementById("questPointer")?.addEventListener("click", () => {
-  const quest = currentQuest();
-  if (quest?.jump) jumpToStep(quest.jump);
-});
-window.addEventListener("scroll", () => {
-  const quest = currentQuest();
-  if (quest && quest.target && mutedQuestKey !== quest.key && quest.key !== "done") {
-    placeQuestPointer(quest.target);
-  }
-}, { passive: true });
-window.addEventListener("resize", () => {
-  const quest = currentQuest();
-  if (quest?.target) placeQuestPointer(quest.target);
-});
-sourceData?.addEventListener("input", updateQuest);
-updateQuest();
-
 function guideToPlayerNames() {
   setFoldOpen("whoFindToggle", "whoFindPanel", true);
   setDisplayMode("names");
@@ -3028,7 +2859,7 @@ function renderGroupChips(data) {
   groupChips.innerHTML = "";
   const groups = getVisibleGroups(data);
   const summary = document.getElementById("groupSummary");
-    if (summary) summary.textContent = groups.length ? `${groups.length} 組，點開可看同組名單` : "目前沒有組別";
+    if (summary) summary.textContent = groups.length ? `${groups.length} 蝯?暺??舐????` : "?桀?瘝?蝯";
   groups.forEach((group) => {
     const sample = group.ours[0] || group.members[0] || {};
     const size = sample.groupSize || group.members.length;
@@ -3037,7 +2868,7 @@ function renderGroupChips(data) {
     button.className = "group-chip";
     button.innerHTML = `
       <strong>${escapeHTML(displayValue(group.division))}</strong>
-      <span>${escapeHTML(displayValue(group.type))} ｜ 同組 ${size} 人 ｜ 本館 ${group.ours.length} 人</span>
+      <span>${escapeHTML(displayValue(group.type))} 嚚??? ${size} 鈭?嚚??祇尹 ${group.ours.length} 鈭?/span>
     `;
     button.addEventListener("click", () => openGroupModal(group.key));
     groupChips.appendChild(button);
@@ -3059,14 +2890,14 @@ function renderTableRow(item, index) {
     </td>
     <td class="${isMissing(item.court) ? "missing" : ""}">${escapeHTML(displayValue(item.court))}</td>
     <td class="match-number ${isMissing(item.matchNo) && !item.bye ? "missing" : ""}">
-      ${item.bye && !item.matchNo ? "輪空晉級" : escapeHTML(displayValue(item.matchNo))}
+      ${item.bye && !item.matchNo ? "頛芰征??" : escapeHTML(displayValue(item.matchNo))}
     </td>
     <td>${sideCell(item)}</td>
     <td class="${!isOrderStyle(item) && isMissing(item.opponent) ? "missing" : ""}">
       ${opponentCell(item)}
     </td>
     <td class="next-cell ${isOrderStyle(item) || (isMissing(item.nextMatchNo) && isMissing(item.nextOpponentHint)) ? (isOrderStyle(item) ? "" : "missing") : ""}">
-      ${isOrderStyle(item) ? "－" : formatNextMatch(item)}
+      ${isOrderStyle(item) ? "嚗? : formatNextMatch(item)}
     </td>
   `;
   tr.querySelector(".group-link").addEventListener("click", () => openGroupModal(item.groupKey));
@@ -3074,8 +2905,8 @@ function renderTableRow(item, index) {
 }
 
 function sideBadge(color) {
-  if (!color) return `<span class="missing">未提及</span>`;
-  const cls = String(color).includes("紅") ? "hong" : "chung";
+  if (!color) return `<span class="missing">?芣???/span>`;
+  const cls = String(color).includes("蝝?) ? "hong" : "chung";
   return `<span class="side ${cls}">${escapeHTML(color)}</span>`;
 }
 
@@ -3083,10 +2914,10 @@ function formatNextMatch(item) {
   if (item.nextMatchNo) {
     const color = item.nextColor ? " " + item.nextColor : "";
     const hint = item.nextOpponentHint ? "<br><small>vs " + escapeHTML(item.nextOpponentHint) + "</small>" : "";
-    return `場次 ${escapeHTML(item.nextMatchNo)}${escapeHTML(color)}${hint}`;
+    return `?湔活 ${escapeHTML(item.nextMatchNo)}${escapeHTML(color)}${hint}`;
   }
-  if (item.nextOpponentHint) return `對上 ${escapeHTML(item.nextOpponentHint)}`;
-  return "未提及";
+  if (item.nextOpponentHint) return `撠? ${escapeHTML(item.nextOpponentHint)}`;
+  return "?芣???;
 }
 
 function cardRow(label, valueHtml) {
@@ -3101,52 +2932,52 @@ function renderMobileCard(item, index) {
   const detail = isFight(item)
     ? displayValue(item.detailLabel)
     : displayValue(formatPoomsaeLabel(item) || item.detailLabel);
-  const colorLabel = isFight(item) ? "護具" : "出場";
-  const matchText = item.bye && !item.matchNo ? "輪空晉級" : displayValue(item.matchNo);
+  const colorLabel = isFight(item) ? "霅瑕" : "??";
+  const matchText = item.bye && !item.matchNo ? "頛芰征??" : displayValue(item.matchNo);
   const summarySide = isOrderStyle(item)
     ? `<span class="side order">${escapeHTML(orderLabel(item))}</span>`
     : sideCell(item);
   const kpis = isOrderStyle(item)
     ? `<div class="card-kpis">
-        <div class="kpi"><span>場次</span><strong>${escapeHTML(displayValue(item.matchNo))}</strong></div>
-        <div class="kpi"><span>出場方式</span><strong>${escapeHTML(orderLabel(item))}</strong></div>
+        <div class="kpi"><span>?湔活</span><strong>${escapeHTML(displayValue(item.matchNo))}</strong></div>
+        <div class="kpi"><span>?箏??</span><strong>${escapeHTML(orderLabel(item))}</strong></div>
       </div>
-      <p class="card-note">品勢輪流出場，一個個上場打分，沒有對打、也不看青紅。</p>`
+      <p class="card-note">?頛芣??箏嚗????湔???瘝?撠?????蝝?/p>`
     : (item.bye && !item.matchNo
-      ? `<div class="card-kpis"><div class="kpi"><span>本場</span><strong>輪空晉級</strong></div><div class="kpi"><span>${colorLabel}</span>${sideCell(item)}</div></div>`
+      ? `<div class="card-kpis"><div class="kpi"><span>?砍</span><strong>頛芰征??</strong></div><div class="kpi"><span>${colorLabel}</span>${sideCell(item)}</div></div>`
       : `<div class="card-kpis">
-          <div class="kpi"><span>場次</span><strong>${escapeHTML(displayValue(item.matchNo))}</strong></div>
+          <div class="kpi"><span>?湔活</span><strong>${escapeHTML(displayValue(item.matchNo))}</strong></div>
           <div class="kpi"><span>${colorLabel}</span>${sideCell(item)}</div>
         </div>`);
   const vsRow = isOrderStyle(item)
     ? ""
-    : cardRow("對手", `${escapeHTML(displayValue(item.opponent))}${item.opponentClub ? "<small>" + escapeHTML(item.opponentClub) + "</small>" : ""}`);
+    : cardRow("撠?", `${escapeHTML(displayValue(item.opponent))}${item.opponentClub ? "<small>" + escapeHTML(item.opponentClub) + "</small>" : ""}`);
   const nextRow = isOrderStyle(item)
     ? ""
-    : cardRow("下一場", item.nextMatchNo
-      ? escapeHTML("場次 " + item.nextMatchNo + (item.nextColor ? " " + item.nextColor : "") + (item.nextOpponentHint ? " vs " + item.nextOpponentHint : ""))
-      : (item.nextOpponentHint ? "對上 " + escapeHTML(item.nextOpponentHint) : "未提及"));
+    : cardRow("銝???, item.nextMatchNo
+      ? escapeHTML("?湔活 " + item.nextMatchNo + (item.nextColor ? " " + item.nextColor : "") + (item.nextOpponentHint ? " vs " + item.nextOpponentHint : ""))
+      : (item.nextOpponentHint ? "撠? " + escapeHTML(item.nextOpponentHint) : "?芣???));
   card.innerHTML = `
     <div class="card-head">
       <div class="card-player">${index + 1}. ${escapeHTML(item.player)}</div>
       <span class="type ${typeClass}">${escapeHTML(displayValue(item.type))}</span>
     </div>
     <div class="card-summary">
-      <div class="card-match"><small>場次</small><strong>${escapeHTML(matchText)}</strong></div>
+      <div class="card-match"><small>?湔活</small><strong>${escapeHTML(matchText)}</strong></div>
       <div class="card-summary-side">${summarySide}</div>
       <div class="card-court">${escapeHTML(displayValue(item.court))}</div>
     </div>
-    <p class="card-hint">點卡片看詳情</p>
+    <p class="card-hint">暺??底??/p>
     <div class="card-detail">
       ${kpis}
       <div class="card-rows">
-        ${cardRow("場地", escapeHTML(displayValue(item.court)))}
-        ${cardRow("組別", `${escapeHTML(displayValue(item.division))}${item.groupSize ? "<small>同組 " + item.groupSize + " 人</small>" : ""}`)}
-        ${cardRow(isFight(item) ? "級別" : "品勢", escapeHTML(detail))}
+        ${cardRow("?游", escapeHTML(displayValue(item.court)))}
+        ${cardRow("蝯", `${escapeHTML(displayValue(item.division))}${item.groupSize ? "<small>?? " + item.groupSize + " 鈭?/small>" : ""}`)}
+        ${cardRow(isFight(item) ? "蝝" : "?", escapeHTML(detail))}
         ${vsRow}
         ${nextRow}
       </div>
-      <button type="button" class="card-group-btn">看同組名單</button>
+      <button type="button" class="card-group-btn">??蝯???/button>
     </div>
   `;
   card.addEventListener("click", () => {
@@ -3174,29 +3005,29 @@ function openGroupModal(key) {
 
   modalBody.innerHTML = `
     <div class="detail-grid">
-      ${detailCell("項目", sample.type)}
-      ${detailCell("組別", sample.division)}
-      ${detailCell("組別代碼", sample.groupCode)}
-      ${detailCell("同組人數", size ? size + " 人" : "")}
-      ${detailCell(isFight(sample) ? "對打級別" : "品勢項目", isFight(sample) ? sample.weightClass : (formatPoomsaeLabel(sample) || sample.eventName))}
-      ${!isFight(sample) && sample.event1 ? detailCell("第一品勢", sample.event1) : ""}
-      ${!isFight(sample) && sample.event2 ? detailCell("第二品勢", sample.event2) : ""}
-      ${detailCell("帶色 / 段級", sample.belt)}
-      ${detailCell("場地", sample.court)}
-      ${detailCell("年齡層", sample.ageGroup)}
+      ${detailCell("?", sample.type)}
+      ${detailCell("蝯", sample.division)}
+      ${detailCell("蝯隞?Ⅳ", sample.groupCode)}
+      ${detailCell("??鈭箸", size ? size + " 鈭? : "")}
+      ${detailCell(isFight(sample) ? "撠?蝝" : "??", isFight(sample) ? sample.weightClass : (formatPoomsaeLabel(sample) || sample.eventName))}
+      ${!isFight(sample) && sample.event1 ? detailCell("蝚砌??", sample.event1) : ""}
+      ${!isFight(sample) && sample.event2 ? detailCell("蝚砌??", sample.event2) : ""}
+      ${detailCell("撣嗉 / 畾萇?", sample.belt)}
+      ${detailCell("?游", sample.court)}
+      ${detailCell("撟湧翩撅?, sample.ageGroup)}
     </div>
 
     <div>
-      <h4>同組名單（${size} 人）</h4>
+      <h4>???嚗?{size} 鈭綽?</h4>
       <div class="person-list">
-        ${roster.map((item) => personRow(item, matchesClub(item.club, getActiveKeywords()))).join("") || `<div class="missing">未提及</div>`}
+        ${roster.map((item) => personRow(item, matchesClub(item.club, getActiveKeywords()))).join("") || `<div class="missing">?芣???/div>`}
       </div>
     </div>
 
     <div>
-      <h4>本館選手賽程</h4>
+      <h4>?祇尹?豢?鞈賜?</h4>
       <div class="person-list">
-        ${ours.map((item) => matchPlanRow(item)).join("") || `<div class="missing">未提及</div>`}
+        ${ours.map((item) => matchPlanRow(item)).join("") || `<div class="missing">?芣???/div>`}
       </div>
     </div>
   `;
@@ -3206,20 +3037,20 @@ function openGroupModal(key) {
 
 function matchPlanRow(item) {
   const first = isOrderStyle(item)
-    ? `本場：場次 ${displayValue(item.matchNo)} ｜ ${orderLabel(item)}（輪流出場，無青紅）`
+    ? `?砍嚗甈?${displayValue(item.matchNo)} 嚚?${orderLabel(item)}嚗憚瘚?湛??⊿?蝝?`
     : (item.bye && !item.matchNo
-      ? "本場：輪空晉級"
-      : `本場：場次 ${displayValue(item.matchNo)} ${item.color || ""} vs ${displayValue(item.opponent)}${item.opponentClub ? "（" + item.opponentClub + "）" : ""}`);
+      ? "?砍嚗憚蝛箸?蝝?
+      : `?砍嚗甈?${displayValue(item.matchNo)} ${item.color || ""} vs ${displayValue(item.opponent)}${item.opponentClub ? "嚗? + item.opponentClub + "嚗? : ""}`);
   const next = isOrderStyle(item)
-    ? "一個個上場打分，打完換下一位"
+    ? "銝???湔???????銝雿?
     : (item.nextMatchNo
-      ? `贏了下一場：場次 ${item.nextMatchNo} ${item.nextColor || ""} vs ${item.nextOpponentHint || "未提及"}`
-      : (item.nextOpponentHint ? `贏了下一場：對上 ${item.nextOpponentHint}` : "贏了下一場：未提及"));
+      ? `韐?銝??湛??湔活 ${item.nextMatchNo} ${item.nextColor || ""} vs ${item.nextOpponentHint || "?芣???}`
+      : (item.nextOpponentHint ? `韐?銝??湛?撠? ${item.nextOpponentHint}` : "韐?銝??湛??芣???));
   return `
     <div class="person-row ours">
       <div>
         <b>${escapeHTML(item.player)}</b>
-        <small>籤號 ${item.seed || "未提及"} ｜ ${escapeHTML(first)}</small>
+        <small>蝐方? ${item.seed || "?芣???} 嚚?${escapeHTML(first)}</small>
         <small>${escapeHTML(next)}</small>
       </div>
     </div>
@@ -3240,10 +3071,10 @@ function personRow(item, ours) {
   return `
     <div class="person-row ${ours ? "ours" : ""}">
       <div>
-        <b>${item.seed ? item.seed + ". " : ""}${escapeHTML(item.player || "未提及")}</b>
-        <small>${escapeHTML(displayValue(item.club))} ｜ ${escapeHTML(isOrderStyle(item) ? orderLabel(item) : (item.color || (item.bye ? "輪空晉級" : "")))}</small>
+        <b>${item.seed ? item.seed + ". " : ""}${escapeHTML(item.player || "?芣???)}</b>
+        <small>${escapeHTML(displayValue(item.club))} 嚚?${escapeHTML(isOrderStyle(item) ? orderLabel(item) : (item.color || (item.bye ? "頛芰征??" : "")))}</small>
       </div>
-      <small>${item.matchNo ? escapeHTML("場次 " + item.matchNo) : (item.bye ? "輪空" : "場次未提及")}</small>
+      <small>${item.matchNo ? escapeHTML("?湔活 " + item.matchNo) : (item.bye ? "頛芰征" : "?湔活?芣???)}</small>
     </div>
   `;
 }
@@ -3251,7 +3082,7 @@ function personRow(item, ours) {
 function renderOtherPeople(sample, ours, members, opponents) {
   const ourNames = new Set(ours.map((item) => item.player));
   if (isFight(sample)) {
-    if (!opponents.length) return `<div class="missing">未提及</div>`;
+    if (!opponents.length) return `<div class="missing">?芣???/div>`;
     return opponents.map((item) => `
       <div class="person-row">
         <div>
@@ -3263,7 +3094,7 @@ function renderOtherPeople(sample, ours, members, opponents) {
   }
 
   const others = members.filter((item) => item.player && !ourNames.has(item.player));
-  if (!others.length) return `<div class="missing">未提及</div>`;
+  if (!others.length) return `<div class="missing">?芣???/div>`;
   return others.map((item) => personRow(item, false)).join("");
 }
 
@@ -3279,121 +3110,121 @@ document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") closeModal();
 });
 
-const TOUR_SEEN_KEY = "tkd_sys_tutorial_seen_v9";
+const TOUR_SEEN_KEY = "tkd_sys_tutorial_seen_v7";
 const TOUR_STEPS = [
   {
-    title: "平常只要三步",
+    title: "撟喳虜?芾?銝郊",
     copy: `
       <ul>
-        <li>先點選檔案</li>
-        <li>再按藍色「整理賽程」</li>
-        <li>表出來後，再決定要不要匯出</li>
+        <li>??憭扳憛瑼?</li>
+        <li>?????魚蝔?/li>
+        <li>銵典靘?嚗?摰??臬</li>
       </ul>
     `,
     stage: `
       <ol class="demo-steps">
-        <li><span>1</span><div><b>點選檔案</b><small>秩序冊、對打表、品勢表都可以</small></div></li>
-        <li><span>2</span><div><b>按整理賽程</b><small>不按，下面不會出表</small></div></li>
-        <li><span>3</span><div><b>看出場表</b><small>看完請匯出。找不到人再改找誰</small></div></li>
+        <li><span>1</span><div><b>暺瑼?</b><small>蝘拙????”???Ｚ”?賢隞?/small></div></li>
+        <li><span>2</span><div><b>??魚蝔?/b><small>銝?嚗??Ｖ??銵?/small></div></li>
+        <li><span>3</span><div><b>??渲”</b><small>??隢?綽??撠望?鈭?/small></div></li>
       </ol>
     `
   },
   {
-    title: "點這裡選檔案",
+    title: "暺ㄐ?豢?獢?,
     copy: `
       <ul>
-        <li>點下面大方塊選檔案就可以</li>
-        <li>秩序冊、對打表、品勢表都可以</li>
-        <li>一次可以選多個；選完還要按整理賽程</li>
+        <li>暺之?孵??豢?獢?銋隞交??脣</li>
+        <li>蝘拙????”???Ｚ”?賢隞?/li>
+        <li>???游銝甈∪??賂?銝?瘥魚隢????/li>
       </ul>
     `,
     stage: `
       <div class="demo-drop">
-        <span class="demo-file">秩序冊.pdf</span>
-        <strong>點這裡選檔案</strong>
-        <small>也可以把檔案拖進來</small>
+        <span class="demo-file">蝘拙???pdf</span>
+        <strong>暺ㄐ?豢?獢?/strong>
+        <small>銋隞交?瑼??脖?</small>
       </div>
     `
   },
   {
-    title: "一定要按「整理賽程」",
+    title: "銝摰???魚蝔?,
     copy: `
       <ul>
-        <li>選好檔案還不會出表</li>
-        <li>一定要按藍色「整理賽程」</li>
-        <li>沒有檔案才用最下面的貼文字，平常可以先不管</li>
+        <li>?詨末瑼????銵?/li>
+        <li>銝摰????脯?魚蝔?/li>
+        <li>瘝?獢??冽?銝鞎潭?摮?鞎澆?銝璅????/li>
       </ul>
     `,
-    stage: `<span class="demo-btn">整理賽程</span>`
+    stage: `<span class="demo-btn">?渡?鞈賜?</span>`
   },
   {
-    title: "表出來後，下一步",
+    title: "銵典靘?嚗?銝甇?,
     copy: `
       <ul>
-        <li>先看出場順序</li>
-        <li>看完請按「匯出 Excel」存檔</li>
-        <li>網頁不存檔，重整就沒了</li>
-        <li>找不到人，再去改找人方式</li>
+        <li>頞??Ｚ??拇?</li>
+        <li>??隢????Excel??瑼?/li>
+        <li>蝬脤?銝?瑼??撠望?鈭?/li>
+        <li>?曆??唬犖嚗?????曆犖?孵???/li>
       </ul>
     `,
     stage: `
       <div class="demo-results">
         <div class="demo-mini-card">
-          <div class="demo-mini-head"><b>潘侑廷</b><span class="type po">品勢</span></div>
+          <div class="demo-mini-head"><b>瞏?撱?/b><span class="type po">?</span></div>
           <div class="demo-mini-kpis">
-            <div><span>場次</span><strong>2111</strong></div>
-            <div><span>出場方式</span><strong>輪流出場</strong></div>
+            <div><span>?湔活</span><strong>2111</strong></div>
+            <div><span>?箏??</span><strong>蝚?雿?/strong></div>
           </div>
         </div>
         <div class="demo-mini-card">
-          <div class="demo-mini-head"><b>黃宥豪</b><span class="type fight">對打</span></div>
+          <div class="demo-mini-head"><b>?撣?/b><span class="type fight">撠?</span></div>
           <div class="demo-mini-kpis">
-            <div><span>場次</span><strong>326</strong></div>
-            <div><span>護具</span><span class="side chung">青方</span></div>
+            <div><span>?湔活</span><strong>326</strong></div>
+            <div><span>霅瑕</span><span class="side chung">?</span></div>
           </div>
         </div>
       </div>
     `
   },
   {
-    title: "找不到人，再改找誰",
+    title: "?曆??唬犖嚗??寞隤?,
     copy: `
       <ul>
-        <li>平常不用改，多數比賽用報名單位就好</li>
-        <li><b class="mark-unit">報名單位</b>：用關鍵字找秩序冊上的道館名、校名</li>
-        <li><b>我的道館</b>：只是匯出檔名，不是拿來找人</li>
-        <li><b class="mark-names">學員名字</b>：校隊用學校報名、畫面沒人時再選</li>
-        <li>表下面出現提示時，點了會帶你去填</li>
+        <li>撟喳虜銝?對??摮歇憛怠末</li>
+        <li><b class="mark-unit">?勗??桐?</b>嚗?摮?尹???/li>
+        <li><b>???尹</b>嚗?臬?箸???銝?蹂??曆犖</li>
+        <li><b class="mark-names">摮詨??</b>嚗?摮豢?勗??”銝?鈭箸??</li>
+        <li>?恍??暹?蝷綽?暺??葆雿??/li>
       </ul>
     `,
     stage: `
       <div class="demo-find-chips">
-        <span class="on unit">報名單位</span>
-        <span class="names">學員名字</span>
-        <span>兩種都找</span>
-        <span>全部選手</span>
+        <span class="on unit">?勗??桐?</span>
+        <span class="names">摮詨??</span>
+        <span>?拍車?賣</span>
+        <span>?券?豢?</span>
       </div>
       <div class="demo-swap">
         <div class="demo-swap-scene a">
           <div class="demo-card on demo-card-unit">
-            <b>報名單位</b>
-            <small class="demo-ok">有抓到人 → 直接用這個</small>
+            <b>?勗??桐?</b>
+            <small class="demo-ok">???唬犖 ??撠梁?遢</small>
           </div>
-          <div class="demo-arrow">↓</div>
+          <div class="demo-arrow">??/div>
           <div class="demo-card dim">
-            <b>學員名字</b>
-            <small>先不用</small>
+            <b>摮詨??</b>
+            <small>????/small>
           </div>
         </div>
         <div class="demo-swap-scene b">
           <div class="demo-card dim">
-            <b>報名單位</b>
-            <small class="demo-miss">沒找到</small>
+            <b>?勗??桐?</b>
+            <small class="demo-miss">瘝???/small>
           </div>
-          <div class="demo-arrow">↓</div>
+          <div class="demo-arrow">??/div>
           <div class="demo-card on demo-pulse demo-card-names">
-            <b>學員名字</b>
-            <small class="demo-ok">改選這個，再套用名單</small>
+            <b>摮詨??</b>
+            <small class="demo-ok">?寥?????內</small>
           </div>
         </div>
       </div>
@@ -3422,7 +3253,7 @@ function renderTour() {
   if (label) label.textContent = `${tourIndex + 1} / ${TOUR_STEPS.length}`;
   if (dots) {
     dots.innerHTML = TOUR_STEPS.map((_, index) =>
-      `<button type="button" class="tour-dot ${index === tourIndex ? "active" : ""}" data-tour-step="${index}" aria-label="第${index + 1}頁"></button>`
+      `<button type="button" class="tour-dot ${index === tourIndex ? "active" : ""}" data-tour-step="${index}" aria-label="蝚?${index + 1} ??></button>`
     ).join("");
     dots.querySelectorAll(".tour-dot").forEach((dot) => {
       dot.addEventListener("click", () => {
@@ -3432,21 +3263,18 @@ function renderTour() {
     });
   }
   if (prev) prev.disabled = tourIndex === 0;
-  if (next) next.textContent = tourIndex === TOUR_STEPS.length - 1 ? "開始去做" : "下一個任務";
+  if (next) next.textContent = tourIndex === TOUR_STEPS.length - 1 ? "???" : "銝???;
 }
 
 function openTour() {
   tourIndex = 0;
   renderTour();
   document.getElementById("tourModal")?.classList.remove("hidden");
-  updateQuest();
 }
 
 function closeTour() {
   markTourSeen();
   document.getElementById("tourModal")?.classList.add("hidden");
-  updateQuest();
-  showQuestToast("跟著橘色標籤走，下一步會自動滑過去");
 }
 
 function maybeOpenTour() {
@@ -3497,22 +3325,22 @@ function downloadBlob(blob, filename) {
 }
 
 function safeFileName(name) {
-  return String(name || "賽程")
-    .replace(/[\\/:*?"<>|｜]/g, "_")
+  return String(name || "鞈賜?")
+    .replace(/[\\/:*?"<>|嚚/g, "_")
     .replace(/\s+/g, " ")
     .trim()
-    .slice(0, 80) || "賽程";
+    .slice(0, 80) || "鞈賜?";
 }
 
 function exportFileName(ext) {
-  const competition = document.getElementById("competitionName").value.trim() || "賽程";
-  const club = clubName.value.trim() || "本館";
-  const extra = exportScope === "品勢" ? "-品勢" : exportScope === "對打" ? "-對打" : "";
+  const competition = document.getElementById("competitionName").value.trim() || "鞈賜?";
+  const club = clubName.value.trim() || "?祇尹";
+  const extra = exportScope === "?" ? "-?" : exportScope === "撠?" ? "-撠?" : "";
   return `${safeFileName(`${competition}-${club}${extra}`)}.${ext}`;
 }
 
 function downloadWorkbook(wb, filename) {
-  const name = safeFileName(String(filename || "賽程").replace(/\.xlsx$/i, "")) + ".xlsx";
+  const name = safeFileName(String(filename || "鞈賜?").replace(/\.xlsx$/i, "")) + ".xlsx";
   try {
     const out = XLSX.write(wb, { bookType: "xlsx", type: "array" });
     downloadBlob(
@@ -3523,31 +3351,31 @@ function downloadWorkbook(wb, filename) {
     try {
       XLSX.writeFile(wb, name);
     } catch (inner) {
-      alert("匯出失敗：" + (inner.message || error.message));
+      alert("?臬憭望?嚗? + (inner.message || error.message));
     }
   }
 }
 
 function classifyType(item) {
-  if (isFight(item)) return "對打";
-  if (isPoomsae(item)) return "品勢";
-  if (item.weightClass || /公斤|量級/.test(item.division || "")) return "對打";
-  if (item.eventName || /章|品勢/.test([item.division, item.detailLabel].join(""))) return "品勢";
-  return item.type || "其他";
+  if (isFight(item)) return "撠?";
+  if (isPoomsae(item)) return "?";
+  if (item.weightClass || /?祆|??/.test(item.division || "")) return "撠?";
+  if (item.eventName || /蝡?/.test([item.division, item.detailLabel].join(""))) return "?";
+  return item.type || "?嗡?";
 }
 
 function formatMatchExport(item) {
   if (isOrderStyle(item)) {
     const match = item.matchNo || "";
     const order = item.orderNo || item.seed;
-    if (match && order) return `${match}（第${order}位）`;
-    return match || (order ? `第${order}位` : "未提及");
+    if (match && order) return `${match}嚗洵${order}雿?`;
+    return match || (order ? `蝚?{order}雿 : "?芣???);
   }
   return formatColorSequence(item);
 }
 
 function sideExport(item) {
-  if (isOrderStyle(item)) return "輪流出場";
+  if (isOrderStyle(item)) return "頛芣??箏";
   return displayValue(item.bye && !item.matchNo ? item.nextColor : item.color);
 }
 
@@ -3558,25 +3386,25 @@ function opponentExport(item) {
 
 function rowsForExport(data) {
   return data.map((item, index) => ({
-    順序: index + 1,
-    選手: item.player || "未提及",
-    項目: displayValue(classifyType(item)),
-    組別: displayValue(item.division),
-    年齡層: displayValue(item.ageGroup),
-    性別: displayValue(item.gender),
-    級別或品勢項目: displayValue(isPoomsae(item) ? formatPoomsaeLabel(item) : item.detailLabel),
-    帶色段級: displayValue(item.belt),
-    場地: displayValue(item.court),
-    本場場次: item.bye && !item.matchNo ? "輪空晉級" : displayValue(item.matchNo),
-    青紅方: sideExport(item),
-    對手: opponentExport(item),
-    對手道館: isOrderStyle(item) ? "－" : displayValue(item.opponentClub),
-    下一場場次: isOrderStyle(item) ? "－" : displayValue(item.nextMatchNo),
-    下一場青紅: isOrderStyle(item) ? "－" : displayValue(item.nextColor),
-    下一場對手: isOrderStyle(item) ? "－" : displayValue(item.nextOpponentHint),
-    籤號: item.seed || "未提及",
-    同組人數: item.groupSize || "未提及",
-    本館: displayValue(item.club)
+    ??: index + 1,
+    ?豢?: item.player || "?芣???,
+    ?: displayValue(classifyType(item)),
+    蝯: displayValue(item.division),
+    撟湧翩撅? displayValue(item.ageGroup),
+    ?批: displayValue(item.gender),
+    蝝???ａ??? displayValue(isPoomsae(item) ? formatPoomsaeLabel(item) : item.detailLabel),
+    撣嗉畾萇?: displayValue(item.belt),
+    ?游: displayValue(item.court),
+    ?砍?湔活: item.bye && !item.matchNo ? "頛芰征??" : displayValue(item.matchNo),
+    ???? sideExport(item),
+    撠?: opponentExport(item),
+    撠??尹: isOrderStyle(item) ? "嚗? : displayValue(item.opponentClub),
+    銝??游甈? isOrderStyle(item) ? "嚗? : displayValue(item.nextMatchNo),
+    銝??湧?蝝? isOrderStyle(item) ? "嚗? : displayValue(item.nextColor),
+    銝??游??? isOrderStyle(item) ? "嚗? : displayValue(item.nextOpponentHint),
+    蝐方?: item.seed || "?芣???,
+    ??鈭箸: item.groupSize || "?芣???,
+    ?祇尹: displayValue(item.club)
   }));
 }
 
@@ -3587,11 +3415,11 @@ const EXPORT_PREVIEW_LIMIT = 12;
 
 document.getElementById("exportExcelBtn").addEventListener("click", () => {
   if (!window.XLSX) {
-    alert("Excel 套件尚未載入，請確認網路連線");
+    alert("Excel 憟辣撠頛嚗?蝣箄?蝬脰楝???");
     return;
   }
   if (!allData.length) {
-    alert("沒有可匯出的資料。請先解析檔案，並確認畫面上有選手列。");
+    alert("瘝??臬?箇?鞈????圾??獢?銝衣Ⅱ隤?Ｖ??????);
     return;
   }
   openExportModal("excel");
@@ -3599,7 +3427,7 @@ document.getElementById("exportExcelBtn").addEventListener("click", () => {
 
 document.getElementById("exportWordBtn").addEventListener("click", () => {
   if (!allData.length) {
-    alert("沒有可匯出的資料");
+    alert("瘝??臬?箇?鞈?");
     return;
   }
   openExportModal("word");
@@ -3608,9 +3436,9 @@ document.getElementById("exportWordBtn").addEventListener("click", () => {
 function openExportModal(kind) {
   exportKind = kind === "word" ? "word" : "excel";
   exportPreviewTab = "all";
-  exportScope = (currentFilter === "品勢" || currentFilter === "對打") ? currentFilter : "both";
-  if (!poomsaeItems(allData).length) exportScope = fightItems(allData).length ? "對打" : "both";
-  else if (!fightItems(allData).length) exportScope = "品勢";
+  exportScope = (currentFilter === "?" || currentFilter === "撠?") ? currentFilter : "both";
+  if (!poomsaeItems(allData).length) exportScope = fightItems(allData).length ? "撠?" : "both";
+  else if (!fightItems(allData).length) exportScope = "?";
   const box = document.getElementById("exportFieldList");
   const modal = document.getElementById("exportModal");
   if (!box || !modal) {
@@ -3621,14 +3449,14 @@ function openExportModal(kind) {
   const kicker = document.getElementById("exportKicker");
   const title = document.getElementById("exportTitle");
   const confirm = document.getElementById("exportConfirmBtn");
-  if (kicker) kicker.textContent = exportKind === "word" ? "匯出 Word" : "匯出 Excel";
-  if (title) title.textContent = "先看長什麼樣子";
-  if (confirm) confirm.textContent = exportKind === "word" ? "下載 Word" : "下載 Excel";
+  if (kicker) kicker.textContent = exportKind === "word" ? "?臬 Word" : "?臬 Excel";
+  if (title) title.textContent = "瘝?憿停銝?";
+  if (confirm) confirm.textContent = exportKind === "word" ? "銝? Word" : "銝? Excel";
   document.getElementById("exportFieldsFold")?.classList.toggle("hidden", exportKind === "word");
   const sheetsTitle = document.getElementById("exportSheetsTitle");
-  if (sheetsTitle) sheetsTitle.textContent = exportKind === "word" ? "看出場表預覽" : "看簡表長什麼樣子";
+  if (sheetsTitle) sheetsTitle.textContent = exportKind === "word" ? "???亦敦蝭" : "?陛銵券隞暻潭見摮?;
   const sheetsNote = document.getElementById("exportSheetsNote");
-  if (sheetsNote) sheetsNote.textContent = exportKind === "word" ? "點開可先看出場表" : "檔案裡本來就有，這裡只是先看";
+  if (sheetsNote) sheetsNote.textContent = exportKind === "word" ? "暺??臬???渲”???? : "瑼?鋆⊥靘停???ㄐ?芣??";
   setFoldOpen("exportScopeToggle", "exportScopePanel", false);
   setFoldOpen("exportSheetsToggle", "exportSheetsPanel", false);
   setFoldOpen("exportFieldsToggle", "exportFieldsPanel", false);
@@ -3659,11 +3487,11 @@ function liveExportFields() {
 }
 
 function poomsaeItems(data) {
-  return (data || []).filter((item) => classifyType(item) === "品勢");
+  return (data || []).filter((item) => classifyType(item) === "?");
 }
 
 function fightItems(data) {
-  return (data || []).filter((item) => classifyType(item) === "對打");
+  return (data || []).filter((item) => classifyType(item) === "撠?");
 }
 
 function exportHasBothTypes() {
@@ -3671,8 +3499,8 @@ function exportHasBothTypes() {
 }
 
 function exportItems() {
-  if (exportScope === "品勢") return poomsaeItems(allData);
-  if (exportScope === "對打") return fightItems(allData);
+  if (exportScope === "?") return poomsaeItems(allData);
+  if (exportScope === "撠?") return fightItems(allData);
   return allData.slice();
 }
 
@@ -3687,11 +3515,11 @@ function renderExportScope() {
   });
   const note = document.getElementById("exportScopeNote");
   if (note) {
-    note.textContent = exportScope === "品勢"
-      ? "目前：只出品勢"
-      : exportScope === "對打"
-        ? "目前：只出對打"
-        : "平常不用改，兩種都出（分開）";
+    note.textContent = exportScope === "?"
+      ? "?桀?嚗?箏???
+      : exportScope === "撠?"
+        ? "?桀?嚗?箏???
+        : "撟喳虜銝?對??拍車?賢嚗???";
   }
 }
 
@@ -3699,13 +3527,13 @@ function exportSummaryText() {
   const n = exportItems().length;
   const both = exportHasBothTypes() && exportScope === "both";
   if (exportKind === "word") {
-    if (both) return `會匯出 ${n} 筆。品勢、對打分開兩個表。看完再按下載。`;
-    return `會匯出 ${n} 筆，做成出場表。看完再按下載。`;
+    if (both) return `???${n} 蝑??Ｕ???????瘜Ｘ活????撠望?銝??;
+    return `???${n} 蝑?靘郭甈⊥?摨???撠望?銝??;
   }
-  if (both) return `會匯出 ${n} 筆。品勢、對打各一張詳細表，另有簡表。看完再按下載。`;
-  if (exportScope === "品勢") return `只出品勢，共 ${n} 筆，做成出場表。`;
-  if (exportScope === "對打") return `只出對打，共 ${n} 筆，做成出場表。`;
-  return `會匯出 ${n} 筆，做成出場表。看完再按下載。`;
+  if (both) return `???${n} 蝑??Ｕ???銝撘菔底蝝啗”嚗???渡?陛銵具???撠望?銝??;
+  if (exportScope === "?") return `?芸?嚗 ${n} 蝑?靘郭甈⊥?摨;
+  if (exportScope === "撠?") return `?芸撠?嚗 ${n} 蝑?靘郭甈⊥?摨;
+  return `???${n} 蝑?靘郭甈⊥?摨???撠望?銝??;
 }
 
 function exportSheetsOpen() {
@@ -3717,13 +3545,13 @@ function renderExportTabs() {
   if (!tabs) return;
   const items = exportKind === "word"
     ? [
-        { id: "all", label: exportScope === "both" ? "出場表（品勢、對打分開）" : "出場表" },
-        { id: "groups", label: "組別名單" }
+        { id: "all", label: exportScope === "both" ? "?箏銵剁??嚗?????" : "?箏銵? },
+        { id: "groups", label: "蝯蝝啁?" }
       ]
     : [
-        { id: "all", label: exportScope === "both" ? "詳細資料（分開）" : "詳細資料" },
-        (exportScope !== "對打" && poomsaeItems(exportItems()).length) ? { id: "poomsae", label: "品勢簡表" } : null,
-        (exportScope !== "品勢" && fightItems(exportItems()).length) ? { id: "fight", label: "對打簡表" } : null
+        { id: "all", label: exportScope === "both" ? "閰喟敦鞈賜?嚗???" : "閰喟敦鞈賜?" },
+        (exportScope !== "撠?" && poomsaeItems(exportItems()).length) ? { id: "poomsae", label: "?蝪∟”" } : null,
+        (exportScope !== "?" && fightItems(exportItems()).length) ? { id: "fight", label: "撠?蝪∟”" } : null
       ].filter(Boolean);
   if (!items.some((item) => item.id === exportPreviewTab)) exportPreviewTab = items[0]?.id || "all";
   tabs.innerHTML = items.map((item) => `
@@ -3733,13 +3561,13 @@ function renderExportTabs() {
   if (note) {
     const notes = {
       all: exportKind === "word"
-        ? (exportScope === "both" ? "會把品勢、對打做成兩張出場表，不是混在同一張。" : "做成出場表。")
+        ? (exportScope === "both" ? "???Ｕ?撠???靘郭甈⊥?摨?銝?瘛瑕??撘菔”?? : "靘郭甈⊥?摨?)
         : (exportScope === "both"
-          ? "品勢和對打會分開兩張詳細表。簡表另外有，不會跟詳細表混在一起。"
-          : "這張詳細資料做成出場表。簡表另外有，不會混在這張。"),
-      groups: "組別名單：同組有誰、籤號、出場順序。",
-      poomsae: "品勢簡表：每人一列，有場次、第一／第二品勢。詳細表另外一張。",
-      fight: "對打簡表：每人一列，有場次、青紅。詳細表另外一張。"
+          ? "????????拙撐撌乩?銵剁???瘜Ｘ活?????Ｗ??雿撘菟?拍??
+          : "?撐閰喟敦鞈賜?靘郭甈⊥?摨??Ｗ??雿敶梢?撐銵具?),
+      groups: "蝯蝝啁?嚗?蝯??狐?惜?甈～?,
+      poomsae: "?蝪∟”嚗策銝????????乓甈～??ｇ?甈??箏?銝?整?,
+      fight: "撠?蝪∟”嚗策銝????????乓甈∴???嚗?雿摰??賢??
     };
     note.textContent = notes[exportPreviewTab] || "";
   }
@@ -3750,23 +3578,23 @@ function renderExportPreview() {
   const fileHint = document.getElementById("exportFileHint");
   const summary = document.getElementById("exportSummary");
   if (summary) summary.textContent = exportSummaryText();
-  if (fileHint) fileHint.textContent = `檔名會是 ${exportFileName(exportKind === "word" ? "doc" : "xlsx")}`;
+  if (fileHint) fileHint.textContent = `撠?頛?${exportFileName(exportKind === "word" ? "doc" : "xlsx")}`;
   if (!host) return;
-  const club = clubName.value.trim() || "本館";
+  const club = clubName.value.trim() || "?祇尹";
   const tab = exportSheetsOpen() ? exportPreviewTab : "all";
   if (exportKind === "word") {
     if (tab === "groups") {
       host.innerHTML = wordGroupsPreviewHtml();
       return;
     }
-    const headers = ["順序", "選手", "項目", "組別", "品勢／級別", "場地", "本場", "青紅／出場", "對手／順序", "下一場"];
-    host.innerHTML = previewDetailBlocks(club, headers, (list) => rowsForExport(list).map(wordPreviewRow), "Word 出場表");
+    const headers = ["??", "?豢?", "?", "蝯", "?????, "?游", "?砍", "??嚗??, "撠?嚗?摨?, "銝???];
+    host.innerHTML = previewDetailBlocks(club, headers, (list) => rowsForExport(list).map(wordPreviewRow), "Word ?箏銵?);
     return;
   }
   const selected = liveExportFields();
   if (tab === "all") {
     if (!selected.length) {
-      host.innerHTML = `<p class="export-preview-empty">請先勾選要匯出的欄位</p>`;
+      host.innerHTML = `<p class="export-preview-empty">隢撠?訾???雿?/p>`;
       return;
     }
     const headers = selected.map((field) => field.label);
@@ -3774,22 +3602,22 @@ function renderExportPreview() {
       club,
       headers,
       (list) => rowsForExport(list).map((row) => selected.map((field) => row[field.key] ?? "")),
-      "詳細資料"
+      "閰喟敦鞈賜?"
     );
     return;
   }
   if (tab === "poomsae") {
     host.innerHTML = previewTableHtml(
-      ["姓名", "組別", "場次", "第一品勢", "第二品勢", "指定品勢"],
+      ["憪?", "蝯", "?湔活", "蝚砌??", "蝚砌??", "瘥魚?"],
       poomsaeExportRows(exportItems()),
-      `${club}｜品勢簡表`
+      `${club}嚚??Ｙ陛銵灼
     );
     return;
   }
   host.innerHTML = previewTableHtml(
-    ["姓名", "量級／組別", "場次／青紅"],
+    ["憪?", "擃?嚗???, "?湔活嚗???],
     fightExportRows(exportItems()),
-    `${club}｜對打簡表`
+    `${club}嚚??陛銵灼
   );
 }
 
@@ -3797,25 +3625,25 @@ function previewDetailBlocks(club, headers, rowFn, kind) {
   const poom = poomsaeItems(exportItems());
   const fight = fightItems(exportItems());
   if (exportScope !== "both") {
-    const label = exportScope === "品勢" ? "品勢" : exportScope === "對打" ? "對打" : "";
-    return previewTableHtml(headers, rowFn(exportItems()), `${club}｜${kind}${label ? "-" + label : ""}（詳細表）`);
+    const label = exportScope === "?" ? "?" : exportScope === "撠?" ? "撠?" : "";
+    return previewTableHtml(headers, rowFn(exportItems()), `${club}嚚?{kind}${label ? "-" + label : ""}嚗?瘜Ｘ活嚗);
   }
   const parts = [];
-  if (poom.length) parts.push(previewTableHtml(headers, rowFn(poom), `${club}｜${kind}-品勢（詳細表）`));
-  if (fight.length) parts.push(previewTableHtml(headers, rowFn(fight), `${club}｜${kind}-對打（詳細表）`));
-  return parts.join("") || `<p class="export-preview-empty">沒有資料</p>`;
+  if (poom.length) parts.push(previewTableHtml(headers, rowFn(poom), `${club}嚚?{kind}-?嚗?瘜Ｘ活嚗));
+  if (fight.length) parts.push(previewTableHtml(headers, rowFn(fight), `${club}嚚?{kind}-撠?嚗?瘜Ｘ活嚗));
+  return parts.join("") || `<p class="export-preview-empty">瘝?鞈?</p>`;
 }
 
 function previewTableHtml(headers, rows, caption) {
   const shown = rows.slice(0, EXPORT_PREVIEW_LIMIT);
-  const extra = rows.length > shown.length ? `，後面還有 ${rows.length - shown.length} 筆沒顯示` : "";
+  const extra = rows.length > shown.length ? `嚗??ａ???${rows.length - shown.length} 蝑?撖恍脫?獢 : "";
   return `
-    <p class="export-preview-meta">${escapeHTML(caption)}｜先看 ${shown.length} 筆／共 ${rows.length} 筆${extra}</p>
+    <p class="export-preview-meta">${escapeHTML(caption)}??汗??${shown.length} 蝑???${rows.length} 蝑?{extra}</p>
     <div class="export-preview-wrap">
       <table class="export-preview-table">
         <thead><tr>${headers.map((h) => `<th>${escapeHTML(h)}</th>`).join("")}</tr></thead>
         <tbody>
-          ${shown.map((row) => `<tr>${row.map((cell) => `<td>${escapeHTML(String(cell ?? ""))}</td>`).join("")}</tr>`).join("") || `<tr><td colspan="${headers.length}">沒有資料</td></tr>`}
+          ${shown.map((row) => `<tr>${row.map((cell) => `<td>${escapeHTML(String(cell ?? ""))}</td>`).join("")}</tr>`).join("") || `<tr><td colspan="${headers.length}">瘝?鞈?</td></tr>`}
         </tbody>
       </table>
     </div>
@@ -3823,25 +3651,24 @@ function previewTableHtml(headers, rows, caption) {
 }
 
 function wordPreviewRow(row) {
-  const nextColor = row["下一場青紅"];
-  const next = `${row["下一場場次"]}${nextColor && nextColor !== "－" && nextColor !== "未提及" ? " " + nextColor : ""}`;
-  return [row["順序"], row["選手"], row["項目"], row["組別"], row["級別或品勢項目"], row["場地"], row["本場場次"], row["青紅方"], row["對手"], next];
+  const next = `${row.銝??游甈﹙${row.銝??湧?蝝?&& row.銝??湧?蝝?!== "嚗? && row.銝??湧?蝝?!== "?芣??? ? " " + row.銝??湧?蝝?: ""}`;
+  return [row.??, row.?豢?, row.?, row.蝯, row.蝝???ａ??? row.?游, row.?砍?湔活, row.???? row.撠?, next];
 }
 
 function wordGroupsPreviewHtml() {
   const groups = getVisibleGroups(exportItems());
   const shown = groups.slice(0, 8);
-  const extra = groups.length > shown.length ? `<p class="export-preview-meta">下面還有 ${groups.length - shown.length} 組沒顯示</p>` : "";
+  const extra = groups.length > shown.length ? `<p class="export-preview-meta">敺?? ${groups.length - shown.length} 蝯?撖恍脫?獢?/p>` : "";
   return `
-    <p class="export-preview-meta">Word 組別名單｜先看 ${shown.length} 組／共 ${groups.length} 組</p>
+    <p class="export-preview-meta">Word 蝯蝝啁???汗 ${shown.length} 蝯???${groups.length} 蝯?/p>
     <div class="export-preview-wrap">
       <div class="export-preview-groups">
         ${shown.map((group) => {
           const people = (group.members.length ? group.members : group.ours).slice(0, 8).map((item) =>
-            `<li>${escapeHTML(displayValue(item.player))}（${escapeHTML(displayValue(item.club))}）</li>`
+            `<li>${escapeHTML(displayValue(item.player))}嚗?{escapeHTML(displayValue(item.club))}嚗?/li>`
           ).join("");
-          return `<div><h4>${escapeHTML(displayValue(group.type))} ｜ ${escapeHTML(displayValue(group.division))}</h4><ul>${people || "<li>未提及</li>"}</ul></div>`;
-        }).join("") || `<p class="export-preview-empty">沒有組別</p>`}
+          return `<div><h4>${escapeHTML(displayValue(group.type))} 嚚?${escapeHTML(displayValue(group.division))}</h4><ul>${people || "<li>?芣???/li>"}</ul></div>`;
+        }).join("") || `<p class="export-preview-empty">瘝?蝯</p>`}
       </div>
     </div>
     ${extra}
@@ -3868,22 +3695,22 @@ function fightExportRows(data) {
 }
 
 function doExportExcel() {
-  const club = clubName.value.trim() || "本館";
+  const club = clubName.value.trim() || "?祇尹";
   const workbook = XLSX.utils.book_new();
   const source = exportItems();
   const poomsae = poomsaeItems(source);
   const fight = fightItems(source);
-  const other = source.filter((item) => classifyType(item) !== "品勢" && classifyType(item) !== "對打");
+  const other = source.filter((item) => classifyType(item) !== "?" && classifyType(item) !== "撠?");
   const selected = EXPORT_FIELDS.filter((field) => exportFields.includes(field.key));
   if (!selected.length) {
-    alert("請先勾選要匯出的欄位");
+    alert("隢撠?訾???雿?);
     return;
   }
 
   const addDetailSheet = (title, items) => {
     if (!items.length) return;
     const rows = [
-      [`${club}｜${title}`],
+      [`${club}嚚?{title}`],
       selected.map((field) => field.label)
     ];
     rowsForExport(items).forEach((row) => {
@@ -3895,65 +3722,65 @@ function doExportExcel() {
   };
 
   if (exportScope === "both" && poomsae.length && fight.length) {
-    addDetailSheet("詳細資料-品勢", poomsae);
-    addDetailSheet("詳細資料-對打", fight);
+    addDetailSheet("閰喟敦鞈賜?-?", poomsae);
+    addDetailSheet("閰喟敦鞈賜?-撠?", fight);
   } else {
-    addDetailSheet(poomsae.length && !fight.length ? "詳細資料-品勢" : fight.length && !poomsae.length ? "詳細資料-對打" : "詳細資料", source);
+    addDetailSheet(poomsae.length && !fight.length ? "閰喟敦鞈賜?-?" : fight.length && !poomsae.length ? "閰喟敦鞈賜?-撠?" : "閰喟敦鞈賜?", source);
   }
 
   if (poomsae.length) {
     const poomRows = [
-      [`${club}｜比賽資料`],
-      ["姓名", "組別", "場次", "第一品勢", "第二品勢", "指定品勢"],
+      [`${club}嚚??Ｙ陛銵灼],
+      ["憪?", "蝯", "?湔活", "蝚砌??", "蝚砌??", "瘥魚?"],
       ...poomsaeExportRows(poomsae)
     ];
     const poomSheet = XLSX.utils.aoa_to_sheet(poomRows);
     poomSheet["!cols"] = [12, 32, 16, 16, 16, 18].map((wch) => ({ wch }));
-    XLSX.utils.book_append_sheet(workbook, poomSheet, "比賽資料");
+    XLSX.utils.book_append_sheet(workbook, poomSheet, "?蝪∟”");
   }
 
   if (fight.length) {
     const fightRows = [
-      [`${club}｜對打比賽資料`],
-      ["姓名", "量級／組別", "場次／青紅"],
+      [`${club}嚚??陛銵灼],
+      ["憪?", "擃?嚗???, "?湔活嚗???],
       ...fightExportRows(fight)
     ];
     const fightSheet = XLSX.utils.aoa_to_sheet(fightRows);
     fightSheet["!cols"] = [12, 32, 18].map((wch) => ({ wch }));
-    XLSX.utils.book_append_sheet(workbook, fightSheet, "對打比賽資料");
+    XLSX.utils.book_append_sheet(workbook, fightSheet, "撠?蝪∟”");
   }
 
   if (other.length && !poomsae.length && !fight.length) {
     const extra = [
-      [`${club}｜其他`],
-      ["姓名", "項目", "組別", "場次"]
+      [`${club}嚚隞],
+      ["憪?", "?", "蝯", "?湔活"]
     ];
     other.forEach((item) => {
       extra.push([item.player || "", item.type || "", compactDivision(item), formatMatchExport(item)]);
     });
-    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(extra), "其他");
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(extra), "?嗡?");
   }
 
   try {
     downloadWorkbook(workbook, exportFileName("xlsx"));
   } catch (error) {
-    alert("匯出失敗：" + error.message);
+    alert("?臬憭望?嚗? + error.message);
   }
 }
 
 function wordTableRows(list) {
   return rowsForExport(list).map((row) => `
     <tr>
-      <td>${escapeHTML(row["順序"])}</td>
-      <td>${escapeHTML(row["選手"])}</td>
-      <td>${escapeHTML(row["項目"])}</td>
-      <td>${escapeHTML(row["組別"])}</td>
-      <td>${escapeHTML(row["級別或品勢項目"])}</td>
-      <td>${escapeHTML(row["場地"])}</td>
-      <td>${escapeHTML(row["本場場次"])}</td>
-      <td>${escapeHTML(row["青紅方"])}</td>
-      <td>${escapeHTML(row["對手"])}</td>
-      <td>${escapeHTML(row["下一場場次"])}${row["下一場青紅"] && row["下一場青紅"] !== "－" && row["下一場青紅"] !== "未提及" ? " " + escapeHTML(row["下一場青紅"]) : ""}</td>
+      <td>${escapeHTML(row.??)}</td>
+      <td>${escapeHTML(row.?豢?)}</td>
+      <td>${escapeHTML(row.?)}</td>
+      <td>${escapeHTML(row.蝯)}</td>
+      <td>${escapeHTML(row.蝝???ａ???}</td>
+      <td>${escapeHTML(row.?游)}</td>
+      <td>${escapeHTML(row.?砍?湔活)}</td>
+      <td>${escapeHTML(row.????}</td>
+      <td>${escapeHTML(row.撠?)}</td>
+      <td>${escapeHTML(row.銝??游甈?}${row.銝??湧?蝝?&& row.銝??湧?蝝?!== "嚗? && row.銝??湧?蝝?!== "?芣??? ? " " + escapeHTML(row.銝??湧?蝝? : ""}</td>
     </tr>
   `).join("");
 }
@@ -3961,32 +3788,32 @@ function wordTableRows(list) {
 function wordGroupsHtml(list) {
   return getVisibleGroups(list).map((group) => {
     const people = (group.members.length ? group.members : group.ours).map((item) =>
-      `<li>${escapeHTML(displayValue(item.player))}（${escapeHTML(displayValue(item.club))}）
-       籤號${item.seed || "?"} ${escapeHTML(isOrderStyle(item) ? orderLabel(item) : (item.color || ""))} 場次${escapeHTML(displayValue(item.matchNo))}
-       ${isOrderStyle(item) ? "輪流出場" : "對手：" + escapeHTML(displayValue(item.opponent))}
-       ${isOrderStyle(item) ? "" : "下一場：" + escapeHTML(displayValue(item.nextMatchNo)) + " " + escapeHTML(item.nextColor || "")}</li>`
+      `<li>${escapeHTML(displayValue(item.player))}嚗?{escapeHTML(displayValue(item.club))}嚗?
+       蝐方?${item.seed || "?"} ${escapeHTML(isOrderStyle(item) ? orderLabel(item) : (item.color || ""))} ?湔活${escapeHTML(displayValue(item.matchNo))}
+       ${isOrderStyle(item) ? "頛芣??箏" : "撠?嚗? + escapeHTML(displayValue(item.opponent))}
+       ${isOrderStyle(item) ? "" : "銝??湛?" + escapeHTML(displayValue(item.nextMatchNo)) + " " + escapeHTML(item.nextColor || "")}</li>`
     ).join("");
-    return `<h3>${escapeHTML(displayValue(group.type))} ｜ ${escapeHTML(displayValue(group.division))}</h3><ul>${people}</ul>`;
+    return `<h3>${escapeHTML(displayValue(group.type))} 嚚?${escapeHTML(displayValue(group.division))}</h3><ul>${people}</ul>`;
   }).join("");
 }
 
 function doExportWord() {
-  const competition = document.getElementById("competitionName").value || "賽程";
-  const club = clubName.value || "本館";
+  const competition = document.getElementById("competitionName").value || "鞈賜?";
+  const club = clubName.value || "?祇尹";
   const source = exportItems();
   const poom = poomsaeItems(source);
   const fight = fightItems(source);
   const tableHead = `
           <tr>
-            <th>順序</th><th>選手</th><th>項目</th><th>組別</th>
-            <th>級別 / 品勢項目</th><th>場地</th><th>本場</th><th>青紅／出場</th><th>對手／順序</th><th>下一場</th>
+            <th>??</th><th>?豢?</th><th>?</th><th>蝯</th>
+            <th>蝝 / ??</th><th>?游</th><th>?砍</th><th>??嚗??/th><th>撠?嚗?摨?/th><th>銝???/th>
           </tr>`;
   const tables = exportScope === "both" && poom.length && fight.length
-    ? `<h2>品勢（詳細表）</h2><table>${tableHead}${wordTableRows(poom)}</table>
-        <h2>對打（詳細表）</h2><table>${tableHead}${wordTableRows(fight)}</table>`
+    ? `<h2>?嚗?瘜Ｘ活嚗?/h2><table>${tableHead}${wordTableRows(poom)}</table>
+        <h2>撠?嚗?瘜Ｘ活嚗?/h2><table>${tableHead}${wordTableRows(fight)}</table>`
     : `<table>${tableHead}${wordTableRows(source)}</table>`;
   const groups = exportScope === "both" && poom.length && fight.length
-    ? `<h2>品勢組別</h2>${wordGroupsHtml(poom)}<h2>對打組別</h2>${wordGroupsHtml(fight)}`
+    ? `<h2>?蝯</h2>${wordGroupsHtml(poom)}<h2>撠?蝯</h2>${wordGroupsHtml(fight)}`
     : wordGroupsHtml(source);
 
   const html = `
@@ -4003,10 +3830,10 @@ function doExportWord() {
       </head>
       <body>
         <h1>${escapeHTML(competition)}</h1>
-        <p>道館：${escapeHTML(club)}</p>
-        <p>選手 ${[...new Set(source.map((item) => item.player))].length} 人，出場 ${source.length} 筆。</p>
+        <p>?尹嚗?{escapeHTML(club)}</p>
+        <p>?豢? ${[...new Set(source.map((item) => item.player))].length} 鈭綽??箏 ${source.length} ?氬?/p>
         ${tables}
-        <h2>組別名單</h2>
+        <h2>蝯蝝啁?</h2>
         ${groups}
       </body>
     </html>
@@ -4018,23 +3845,22 @@ function doExportWord() {
   );
 }
 
-
 function formatColorSequence(item) {
   const parts = [];
   if (item.bye && !item.matchNo && item.nextMatchNo) {
     parts.push(`${item.nextMatchNo}${shortColor(item.nextColor)}`);
-    return parts.join("、");
+    return parts.join("??);
   }
   if (item.matchNo) parts.push(`${item.matchNo}${shortColor(item.color)}`);
   if (item.nextMatchNo) parts.push(`${item.nextMatchNo}${shortColor(item.nextColor)}`);
-  return parts.filter(Boolean).join("、") || "未提及";
+  return parts.filter(Boolean).join("??) || "?芣???;
 }
 
 function shortPoomsae(text) {
   return String(text || "")
-    .replace(/未提及/g, "")
-    .replace(/太極/g, "")
-    .replace(/前抬腳/g, "前抬腿")
+    .replace(/?芣???g, "")
+    .replace(/憭芣扔/g, "")
+    .replace(/???g, "???)
     .trim();
 }
 
@@ -4042,7 +3868,7 @@ function compactDivision(item) {
   const text = [item.ageGroup, item.gender, item.division, item.weightClass]
     .filter(Boolean)
     .join("");
-  return (item.division || text || "").replace(/比賽組別:?/g, "").trim() || "未提及";
+  return (item.division || text || "").replace(/瘥魚蝯:?/g, "").trim() || "?芣???;
 }
 
 function bindFold(toggleId, panelId) {
@@ -4053,7 +3879,7 @@ function bindFold(toggleId, panelId) {
     const open = panel.classList.toggle("hidden") === false;
     toggle.setAttribute("aria-expanded", open ? "true" : "false");
     const arrow = toggle.querySelector(".fold-arrow");
-    if (arrow) arrow.textContent = open ? "－" : "＋";
+    if (arrow) arrow.textContent = open ? "嚗? : "嚗?;
   });
 }
 
@@ -4064,7 +3890,7 @@ function setFoldOpen(toggleId, panelId, open) {
   panel.classList.toggle("hidden", !open);
   toggle.setAttribute("aria-expanded", open ? "true" : "false");
   const arrow = toggle.querySelector(".fold-arrow");
-    if (arrow) arrow.textContent = open ? "－" : "＋";
+  if (arrow) arrow.textContent = open ? "嚗? : "嚗?;
 }
 
 bindFold("pasteToggle", "pastePanel");
@@ -4171,7 +3997,7 @@ document.getElementById("exportConfirmBtn")?.addEventListener("click", () => {
   }
   const selected = collectExportFields();
   if (!selected.length) {
-    alert("請先勾選要匯出的欄位");
+    alert("隢撠?訾???雿?);
     return;
   }
   exportFields = selected;
@@ -4184,7 +4010,7 @@ function openRosterModal() {
   clearPlayerNamesPulse();
   const modal = document.getElementById("rosterModal");
   const title = document.getElementById("rosterTitle");
-  if (title) title.textContent = `${clubName.value.trim() || "金城土城"}學員`;
+  if (title) title.textContent = `${clubName.value.trim() || "????"}摮詨`;
   const search = document.getElementById("rosterSearch");
   if (search) search.value = "";
   renderRosterList();
@@ -4196,7 +4022,7 @@ function rosterChip(name, checked) {
     <label class="check-chip">
       <input type="checkbox" value="${escapeHTML(name)}" ${checked ? "checked" : ""} />
       <span>${escapeHTML(name)}</span>
-      <button type="button" class="chip-del" data-name="${escapeHTML(name)}" aria-label="從常用名單刪除 ${escapeHTML(name)}">×</button>
+      <button type="button" class="chip-del" data-name="${escapeHTML(name)}" aria-label="敺虜?典??格??${escapeHTML(name)}">?</button>
     </label>
   `;
 }
@@ -4207,7 +4033,7 @@ function renderRosterList() {
   const names = getClubRoster();
   const checked = new Set(uniqueNameList(rosterChecked));
   box.innerHTML = names.map((name) => rosterChip(name, checked.has(name))).join("")
-    || `<p class="hint">還沒有名單。可在下面新增，或先用預設的常用名單。</p>`;
+    || `<p class="hint">?????柴?其??Ｗ??伐????敺拍妝摨????/p>`;
   filterRosterList();
 }
 
@@ -4235,7 +4061,7 @@ function addRosterName() {
   const input = document.getElementById("rosterAddName");
   const name = String(input?.value || "").replace(/\s+/g, "");
   if (!/^[\u4e00-\u9fff]{2,4}$/.test(name)) {
-    alert("請輸入 2 到 4 個字的中文姓名");
+    alert("隢撓??2 ??4 ???葉????);
     return;
   }
   clubRoster = uniqueNameList([...clubRoster, name]);
@@ -4257,7 +4083,7 @@ function removeRosterName(name) {
 }
 
 function resetRosterToDefault() {
-  if (!confirm("要把常用名單還原成金城土城預設名單嗎？你自己加的人會被清掉。")) return;
+  if (!confirm("?Ｗ儔?妝摨?銝??????嚗?????????蝵柴?)) return;
   clubRoster = DEFAULT_CLUB_ROSTER.slice();
   rosterChecked = DEFAULT_CHECKED_ROSTER.slice();
   saveSettings();
@@ -4267,7 +4093,7 @@ function resetRosterToDefault() {
 function applyRosterToNames() {
   const names = [...document.querySelectorAll("#rosterList input[type=checkbox]:checked")].map((input) => input.value);
   if (!names.length) {
-    alert("請至少勾選一位選手，或改到下面的框自己貼名單");
+    alert("隢撠?訾?雿????唬??Ｙ?獢撌梯票?");
     return;
   }
   rosterChecked = uniqueNameList(names);
@@ -4292,35 +4118,34 @@ function switchTab(tab) {
   document.getElementById("tabCustom")?.classList.toggle("active", tab === "custom");
   document.getElementById("matchApp")?.classList.toggle("hidden", tab !== "match");
   document.getElementById("customApp")?.classList.toggle("hidden", tab !== "custom");
-  updateQuest();
 }
 
 const CUSTOM_TPL = {
   meal: {
-    title: "吃飯統計",
+    title: "?ㄞ蝯梯?",
     columns: [
-      { key: "name", label: "姓名" },
-      { key: "join", label: "參加" },
-      { key: "fee", label: "金額", money: true },
-      { key: "note", label: "備註" }
+      { key: "name", label: "憪?" },
+      { key: "join", label: "??" },
+      { key: "fee", label: "??", money: true },
+      { key: "note", label: "?酉" }
     ]
   },
   signup: {
-    title: "報名收費",
+    title: "?勗??嗉祥",
     columns: [
-      { key: "name", label: "姓名" },
-      { key: "item", label: "項目" },
-      { key: "fee", label: "費用", money: true },
-      { key: "paid", label: "已繳" },
-      { key: "note", label: "備註" }
+      { key: "name", label: "憪?" },
+      { key: "item", label: "?" },
+      { key: "fee", label: "鞎餌", money: true },
+      { key: "paid", label: "撌脩像" },
+      { key: "note", label: "?酉" }
     ]
   },
   blank: {
-    title: "名單",
+    title: "?",
     columns: [
-      { key: "name", label: "姓名" },
-      { key: "col1", label: "欄位1" },
-      { key: "col2", label: "欄位2" }
+      { key: "name", label: "憪?" },
+      { key: "col1", label: "甈?1" },
+      { key: "col2", label: "甈?2" }
     ]
   }
 };
@@ -4357,7 +4182,7 @@ function renderCustomTable() {
     const del = document.createElement("button");
     del.className = "btn gray";
     del.type = "button";
-    del.textContent = "刪";
+    del.textContent = "??;
     del.addEventListener("click", () => {
       customState.rows.splice(rowIndex, 1);
       if (!customState.rows.length) customState.rows.push(emptyCustomRow());
@@ -4376,14 +4201,14 @@ function updateCustomSum() {
   if (!el) return;
   const moneyCols = customState.columns.filter((col) => col.money);
   if (!moneyCols.length) {
-    el.textContent = `共 ${customState.rows.filter((row) => (row.name || "").trim()).length} 人`;
+    el.textContent = `??${customState.rows.filter((row) => (row.name || "").trim()).length} 鈭槁;
     return;
   }
   const parts = moneyCols.map((col) => {
     const sum = customState.rows.reduce((acc, row) => acc + (parseFloat(row[col.key]) || 0), 0);
-    return `${col.label}合計 ${sum}`;
+    return `${col.label}?? ${sum}`;
   });
-  el.textContent = `共 ${customState.rows.filter((row) => (row.name || "").trim()).length} 人 ｜ ${parts.join(" ｜ ")}`;
+  el.textContent = `??${customState.rows.filter((row) => (row.name || "").trim()).length} 鈭?嚚?${parts.join(" 嚚?")}`;
 }
 
 function applyCustomTemplate(key) {
@@ -4408,17 +4233,17 @@ document.getElementById("customAddRowBtn")?.addEventListener("click", () => {
   renderCustomTable();
 });
 document.getElementById("customAddColBtn")?.addEventListener("click", () => {
-  const label = prompt("新欄位名稱", "備註");
+  const label = prompt("?唳?雿?蝔?, "?酉");
   if (!label) return;
   const key = "col" + Date.now();
-  customState.columns.push({ key, label, money: /費|錢|額|元/.test(label) });
+  customState.columns.push({ key, label, money: /鞎誡?└憿??.test(label) });
   customState.rows.forEach((row) => { row[key] = ""; });
   saveSettings();
   renderCustomTable();
 });
 document.getElementById("customAddNamesBtn")?.addEventListener("click", () => {
   const raw = document.getElementById("customPasteNames").value || "";
-  const names = raw.split(/[\n,，、]/).map((item) => item.trim()).filter(Boolean);
+  const names = raw.split(/[\n,嚗/).map((item) => item.trim()).filter(Boolean);
   names.forEach((name) => {
     const row = emptyCustomRow();
     row.name = name;
@@ -4432,9 +4257,9 @@ document.getElementById("customAddNamesBtn")?.addEventListener("click", () => {
   renderCustomTable();
 });
 document.getElementById("customExportBtn")?.addEventListener("click", () => {
-  if (!window.XLSX) return alert("Excel 套件尚未載入");
+  if (!window.XLSX) return alert("Excel 憟辣撠頛");
   const filled = customState.rows.filter((row) => customState.columns.some((col) => String(row[col.key] || "").trim()));
-  if (!filled.length) return alert("沒有可匯出的資料，請先填列或貼上姓名。");
+  if (!filled.length) return alert("瘝??臬?箇?鞈?嚗??‵??鞎潔?憪???);
   const aoa = [
     [customState.title],
     customState.columns.map((col) => col.label),
@@ -4443,8 +4268,8 @@ document.getElementById("customExportBtn")?.addEventListener("click", () => {
   const wb = XLSX.utils.book_new();
   const sheet = XLSX.utils.aoa_to_sheet(aoa);
   sheet["!cols"] = customState.columns.map(() => ({ wch: 14 }));
-  XLSX.utils.book_append_sheet(wb, sheet, safeFileName(customState.title || "統計").slice(0, 31));
-  downloadWorkbook(wb, `${customState.title || "客製化統計"}.xlsx`);
+  XLSX.utils.book_append_sheet(wb, sheet, safeFileName(customState.title || "蝯梯?").slice(0, 31));
+  downloadWorkbook(wb, `${customState.title || "摰Ｚˊ?絞閮?}.xlsx`);
 });
 
 renderCustomTable();
