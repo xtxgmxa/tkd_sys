@@ -2902,31 +2902,23 @@ function setQuestTarget(el, badgeText) {
 function placeQuestPointer(el) {
   const ptr = document.getElementById("questPointer");
   if (!ptr) return;
-  if (!el || mutedQuestKey === lastQuestKey) {
+  const narrow = window.matchMedia("(max-width: 780px)").matches;
+  if (!el || mutedQuestKey === lastQuestKey || narrow) {
     ptr.classList.add("hidden");
     return;
   }
   const box = el.getBoundingClientRect();
   const vh = window.innerHeight;
   const inView = box.bottom > 88 && box.top < vh - 88;
-  ptr.classList.remove("hidden");
-  if (inView) {
-    ptr.classList.add("is-on-target");
-    ptr.textContent = "👇";
-    ptr.style.left = `${box.left + box.width / 2}px`;
-    ptr.style.top = `${Math.max(18, box.top - 4)}px`;
+  if (!inView) {
+    ptr.classList.add("hidden");
     return;
   }
-  ptr.classList.remove("is-on-target");
-  if (box.top >= vh - 88) {
-    ptr.textContent = "往下滑 ↓";
-    ptr.style.left = "50%";
-    ptr.style.top = `${vh - 118}px`;
-  } else {
-    ptr.textContent = "↑ 回到上面";
-    ptr.style.left = "50%";
-    ptr.style.top = "78px";
-  }
+  ptr.classList.remove("hidden");
+  ptr.classList.add("is-on-target");
+  ptr.textContent = "👇";
+  ptr.style.left = `${box.left + box.width / 2}px`;
+  ptr.style.top = `${Math.max(18, box.top - 4)}px`;
 }
 
 function updateQuest() {

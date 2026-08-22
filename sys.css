@@ -30,7 +30,7 @@ html, body {
 .app {
   max-width: 1760px;
   margin: 0 auto;
-  padding-bottom: 64px;
+  padding-bottom: 88px;
 }
 
 .topbar {
@@ -355,18 +355,21 @@ main { padding: 24px 28px 0; }
 
 .to-top {
   position: fixed;
-  right: 18px;
-  bottom: 22px;
+  right: 16px;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
   z-index: 40;
+  width: 44px;
+  height: 44px;
+  padding: 0;
   border: 0;
-  border-radius: 999px;
-  padding: 12px 16px;
+  border-radius: 50%;
   background: var(--ink);
   color: #fff;
   font: inherit;
-  font-size: 14px;
+  font-size: 20px;
   font-weight: 800;
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.28);
+  line-height: 1;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.24);
   cursor: pointer;
   opacity: 0;
   pointer-events: none;
@@ -448,7 +451,7 @@ main { padding: 24px 28px 0; }
 .quest-chip {
   position: fixed;
   right: 14px;
-  bottom: 78px;
+  bottom: calc(68px + env(safe-area-inset-bottom, 0px));
   z-index: 45;
   display: flex;
   align-items: center;
@@ -1631,24 +1634,28 @@ tbody tr:hover { background: #f8fafc; }
 .modal {
   position: fixed;
   inset: 0;
-  z-index: 40;
+  z-index: 50;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
-  padding: 40px 16px;
-  overflow: auto;
+  padding: 16px;
+  overflow: hidden;
 }
 
 .modal-backdrop { position: fixed; inset: 0; background: rgba(15, 23, 42, .48); }
 
 .modal-card {
   position: relative;
+  display: flex;
+  flex-direction: column;
   width: min(980px, 100%);
+  max-height: min(92dvh, 920px);
+  min-height: 0;
   background: #fff;
   border-radius: 18px;
   box-shadow: 0 20px 50px rgba(0,0,0,.2);
   padding: 28px;
-  margin-top: 20px;
+  overflow: hidden;
 }
 
 .field-label-row {
@@ -1681,12 +1688,15 @@ tbody tr:hover { background: #f8fafc; }
   overflow: hidden;
 }
 .modal-card-export .modal-body { min-width: 0; }
+.modal-head { flex-shrink: 0; }
 #exportFieldsBlock { min-width: 0; max-width: 100%; }
 #exportFieldList {
   max-height: 22vh;
   min-width: 0;
   max-width: 100%;
   overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
   grid-template-columns: repeat(auto-fill, minmax(136px, 1fr));
 }
 #exportPreview { min-width: 0; max-width: 100%; display: grid; gap: 16px; }
@@ -1768,6 +1778,8 @@ tbody tr:hover { background: #f8fafc; }
   max-width: 100%;
   min-width: 0;
   background: #fff;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y;
 }
 .export-preview-table {
   width: max-content;
@@ -1840,6 +1852,8 @@ tbody tr:hover { background: #f8fafc; }
   max-height: 46vh;
   overflow: auto;
   padding: 4px 2px;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
 }
 .picker-grid { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
 .check-chip {
@@ -1854,6 +1868,7 @@ tbody tr:hover { background: #f8fafc; }
   font-size: 14px;
   font-weight: 700;
   cursor: pointer;
+  touch-action: manipulation;
 }
 .check-chip input { width: 16px; height: 16px; margin: 0; }
 .check-chip:has(input:checked) {
@@ -1885,11 +1900,25 @@ tbody tr:hover { background: #f8fafc; }
   display: flex;
   justify-content: flex-end;
   gap: 8px;
-  margin-top: 8px;
+  flex-shrink: 0;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e2e8f0;
+  background: #fff;
 }
 .modal-kicker { margin: 0; font-size: 13px; font-weight: 700; color: #64748b; }
 .modal-head h3 { margin: 4px 0 0; font-size: 24px; font-weight: 800; }
-.modal-body { display: grid; gap: 16px; }
+.modal-body {
+  display: grid;
+  gap: 16px;
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+}
 
 .modal-card-tour {
   width: min(560px, 100%);
@@ -2271,7 +2300,7 @@ tbody tr:hover { background: #f8fafc; }
 
 @media (max-width: 780px) {
   html, body { font-size: 16px; }
-  .app { padding-bottom: 48px; }
+  .app { padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
   main { padding: 12px; }
   .topbar { padding: 16px 16px 0; }
   .topbar h1 { font-size: 22px; word-break: keep-all; }
@@ -2308,8 +2337,33 @@ tbody tr:hover { background: #f8fafc; }
   .result-next { flex-direction: column; align-items: stretch; }
   .result-next-actions { width: 100%; }
   .result-next-actions .btn, .result-next > .btn { width: 100%; }
-  .to-top { right: 14px; bottom: 16px; }
-  .quest-chip { right: 12px; bottom: 68px; }
+  .to-top { right: 14px; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); }
+  .quest-chip { right: 12px; bottom: calc(66px + env(safe-area-inset-bottom, 0px)); }
+  .quest-pointer { display: none !important; }
+  .modal { padding: 8px; align-items: stretch; }
+  .modal-card, .modal-card-export, .modal-card-narrow {
+    width: 100%;
+    max-height: calc(100dvh - 16px);
+    border-radius: 16px;
+  }
+  .modal-actions {
+    position: sticky;
+    bottom: 0;
+    margin: 0 -4px;
+    padding: 12px 4px calc(10px + env(safe-area-inset-bottom, 0px));
+  }
+  .modal-actions .btn { min-height: 44px; }
+  #exportFieldList,
+  .roster-grid,
+  .picker-grid {
+    max-height: none;
+    overflow: visible;
+  }
+  .export-preview-wrap {
+    max-height: 42vh;
+    overflow-x: auto;
+  }
+  .modal-body { touch-action: auto; }
   .quest-badge { right: 6px; top: -10px; font-size: 11px; }
   .quest-toast { top: 10px; font-size: 13px; }
   .how-jump { padding: 14px; }
@@ -2318,7 +2372,6 @@ tbody tr:hover { background: #f8fafc; }
   .export-name { grid-template-columns: 1fr; }
   .export-name label { padding-top: 0; }
   .fold-toggle { word-break: keep-all; }
-  .modal { padding: 16px 12px; }
   .modal-card, .modal-card-tour, .modal-card-narrow, .modal-card-export { padding: 20px 16px; }
   .tour-copy { font-size: 15px; }
   .tour-stage { min-height: 0; padding: 12px; }
