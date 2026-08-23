@@ -763,7 +763,7 @@ function parseOrderBooklet(raw) {
 
 function parseGroupHeader(line) {
   const src = String(line || "").replace(/^.*?(比賽組別:)/, "$1");
-  const withCode = src.match(/^比賽組別:\s*([A-Za-z]{1,3}\d{2})\s*(.+)$/);
+  const withCode = src.match(/^比賽組別:\s*([A-Za-z]{1,3}\d{2,4})\s*(.+)$/);
   const plain = src.match(/^比賽組別:\s*(.+)$/);
   if (!withCode && !plain) return null;
 
@@ -944,11 +944,11 @@ function parseSeedLine(line, header) {
     playerId = idMatch[2];
   }
 
-  const split = splitClubPlayer(rest) || { club: "", player: rest.replace(/\s+/g, "") };
-  if (!split.player || split.player.length < 2) return null;
+  const split = splitClubPlayer(rest) || { club: "", player: formatPlayerName(rest) || rest.trim() };
+  if (!split.player || String(split.player).replace(/\s+/g, "").length < 2) return null;
 
   return enrichItem({
-    player: split.player.replace(/\s+/g, ""),
+    player: formatPlayerName(split.player) || split.player,
     club: split.club,
     type: header.type || "",
     division: header.division || "",
@@ -976,23 +976,56 @@ function parseSeedLine(line, header) {
   });
 }
 
+function isEnglishName(text) {
+  const t = String(text || "").replace(/\s+/g, " ").trim();
+  if (t.length < 4 || t.length > 40) return false;
+  if (!/^(?:[A-Za-z][A-Za-z\-']+\s+){1,3}[A-Za-z][A-Za-z\-']+$/.test(t)) return false;
+  return !/(taekwondo|association|chinese|taipei|hong\s*kong|movement|athletic|foreigners|school|club)/i.test(t);
+}
+
+function formatPlayerName(name) {
+  const t = String(name || "").normalize("NFKC").replace(/\s+/g, " ").trim();
+  if (!t) return "";
+  const mixed = t.match(/^([\u4e00-\u9fff]{2,4})(?:\s+([A-Za-z][A-Za-z\-']*(?:\s+[A-Za-z][A-Za-z\-']*){0,3}))?$/);
+  if (mixed) return mixed[2] ? `${mixed[1]} ${mixed[2]}` : mixed[1];
+  if (isEnglishName(t)) return t;
+  const glued = t.replace(/\s+/g, "");
+  if (/^[\u4e00-\u9fff]{2,8}(?:[\/／][\u4e00-\u9fff]{2,8})*$/.test(glued)) return glued;
+  return t;
+}
+
 function splitClubPlayer(middle) {
   const cleaned = String(middle || "").normalize("NFKC").replace(/\*/g, "").replace(/\s+/g, " ").trim();
   if (!cleaned) return null;
 
-  const clubFirst = cleaned.match(/^(.+?(?:分館|中心|國小|國中|高中|小學|協會|跆訓|跆拳|道館|館|隊|團))\s+(.+)$/);
+  const clubFirst = cleaned.match(/^(.+?(?:分館|中心|國小|國中|高中|小學|協會|跆訓|跆拳道|道館|館|隊|團|會|學校))\s+(.+)$/);
   if (clubFirst) {
-    return {
-      club: clubFirst[1].trim(),
-      player: clubFirst[2].replace(/\s+/g, "")
-    };
+    const player = formatPlayerName(clubFirst[2]) || clubFirst[2].trim();
+    if (player) return { club: clubFirst[1].trim(), player };
+  }
+
+  const cjkEnd = cleaned.match(/^(.+?)\s+([\u4e00-\u9fff]{2,4})(?:\s+([A-Za-z][A-Za-z\-']*(?:\s+[A-Za-z][A-Za-z\-']*){0,3}))?$/);
+  if (cjkEnd && !NAME_STOP.has(cjkEnd[2])) {
+    return { club: cjkEnd[1].trim(), player: cjkEnd[3] ? `${cjkEnd[2]} ${cjkEnd[3]}` : cjkEnd[2] };
+  }
+
+  const words = cleaned.split(" ");
+  for (let n = Math.min(4, words.length); n >= 2; n--) {
+    const player = words.slice(-n).join(" ");
+    if (!isEnglishName(player)) continue;
+    return { club: words.slice(0, -n).join(" "), player };
+  }
+
+  const alone = formatPlayerName(cleaned);
+  if (alone && (isLikelyPersonName(alone) || isEnglishName(alone))) {
+    return { club: "", player: alone };
   }
 
   const parts = cleaned.split(" ");
-  if (parts.length < 2) return null;
+  if (parts.length < 2) return alone ? { club: "", player: alone } : null;
   return {
-    club: parts.slice(0, -1).join(""),
-    player: parts[parts.length - 1]
+    club: parts.slice(0, -1).join(" "),
+    player: formatPlayerName(parts[parts.length - 1]) || parts[parts.length - 1]
   };
 }
 
@@ -1709,7 +1742,10 @@ const NAME_HEADER_SKIP = new Set([
 ]);
 
 function isLikelyPersonName(text) {
-  const name = String(text || "").replace(/\s+/g, "");
+  const raw = String(text || "").replace(/\s+/g, " ").trim();
+  if (isEnglishName(raw)) return true;
+  const mixed = raw.match(/^([\u4e00-\u9fff]{2,4})(?:\s+[A-Za-z].*)?$/);
+  const name = mixed ? mixed[1] : raw.replace(/\s+/g, "");
   if (!/^[\u4e00-\u9fff]{2,4}$/.test(name)) return false;
   if (NAME_HEADER_SKIP.has(name)) return false;
   if (/(國小|國中|高中|小學|道館|協會|跆拳|年級|公斤|品勢|對打|場地|場次|護具)$/.test(name)) return false;
@@ -1735,6 +1771,10 @@ function harvestNamesFromPiece(piece) {
   const found = [];
   const text = String(piece || "").trim();
   if (!text) return found;
+  if (isEnglishName(text) || isLikelyPersonName(text)) {
+    found.push(formatPlayerName(text) || text);
+    return found;
+  }
 
   const tokens = text.split(/\s+/).filter(Boolean);
   if (tokens.length > 1) {
@@ -1821,7 +1861,7 @@ function applyTidiedNames(raw, mergeWithCurrent) {
   if (!tidied.names.length) {
     showNameTidyStatus(0);
     const el = document.getElementById("playerNamesStatus");
-    if (el) el.textContent = "沒辨識到姓名，請改貼中文名字";
+    if (el) el.textContent = "沒辨識到姓名，請改貼中文或英文名字";
     return false;
   }
   playerNamesEl.value = tidied.text;
@@ -1833,10 +1873,10 @@ function applyTidiedNames(raw, mergeWithCurrent) {
 }
 
 function itemMatchesName(item, names) {
-  const player = normalizeText(item.player);
+  const player = normalizeText(item.player).toLowerCase();
   if (!player) return false;
   return names.some((name) => {
-    const key = normalizeText(name);
+    const key = normalizeText(name).toLowerCase();
     if (!key) return false;
     return player === key || player.includes(key) || key.includes(player);
   });
@@ -2228,9 +2268,11 @@ function normalizePlayerLine(line) {
     return `${dashed[2]} ${dashed[3]}`;
   }
   const start = t.match(/^([1-9]\d?)\s+(.+)$/);
-  if (start && /[\u4e00-\u9fff]{2,}/.test(start[2]) && !/^(籤號|單位|姓名|公斤|量級|人)/.test(start[2])) {
-    if (!/^\d{2,4}(?:-\d+)?$/.test(start[2]) && !/^(公斤級?|量級)$/.test(start[2].replace(/\s/g, ""))) {
-      return `${start[1]} ${start[2]}`;
+  const startRest = start ? start[2] : "";
+  const startHasName = /[\u4e00-\u9fff]{2,}/.test(startRest) || /[A-Za-z]{2,}/.test(startRest);
+  if (start && startHasName && !/^(籤號|單位|姓名|公斤|量級|人|第一品勢|第二品勢)/.test(startRest)) {
+    if (!/^\d{2,4}(?:-\d+)?$/.test(startRest) && !/^(公斤級?|量級)$/.test(startRest.replace(/\s/g, ""))) {
+      return `${start[1]} ${startRest}`;
     }
   }
   const end = t.match(/^(.+?)\s+([1-9]\d?)$/);
@@ -2275,7 +2317,7 @@ function parsePoomsaeOrderTable(raw) {
       header.court = court;
       return;
     }
-    const title = line.match(/^(\d{2,4})\s*-?\s*(?:自由)?品勢出場順序表/);
+    const title = line.match(/^(\d{1,4})\s*-?\s*(?:自由|雙人|團體)?品勢出場順序表/);
     const matchHit = line.match(/場\s*次\s*:\s*(\d{2,4})/) || title;
     if (matchHit) {
       flush();
@@ -2318,7 +2360,7 @@ function parsePoomsaeOrderTable(raw) {
     const playerLine = person
       ? `${person[1]} ${person[2]} ${person[3]}`.trim()
       : normalizePlayerLine(line);
-    if (playerLine && /^\d/.test(line) && /[\u4e00-\u9fff]{2,}/.test(line)) {
+    if (playerLine && /^\d/.test(line) && (/[\u4e00-\u9fff]{2,}/.test(line) || /[A-Za-z]{2,}/.test(line))) {
       const item = parseSeedLine(playerLine, header);
       if (item) {
         if (person) {
@@ -2647,6 +2689,7 @@ function groupKey(item) {
   if (item.groupCode) return `${item.type || ""}｜${item.groupCode}`;
   const type = item.type || "未提及項目";
   const division = item.division || "未提及組別";
+  if (isOrderStyle(item) && item.matchNo) return `${type}｜${division}｜場${item.matchNo}`;
   return `${type}｜${division}`;
 }
 
@@ -2658,8 +2701,11 @@ function attachGroups(items) {
     map.get(key).push(item);
   });
   items.forEach((item) => {
+    const members = map.get(groupKey(item)) || [];
     item.groupKey = groupKey(item);
-    item.groupMembers = map.get(item.groupKey) || [];
+    item.groupMembers = members;
+    const n = members.filter((row) => row.player && row.player !== "輪空").length;
+    if (n) item.groupSize = n;
   });
 }
 
@@ -3198,8 +3244,16 @@ function openGroupModal(key) {
   if (!sample) return;
 
   modalTitle.textContent = displayValue(sample.division);
-  const roster = [...members].sort((a, b) => (a.seed || 99) - (b.seed || 99));
-  const size = sample.groupSize || roster.length;
+  const seen = new Set();
+  const roster = [...members]
+    .sort((a, b) => (a.seed || 99) - (b.seed || 99))
+    .filter((item) => {
+      const rowKey = `${item.seed || ""}|${item.player}|${item.club}|${item.matchNo || ""}`;
+      if (seen.has(rowKey)) return false;
+      seen.add(rowKey);
+      return true;
+    });
+  const size = roster.length;
 
   modalBody.innerHTML = `
     <div class="detail-grid">
