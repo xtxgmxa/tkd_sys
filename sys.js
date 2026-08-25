@@ -23,12 +23,14 @@ let competitionNameManual = false;
 const EXPORT_FIELDS = [
   { key: "選手", label: "選手" },
   { key: "項目", label: "項目" },
+  { key: "比賽日期", label: "比賽日期" },
   { key: "組別", label: "組別" },
   { key: "年齡層", label: "年齡層" },
   { key: "性別", label: "性別" },
   { key: "級別或品勢項目", label: "品勢或級別" },
   { key: "帶色段級", label: "帶色／段級" },
   { key: "場地", label: "場地" },
+  { key: "比賽地點", label: "比賽地點" },
   { key: "本場場次", label: "本場場次" },
   { key: "青紅方", label: "青紅／出場" },
   { key: "對手", label: "對手／順序" },
@@ -119,6 +121,11 @@ function loadSavedSettings() {
     if (Array.isArray(saved.exportFields) && saved.exportFields.length) {
       exportFields = saved.exportFields.filter((key) => EXPORT_FIELDS.some((item) => item.key === key));
       if (!exportFields.length) exportFields = EXPORT_FIELDS.map((item) => item.key);
+      ["比賽日期", "比賽地點"].forEach((key) => {
+        if (!exportFields.includes(key) && EXPORT_FIELDS.some((item) => item.key === key)) {
+          exportFields.push(key);
+        }
+      });
     }
     const savedMode = ["all", "club", "names", "auto", "either"].includes(saved.displayMode)
       ? saved.displayMode
@@ -338,6 +345,7 @@ analyzeBtn.addEventListener("click", async () => {
     applyInferredCompetitionName(inferCompetitionName(sourceTexts.join("\n")));
 
     parsedAll = dedupeItems(collected.map(enrichItem)).filter((item) => item.player !== "輪空");
+    fillEventMeta(parsedAll, sourceTexts.join("\n"));
     attachGroups(parsedAll);
     inferOpponents(parsedAll);
     parsedAll.forEach((item) => {
@@ -628,6 +636,197 @@ function normalizeSourceText(raw) {
     .trim();
 }
 
+function rocToGregorianYear(n) {
+  if (n >= 1911) return n;
+  if (n >= 80 && n <= 200) return n + 1911;
+  return n;
+}
+
+function parseEventDate(raw) {
+  const t = String(raw || "")
+    .normalize("NFKC")
+    .replace(/（[^）]*）/g, "")
+    .replace(/\([^)]*\)/g, "")
+    .replace(/\s+/g, "");
+  if (!t) return null;
+  let m = t.match(/(?:民國)?(\d{2,4})年(\d{1,2})月(\d{1,2})日/);
+  if (m) {
+    const srcYear = parseInt(m[1], 10);
+    const roc = srcYear < 1911;
+    return makeEventDate(rocToGregorianYear(srcYear), parseInt(m[2], 10), parseInt(m[3], 10), roc);
+  }
+  m = t.match(/(\d{4})[./-](\d{1,2})[./-](\d{1,2})/);
+  if (m) return makeEventDate(parseInt(m[1], 10), parseInt(m[2], 10), parseInt(m[3], 10), false);
+  m = t.match(/(\d{1,2})月(\d{1,2})日/);
+  if (m) return makeEventDate(0, parseInt(m[1], 10), parseInt(m[2], 10), false);
+  return null;
+}
+
+function makeEventDate(year, month, day, roc) {
+  if (!month || !day) return null;
+  const safeYear = year || 2000;
+  const dt = new Date(safeYear, month - 1, day);
+  if (dt.getMonth() !== month - 1 || dt.getDate() !== day) return null;
+  const week = "日一二三四五六"[dt.getDay()];
+  const key = `${String(year || 0).padStart(4, "0")}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  const short = `${month}/${day}`;
+  const display = year
+    ? (roc ? `${year - 1911}年${month}月${day}日` : `${year}年${month}月${day}日`)
+    : `${month}月${day}日`;
+  return { key, year, month, day, week, short, display, label: `${short}（${week}）` };
+}
+
+function splitVenueAddress(raw) {
+  let t = String(raw || "").replace(/\s+/g, " ").trim();
+  t = t.split(/比賽日期|比賽時間|比賽名稱|比賽組別|指導單位|主辦單位/)[0].trim();
+  t = t.replace(/[。．.、，,]+$/g, "").trim();
+  if (!t) return { venue: "", address: "" };
+  const paren = t.match(/^(.{2,48}?)\s*[\(（]([^)）]{4,90})[\)）]\s*$/);
+  if (paren && /[路街號巷弄縣市鄉鎮區]/.test(paren[2])) {
+    return { venue: paren[1].trim(), address: paren[2].replace(/\s+/g, " ").trim() };
+  }
+  return { venue: t, address: "" };
+}
+
+function applyDateTo(target, date) {
+  if (!target || !date) return;
+  target.eventDate = date.display;
+  target.eventDateKey = date.key;
+  target.eventDateLabel = date.label;
+  target.eventDateShort = date.short;
+}
+
+function copyEventMeta(target, source) {
+  if (!target || !source) return;
+  ["eventDate", "eventDateKey", "eventDateLabel", "eventDateShort", "eventVenue", "eventAddress"].forEach((key) => {
+    if (source[key] && !target[key]) target[key] = source[key];
+  });
+}
+
+function absorbEventMeta(line, target) {
+  if (!target) return false;
+  const t = String(line || "").replace(/[：]/g, ":");
+  if (!/比賽日期|比賽時間|比賽地點|地址\s*:/.test(t)) return false;
+  let hit = false;
+  const datePart = t.match(/比賽日期\s*:\s*(.+)$/) || t.match(/比賽時間\s*:\s*(.+)$/);
+  if (datePart) {
+    const date = parseEventDate(datePart[1].split(/比賽地點|比賽名稱|比賽組別|指導單位/)[0]);
+    if (date) {
+      applyDateTo(target, date);
+      hit = true;
+    }
+  }
+  const placePart = t.match(/比賽地點\s*:\s*(.+)$/);
+  if (placePart) {
+    const va = splitVenueAddress(placePart[1]);
+    if (va.venue) {
+      target.eventVenue = va.venue;
+      hit = true;
+    }
+    if (va.address) {
+      target.eventAddress = va.address;
+      hit = true;
+    }
+  }
+  const addrPart = t.match(/(?:地址)\s*:\s*(.+)$/);
+  if (addrPart && !target.eventAddress) {
+    const addr = addrPart[1].split(/比賽日期|比賽時間|比賽名稱/)[0].trim();
+    if (addr) {
+      target.eventAddress = addr;
+      hit = true;
+    }
+  }
+  return hit;
+}
+
+function inferDocEventMeta(raw) {
+  const text = String(raw || "").replace(/[：]/g, ":");
+  const doc = { date: null, venue: "", address: "", poomsaeDate: null, fightDate: null };
+  const lines = text.split(/\n/).slice(0, 80);
+  lines.forEach((line) => absorbEventMeta(line, doc));
+  if (doc.eventDateKey) {
+    doc.date = {
+      display: doc.eventDate,
+      key: doc.eventDateKey,
+      label: doc.eventDateLabel,
+      short: doc.eventDateShort
+    };
+  }
+  if (doc.eventVenue) doc.venue = doc.eventVenue;
+  if (doc.eventAddress) doc.address = doc.eventAddress;
+  const typed = (kind) => {
+    const re = new RegExp(
+      kind + "[^\\n]{0,90}?((?:民國)?\\d{2,4}\\s*年\\s*\\d{1,2}\\s*月\\s*\\d{1,2}\\s*日)",
+      "g"
+    );
+    const m = re.exec(text);
+    return m ? parseEventDate(m[1]) : null;
+  };
+  doc.poomsaeDate = typed("品勢");
+  doc.fightDate = typed("對打");
+  if (!doc.venue) {
+    const place = text.match(/比賽地點\s*:\s*([^\n]{2,90})/);
+    if (place) {
+      const va = splitVenueAddress(place[1]);
+      doc.venue = va.venue;
+      doc.address = doc.address || va.address;
+    }
+  }
+  return doc;
+}
+
+function fillEventMeta(items, raw) {
+  const doc = inferDocEventMeta(raw);
+  (items || []).forEach((item) => {
+    if (!item.eventDateKey) {
+      const typed = isFight(item) ? doc.fightDate : isPoomsae(item) ? doc.poomsaeDate : null;
+      const date = typed || doc.date;
+      if (date) applyDateTo(item, date);
+    }
+    if (!item.eventVenue && doc.venue) item.eventVenue = doc.venue;
+    if (!item.eventAddress && doc.address) item.eventAddress = doc.address;
+  });
+}
+
+function eventDatesOf(list) {
+  const map = new Map();
+  (list || []).forEach((item) => {
+    if (!item.eventDateKey) return;
+    if (!map.has(item.eventDateKey)) {
+      map.set(item.eventDateKey, {
+        key: item.eventDateKey,
+        short: item.eventDateShort || item.eventDateLabel || item.eventDate,
+        label: item.eventDateLabel || item.eventDate,
+        display: item.eventDate,
+        types: new Set()
+      });
+    }
+    if (item.type) map.get(item.eventDateKey).types.add(item.type);
+  });
+  return [...map.values()].sort((a, b) => a.key.localeCompare(b.key));
+}
+
+function eventPlacesOf(list) {
+  const out = [];
+  const seen = new Set();
+  (list || []).forEach((item) => {
+    const venue = String(item.eventVenue || "").trim();
+    const address = String(item.eventAddress || "").trim();
+    if (!venue && !address) return;
+    const key = venue + "|" + address;
+    if (seen.has(key)) return;
+    seen.add(key);
+    out.push({ venue, address });
+  });
+  return out;
+}
+
+function dateSortValue(item) {
+  const key = String(item?.eventDateKey || "");
+  if (!key) return 99999999;
+  return parseInt(key.replace(/-/g, ""), 10) || 99999999;
+}
+
 function parseInput(raw) {
   const text = normalizeSourceText(raw);
   if (!text) return [];
@@ -702,6 +901,7 @@ function parseOrderBooklet(raw) {
   let sectionType = "";
   let header = null;
   let buf = [];
+  const eventCtx = {};
 
   function flush() {
     if (!header) {
@@ -736,6 +936,8 @@ function parseOrderBooklet(raw) {
       continue;
     }
 
+    absorbEventMeta(line, eventCtx);
+
     const courtMatch = readCourtLine(line);
     if (courtMatch) {
       flush();
@@ -752,6 +954,7 @@ function parseOrderBooklet(raw) {
       if (header.type === "對練" || header.type === "競技") header.type = "對打";
       header.court = court;
       header.boutStyle = header.type === "品勢" ? "bracket" : (header.boutStyle || "bracket");
+      copyEventMeta(header, eventCtx);
       continue;
     }
 
@@ -812,6 +1015,7 @@ function parseCompactPoomsaeChart(raw) {
   let court = "";
   let header = null;
   let current = [];
+  const eventCtx = {};
 
   function flush() {
     if (!header || !current.length) {
@@ -826,6 +1030,7 @@ function parseCompactPoomsaeChart(raw) {
       item.division = header.division || item.division;
       item.eventName = header.eventName || item.eventName;
       item.groupSize = header.groupSize || current.length;
+      copyEventMeta(item, header);
       if (item.seed >= 1 && item.seed <= 4) seeds[item.seed] = item;
     });
     applySides(seeds[1], seeds[4]);
@@ -885,8 +1090,11 @@ function parseCompactPoomsaeChart(raw) {
         ageGroup: extractAgeGroup(division),
         belt: extractBelt(division)
       };
+      copyEventMeta(header, eventCtx);
       return;
     }
+    absorbEventMeta(line, header);
+    absorbEventMeta(line, eventCtx);
     if (/^(籤號|單位|姓名|編號)/.test(line) || !header) return;
     const normalized = line.replace(/^(\d+)月(\d+)日\s+/, "$1-$2 ");
     const dashed = normalized.match(/^(\d+)-([1-4])\s+(.+)$/);
@@ -972,7 +1180,13 @@ function parseSeedLine(line, header) {
     nextColor: "",
     nextOpponentHint: "",
     bye: false,
-    boutStyle: header.boutStyle || ""
+    boutStyle: header.boutStyle || "",
+    eventDate: header.eventDate || "",
+    eventDateKey: header.eventDateKey || "",
+    eventDateLabel: header.eventDateLabel || "",
+    eventDateShort: header.eventDateShort || "",
+    eventVenue: header.eventVenue || "",
+    eventAddress: header.eventAddress || ""
   });
 }
 
@@ -2234,6 +2448,7 @@ function parseMatchList(raw) {
       groupCode: (division.match(/^[A-Z]{2}\d{2}/) || [""])[0],
       boutStyle: type === "品勢" ? detectPoomsaeStyleFromText(joined) : "bracket"
     };
+    chunk.lines.forEach((line) => absorbEventMeta(line, header));
 
     const tokens = [];
     chunk.lines.forEach((line) => {
@@ -2299,6 +2514,7 @@ function parsePoomsaeOrderTable(raw) {
       item.eventName = header.eventName || [item.event1, item.event2].filter(Boolean).join("、");
       item.detailLabel = item.eventName || item.detailLabel;
       item.court = item.court || header.court || court;
+      copyEventMeta(item, header);
     });
   }
 
@@ -2332,6 +2548,7 @@ function parsePoomsaeOrderTable(raw) {
         court
       };
     }
+    absorbEventMeta(line, header);
     const divHit = line.match(/比賽組別:\s*(.+?)(?:\s+比賽人數:\s*(\d+)\s*人)?$/)
       || line.match(/組\s*別\s*:\s*(.+)$/);
     if (divHit) {
@@ -2432,6 +2649,7 @@ function parseLooseBracket(raw) {
       groupSize: parseInt((chunk.match(/(\d+)\s*人/) || [])[1] || "0", 10),
       boutStyle: /品勢/.test(chunk) ? detectPoomsaeStyleFromText(chunk) : "bracket"
     };
+    chunk.split(/\n/).forEach((line) => absorbEventMeta(line, header));
     const weightNum = parseInt(String(weightRaw || "").replace(/\D/g, ""), 10) || 0;
     const chunkLines = chunk.split(/\n/).map((line) => line.replace(/\s+/g, " ").trim()).filter(Boolean);
     const tokens = [];
@@ -2584,6 +2802,7 @@ function stampGroup(list, header) {
     if (!item) return;
     item.groupSize = header.groupSize || list.length;
     item.boutStyle = header.boutStyle || item.boutStyle || (isPoomsae(item) ? "bracket" : "bracket");
+    copyEventMeta(item, header);
   });
 }
 
@@ -2604,6 +2823,9 @@ function matchNoMeta(n) {
 }
 
 function sortMatches(a, b) {
+  const da = dateSortValue(a);
+  const db = dateSortValue(b);
+  if (da !== db) return da - db;
   const na = getNumber(a.matchNo || a.nextMatchNo);
   const nb = getNumber(b.matchNo || b.nextMatchNo);
   const ma = matchNoMeta(na);
@@ -2753,7 +2975,7 @@ function inferOpponents(items) {
 function dedupeItems(items) {
   const seen = new Set();
   return items.filter((item) => {
-    const key = [item.player, item.club, item.division, item.matchNo, item.opponent, item.type].join("|");
+    const key = [item.player, item.club, item.division, item.matchNo, item.opponent, item.type, item.eventDateKey || ""].join("|");
     if (!item.player || seen.has(key)) return false;
     seen.add(key);
     return true;
@@ -2821,7 +3043,7 @@ function updateNextPlayer() {
     first = `${item.color || ""} ｜ 場次 ${displayValue(item.matchNo)}`;
   }
   document.getElementById("nextPlayerInfo").textContent =
-    `${displayValue(item.type)} ｜ ${first} ｜ ${displayValue(item.court)} ｜ ${displayValue(item.division)}`;
+    `${item.eventDateLabel ? item.eventDateLabel + " ｜ " : ""}${displayValue(item.type)} ｜ ${first} ｜ ${displayValue(item.court)} ｜ ${displayValue(item.division)}`;
   document.getElementById("nextMatchNo").textContent = isOrderStyle(item)
     ? (item.matchNo || orderLabel(item))
     : (item.matchNo || item.nextMatchNo || "未提及");
@@ -2902,10 +3124,18 @@ function render() {
   if (data.length > 0) clearPlayerNamesPulse();
 
   renderGroupChips(data);
+  renderEventMetaBar(data);
 
+  let lastDate = "";
+  const multiDate = eventDatesOf(data).length > 1;
   data.forEach((item, index) => {
-    renderTableRow(item, index);
-    renderMobileCard(item, index);
+    if (multiDate && item.eventDateKey && item.eventDateKey !== lastDate) {
+      lastDate = item.eventDateKey;
+      resultBody.appendChild(dateBreakRow(item));
+      mobileCards.appendChild(dateBreakCard(item));
+    }
+    renderTableRow(item, index, multiDate);
+    renderMobileCard(item, index, multiDate);
   });
 }
 
@@ -3119,11 +3349,63 @@ function renderGroupChips(data) {
   });
 }
 
-function renderTableRow(item, index) {
+function dateBreakRow(item) {
+  const tr = document.createElement("tr");
+  tr.className = "date-break";
+  tr.innerHTML = `<td colspan="9"><span>${escapeHTML(item.eventDateLabel || item.eventDate || "")}</span>${item.eventDate && item.eventDateLabel ? `<small>${escapeHTML(item.eventDate)}</small>` : ""}</td>`;
+  return tr;
+}
+
+function dateBreakCard(item) {
+  const el = document.createElement("div");
+  el.className = "date-break-card";
+  el.textContent = item.eventDateLabel || item.eventDate || "";
+  return el;
+}
+
+function renderEventMetaBar(data) {
+  const box = document.getElementById("eventMetaBar");
+  if (!box) return;
+  const dates = eventDatesOf(data);
+  const places = eventPlacesOf(data);
+  if (!dates.length && !places.length) {
+    box.className = "event-meta hidden";
+    box.innerHTML = "";
+    return;
+  }
+  const multi = dates.length > 1;
+  box.className = `event-meta ${multi ? "is-many" : "is-one"}`;
+  const dateHtml = dates.length
+    ? (multi
+      ? `<div class="event-meta-dates"><strong>注意：這份有 ${dates.length} 天</strong><div class="event-date-pills">${dates.map((d) => {
+          const kinds = [...d.types].join("／");
+          return `<span>${escapeHTML(d.label)}${kinds ? `<small>${escapeHTML(kinds)}</small>` : ""}</span>`;
+        }).join("")}</div></div>`
+      : `<span class="event-date-chip">${escapeHTML(dates[0].label)}</span><span class="event-date-full">${escapeHTML(dates[0].display || "")}</span>`)
+    : "";
+  const place = places[0];
+  const placeHtml = place
+    ? `<button type="button" class="event-place-btn" id="eventPlaceBtn">${escapeHTML(place.venue || "比賽地點")}${place.address ? " · 看地址" : ""}</button>`
+    : "";
+  const addrHtml = places.some((p) => p.address)
+    ? `<div class="event-address hidden" id="eventAddressBox">${places.map((p) =>
+        `<p>${escapeHTML(p.venue || "比賽地點")}${p.address ? `<br>${escapeHTML(p.address)}` : ""}</p>`
+      ).join("")}</div>`
+    : "";
+  box.innerHTML = `${dateHtml}${placeHtml}${addrHtml}`;
+  document.getElementById("eventPlaceBtn")?.addEventListener("click", () => {
+    document.getElementById("eventAddressBox")?.classList.toggle("hidden");
+  });
+}
+
+function renderTableRow(item, index, multiDate) {
   const tr = document.createElement("tr");
   const typeClass = isFight(item) ? "fight" : isPoomsae(item) ? "po" : "unknown";
   tr.innerHTML = `
-    <td class="wave-cell">${waveLabel(item)}</td>
+    <td class="wave-cell">
+      <span class="wave-num">${waveLabel(item)}</span>
+      ${item.eventDateShort ? `<small class="wave-date${multiDate ? " is-diff" : ""}">${escapeHTML(item.eventDateShort)}</small>` : ""}
+    </td>
     <td><strong>${escapeHTML(item.player)}</strong></td>
     <td><span class="type ${typeClass}">${escapeHTML(displayValue(item.type))}</span></td>
     <td>
@@ -3169,7 +3451,7 @@ function cardRow(label, valueHtml) {
   return `<div class="card-row"><span>${label}</span><b>${valueHtml}</b></div>`;
 }
 
-function renderMobileCard(item, index) {
+function renderMobileCard(item, index, multiDate) {
   const card = document.createElement("div");
   card.className = "match-card";
   const typeClass = isFight(item) ? "fight" : isPoomsae(item) ? "po" : "unknown";
@@ -3209,13 +3491,15 @@ function renderMobileCard(item, index) {
     <div class="card-summary">
       <div class="card-match"><small>場次</small><strong>${escapeHTML(matchText)}</strong></div>
       <div class="card-summary-side">${summarySide}</div>
-      <div class="card-court">${escapeHTML(displayValue(item.court))}</div>
+      <div class="card-court">${item.eventDateShort ? `<span class="card-date${multiDate ? " is-diff" : ""}">${escapeHTML(item.eventDateLabel || item.eventDateShort)}</span>` : ""}${escapeHTML(displayValue(item.court))}</div>
     </div>
     <p class="card-hint">點卡片看詳情</p>
     <div class="card-detail">
       ${kpis}
       <div class="card-rows">
         ${cardRow("場地", escapeHTML(displayValue(item.court)))}
+        ${item.eventDate ? cardRow("比賽日期", escapeHTML(item.eventDateLabel || item.eventDate)) : ""}
+        ${item.eventVenue ? cardRow("比賽地點", escapeHTML(item.eventVenue) + (item.eventAddress ? "<small>" + escapeHTML(item.eventAddress) + "</small>" : "")) : ""}
         ${cardRow("組別", `${escapeHTML(displayValue(item.division))}${item.groupSize ? "<small>同組 " + item.groupSize + " 人</small>" : ""}`)}
         ${cardRow(isFight(item) ? "級別" : "品勢", escapeHTML(detail))}
         ${vsRow}
@@ -3266,6 +3550,9 @@ function openGroupModal(key) {
       ${!isFight(sample) && sample.event2 ? detailCell("第二品勢", sample.event2) : ""}
       ${detailCell("帶色 / 段級", sample.belt)}
       ${detailCell("場地", sample.court)}
+      ${sample.eventDate ? detailCell("比賽日期", sample.eventDateLabel || sample.eventDate) : ""}
+      ${sample.eventVenue ? detailCell("比賽地點", sample.eventVenue) : ""}
+      ${sample.eventAddress ? detailCell("地址", sample.eventAddress) : ""}
       ${detailCell("年齡層", sample.ageGroup)}
     </div>
 
@@ -3644,12 +3931,14 @@ function rowsForExport(data) {
     順序: index + 1,
     選手: item.player || "未提及",
     項目: displayValue(classifyType(item)),
+    比賽日期: item.eventDate || "未提及",
     組別: displayValue(item.division),
     年齡層: displayValue(item.ageGroup),
     性別: displayValue(item.gender),
     級別或品勢項目: displayValue(isPoomsae(item) ? formatPoomsaeLabel(item) : item.detailLabel),
     帶色段級: displayValue(item.belt),
     場地: displayValue(item.court),
+    比賽地點: [item.eventVenue, item.eventAddress].filter(Boolean).join("／") || "未提及",
     本場場次: item.bye && !item.matchNo ? "輪空晉級" : displayValue(item.matchNo),
     青紅方: sideExport(item),
     對手: opponentExport(item),
@@ -3842,7 +4131,7 @@ function renderExportPreview() {
       host.innerHTML = wordGroupsPreviewHtml();
       return;
     }
-    const headers = ["順序", "選手", "項目", "組別", "品勢／級別", "場地", "本場", "青紅／出場", "對手／順序", "下一場"];
+    const headers = ["順序", "選手", "日期", "項目", "組別", "品勢／級別", "場地", "本場", "青紅／出場", "對手／順序", "下一場"];
     host.innerHTML = previewDetailBlocks(club, headers, (list) => rowsForExport(list).map(wordPreviewRow), "Word 出場表");
     return;
   }
@@ -3863,14 +4152,14 @@ function renderExportPreview() {
   }
   if (tab === "poomsae") {
     host.innerHTML = previewTableHtml(
-      ["姓名", "組別", "場次", "第一品勢", "第二品勢", "指定品勢"],
+      ["姓名", "日期", "組別", "場次", "第一品勢", "第二品勢", "指定品勢"],
       poomsaeExportRows(exportItems()),
       `${club}｜品勢簡表`
     );
     return;
   }
   host.innerHTML = previewTableHtml(
-    ["姓名", "量級／組別", "場次／青紅"],
+    ["姓名", "日期", "量級／組別", "場次／青紅"],
     fightExportRows(exportItems()),
     `${club}｜對打簡表`
   );
@@ -3908,7 +4197,7 @@ function previewTableHtml(headers, rows, caption) {
 function wordPreviewRow(row) {
   const nextColor = row["下一場青紅"];
   const next = `${row["下一場場次"]}${nextColor && nextColor !== "－" && nextColor !== "未提及" ? " " + nextColor : ""}`;
-  return [row["順序"], row["選手"], row["項目"], row["組別"], row["級別或品勢項目"], row["場地"], row["本場場次"], row["青紅方"], row["對手"], next];
+  return [row["順序"], row["選手"], row["比賽日期"], row["項目"], row["組別"], row["級別或品勢項目"], row["場地"], row["本場場次"], row["青紅方"], row["對手"], next];
 }
 
 function wordGroupsPreviewHtml() {
@@ -3934,6 +4223,7 @@ function wordGroupsPreviewHtml() {
 function poomsaeExportRows(data) {
   return poomsaeItems(data || exportItems()).map((item) => [
     item.player || "",
+    item.eventDate || item.eventDateShort || "",
     compactDivision(item),
     formatMatchExport(item),
     shortPoomsae(item.event1 || "") || (item.event2 ? "" : formatPoomsaeLabel(item, true)),
@@ -3945,6 +4235,7 @@ function poomsaeExportRows(data) {
 function fightExportRows(data) {
   return fightItems(data || exportItems()).map((item) => [
     item.player || "",
+    item.eventDate || item.eventDateShort || "",
     compactDivision(item),
     formatColorSequence(item)
   ]);
@@ -3987,22 +4278,22 @@ function doExportExcel() {
   if (poomsae.length) {
     const poomRows = [
       [`${club}｜比賽資料`],
-      ["姓名", "組別", "場次", "第一品勢", "第二品勢", "指定品勢"],
+      ["姓名", "日期", "組別", "場次", "第一品勢", "第二品勢", "指定品勢"],
       ...poomsaeExportRows(poomsae)
     ];
     const poomSheet = XLSX.utils.aoa_to_sheet(poomRows);
-    poomSheet["!cols"] = [12, 32, 16, 16, 16, 18].map((wch) => ({ wch }));
+    poomSheet["!cols"] = [12, 16, 32, 16, 16, 16, 18].map((wch) => ({ wch }));
     XLSX.utils.book_append_sheet(workbook, poomSheet, "比賽資料");
   }
 
   if (fight.length) {
     const fightRows = [
       [`${club}｜對打比賽資料`],
-      ["姓名", "量級／組別", "場次／青紅"],
+      ["姓名", "日期", "量級／組別", "場次／青紅"],
       ...fightExportRows(fight)
     ];
     const fightSheet = XLSX.utils.aoa_to_sheet(fightRows);
-    fightSheet["!cols"] = [12, 32, 18].map((wch) => ({ wch }));
+    fightSheet["!cols"] = [12, 16, 32, 18].map((wch) => ({ wch }));
     XLSX.utils.book_append_sheet(workbook, fightSheet, "對打比賽資料");
   }
 
@@ -4029,6 +4320,7 @@ function wordTableRows(list) {
     <tr>
       <td>${escapeHTML(row["順序"])}</td>
       <td>${escapeHTML(row["選手"])}</td>
+      <td>${escapeHTML(row["比賽日期"])}</td>
       <td>${escapeHTML(row["項目"])}</td>
       <td>${escapeHTML(row["組別"])}</td>
       <td>${escapeHTML(row["級別或品勢項目"])}</td>
@@ -4061,7 +4353,7 @@ function doExportWord() {
   const fight = fightItems(source);
   const tableHead = `
           <tr>
-            <th>順序</th><th>選手</th><th>項目</th><th>組別</th>
+            <th>順序</th><th>選手</th><th>日期</th><th>項目</th><th>組別</th>
             <th>級別 / 品勢項目</th><th>場地</th><th>本場</th><th>青紅／出場</th><th>對手／順序</th><th>下一場</th>
           </tr>`;
   const tables = exportScope === "both" && poom.length && fight.length
@@ -4087,6 +4379,8 @@ function doExportWord() {
       <body>
         <h1>${escapeHTML(competition)}</h1>
         <p>道館：${escapeHTML(club)}</p>
+        ${eventDatesOf(source).length ? `<p>比賽日期：${escapeHTML(eventDatesOf(source).map((d) => d.display || d.label).join("、"))}</p>` : ""}
+        ${eventPlacesOf(source).length ? `<p>比賽地點：${escapeHTML(eventPlacesOf(source).map((p) => [p.venue, p.address].filter(Boolean).join(" ")).join("、"))}</p>` : ""}
         <p>選手 ${[...new Set(source.map((item) => item.player))].length} 人，出場 ${source.length} 筆。</p>
         ${tables}
         <h2>組別名單</h2>
