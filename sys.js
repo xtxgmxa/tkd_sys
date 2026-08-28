@@ -4021,13 +4021,51 @@ function collectExportFields() {
   return checked.filter((key) => EXPORT_FIELDS.some((item) => item.key === key));
 }
 
+function selectedExportFields(keys) {
+  const list = Array.isArray(keys) && keys.length ? keys : exportFields;
+  return EXPORT_FIELDS.filter((field) => list.includes(field.key));
+}
+
 function liveExportFields() {
   const modal = document.getElementById("exportModal");
   if (modal && !modal.classList.contains("hidden")) {
     const checked = collectExportFields();
-    return EXPORT_FIELDS.filter((field) => checked.includes(field.key));
+    if (checked.length) return selectedExportFields(checked);
   }
-  return EXPORT_FIELDS.filter((field) => exportFields.includes(field.key));
+  return selectedExportFields(exportFields);
+}
+
+function exportCell(row, key) {
+  const value = row[key];
+  return value == null ? "" : value;
+}
+
+function detailExportAoa(title, items, selected) {
+  const club = clubName.value.trim() || "本館";
+  const headers = selected.map((field) => field.label);
+  const body = rowsForExport(items).map((row) => selected.map((field) => exportCell(row, field.key)));
+  return [[`${club}｜${title}`], headers, ...body];
+}
+
+function sheetFromAoa(aoa, colCount) {
+  const cols = Math.max(colCount || (aoa.reduce((max, row) => Math.max(max, row.length), 0)), 1);
+  const rows = Math.max(aoa.length, 1);
+  const filled = aoa.map((row) => {
+    const line = row.slice(0, cols);
+    while (line.length < cols) line.push("");
+    return line.slice(0, cols);
+  });
+  const sheet = XLSX.utils.aoa_to_sheet(filled);
+  const last = XLSX.utils.encode_col(cols - 1) + String(rows);
+  Object.keys(sheet).forEach((addr) => {
+    if (addr[0] === "!") return;
+    const cell = XLSX.utils.decode_cell(addr);
+    if (cell.c >= cols || cell.r >= rows) delete sheet[addr];
+  });
+  sheet["!ref"] = `A1:${last}`;
+  if (cols > 1) sheet["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: cols - 1 } }];
+  sheet["!cols"] = Array.from({ length: cols }, () => ({ wch: 16 }));
+  return sheet;
 }
 
 function poomsaeItems(data) {
@@ -4151,18 +4189,14 @@ function renderExportPreview() {
     return;
   }
   if (tab === "poomsae") {
-    host.innerHTML = previewTableHtml(
-      ["姓名", "日期", "組別", "場次", "第一品勢", "第二品勢", "指定品勢"],
-      poomsaeExportRows(exportItems()),
-      `${club}｜品勢簡表`
-    );
+    const spec = poomsaeExportSpec(selected.map((field) => field.key));
+    const bundle = compactExportBundle(poomsaeItems(exportItems()), spec);
+    host.innerHTML = previewTableHtml(bundle.headers, bundle.rows, `${club}｜品勢簡表`);
     return;
   }
-  host.innerHTML = previewTableHtml(
-    ["姓名", "日期", "量級／組別", "場次／青紅"],
-    fightExportRows(exportItems()),
-    `${club}｜對打簡表`
-  );
+  const spec = fightExportSpec(selected.map((field) => field.key));
+  const bundle = compactExportBundle(fightItems(exportItems()), spec);
+  host.innerHTML = previewTableHtml(bundle.headers, bundle.rows, `${club}｜對打簡表`);
 }
 
 function previewDetailBlocks(club, headers, rowFn, kind) {
@@ -4220,35 +4254,60 @@ function wordGroupsPreviewHtml() {
   `;
 }
 
-function poomsaeExportRows(data) {
-  return poomsaeItems(data || exportItems()).map((item) => [
-    item.player || "",
-    item.eventDate || item.eventDateShort || "",
-    compactDivision(item),
-    formatMatchExport(item),
-    shortPoomsae(item.event1 || "") || (item.event2 ? "" : formatPoomsaeLabel(item, true)),
-    shortPoomsae(item.event2 || ""),
-    formatPoomsaeLabel(item, true)
-  ]);
+function poomsaeExportSpec(keys) {
+  const has = (key) => keys.includes(key);
+  const cols = [{ label: "姓名", wch: 12, pick: (item) => item.player || "" }];
+  if (has("比賽日期")) cols.push({ label: "日期", wch: 16, pick: (item) => item.eventDate || item.eventDateShort || "" });
+  if (has("組別")) cols.push({ label: "組別", wch: 32, pick: (item) => compactDivision(item) });
+  if (has("本場場次")) cols.push({ label: "場次", wch: 16, pick: (item) => formatMatchExport(item) });
+  if (has("級別或品勢項目")) {
+    cols.push({
+      label: "第一品勢",
+      wch: 16,
+      pick: (item) => shortPoomsae(item.event1 || "") || (item.event2 ? "" : formatPoomsaeLabel(item, true))
+    });
+    cols.push({ label: "第二品勢", wch: 16, pick: (item) => shortPoomsae(item.event2 || "") });
+    cols.push({ label: "指定品勢", wch: 18, pick: (item) => formatPoomsaeLabel(item, true) });
+  }
+  return cols;
 }
 
-function fightExportRows(data) {
-  return fightItems(data || exportItems()).map((item) => [
-    item.player || "",
-    item.eventDate || item.eventDateShort || "",
-    compactDivision(item),
-    formatColorSequence(item)
-  ]);
+function fightExportSpec(keys) {
+  const has = (key) => keys.includes(key);
+  const cols = [{ label: "姓名", wch: 12, pick: (item) => item.player || "" }];
+  if (has("比賽日期")) cols.push({ label: "日期", wch: 16, pick: (item) => item.eventDate || item.eventDateShort || "" });
+  if (has("組別") || has("級別或品勢項目")) cols.push({ label: "量級／組別", wch: 32, pick: (item) => compactDivision(item) });
+  if (has("本場場次") || has("青紅方")) cols.push({ label: "場次／青紅", wch: 18, pick: (item) => formatColorSequence(item) });
+  return cols;
 }
 
-function doExportExcel() {
+function compactExportBundle(items, spec) {
+  return {
+    headers: spec.map((col) => col.label),
+    rows: items.map((item) => spec.map((col) => col.pick(item))),
+    widths: spec.map((col) => col.wch || 14)
+  };
+}
+
+function poomsaeExportRows(data, keys) {
+  const spec = poomsaeExportSpec(keys || liveExportFields().map((field) => field.key));
+  return compactExportBundle(poomsaeItems(data || exportItems()), spec).rows;
+}
+
+function fightExportRows(data, keys) {
+  const spec = fightExportSpec(keys || liveExportFields().map((field) => field.key));
+  return compactExportBundle(fightItems(data || exportItems()), spec).rows;
+}
+
+function doExportExcel(fieldKeys) {
   const club = clubName.value.trim() || "本館";
   const workbook = XLSX.utils.book_new();
   const source = exportItems();
   const poomsae = poomsaeItems(source);
   const fight = fightItems(source);
   const other = source.filter((item) => classifyType(item) !== "品勢" && classifyType(item) !== "對打");
-  const selected = EXPORT_FIELDS.filter((field) => exportFields.includes(field.key));
+  const keys = Array.isArray(fieldKeys) && fieldKeys.length ? fieldKeys : exportFields;
+  const selected = selectedExportFields(keys);
   if (!selected.length) {
     alert("請先勾選要匯出的欄位");
     return;
@@ -4256,15 +4315,9 @@ function doExportExcel() {
 
   const addDetailSheet = (title, items) => {
     if (!items.length) return;
-    const rows = [
-      [`${club}｜${title}`],
-      selected.map((field) => field.label)
-    ];
-    rowsForExport(items).forEach((row) => {
-      rows.push(selected.map((field) => row[field.key] ?? ""));
-    });
-    const sheet = XLSX.utils.aoa_to_sheet(rows);
-    sheet["!cols"] = selected.map(() => ({ wch: 16 }));
+    const aoa = detailExportAoa(title, items, selected);
+    const sheet = sheetFromAoa(aoa, selected.length);
+    sheet["!cols"] = selected.map((field) => ({ wch: Math.min(28, Math.max(10, String(field.label).length + 6)) }));
     XLSX.utils.book_append_sheet(workbook, sheet, title.slice(0, 31));
   };
 
@@ -4276,36 +4329,28 @@ function doExportExcel() {
   }
 
   if (poomsae.length) {
-    const poomRows = [
-      [`${club}｜比賽資料`],
-      ["姓名", "日期", "組別", "場次", "第一品勢", "第二品勢", "指定品勢"],
-      ...poomsaeExportRows(poomsae)
-    ];
-    const poomSheet = XLSX.utils.aoa_to_sheet(poomRows);
-    poomSheet["!cols"] = [12, 16, 32, 16, 16, 16, 18].map((wch) => ({ wch }));
-    XLSX.utils.book_append_sheet(workbook, poomSheet, "比賽資料");
+    const spec = poomsaeExportSpec(keys);
+    const bundle = compactExportBundle(poomsae, spec);
+    const aoa = [[`${club}｜比賽資料`], bundle.headers, ...bundle.rows];
+    const sheet = sheetFromAoa(aoa, bundle.headers.length);
+    sheet["!cols"] = bundle.widths.map((wch) => ({ wch }));
+    XLSX.utils.book_append_sheet(workbook, sheet, "比賽資料");
   }
 
   if (fight.length) {
-    const fightRows = [
-      [`${club}｜對打比賽資料`],
-      ["姓名", "日期", "量級／組別", "場次／青紅"],
-      ...fightExportRows(fight)
-    ];
-    const fightSheet = XLSX.utils.aoa_to_sheet(fightRows);
-    fightSheet["!cols"] = [12, 16, 32, 18].map((wch) => ({ wch }));
-    XLSX.utils.book_append_sheet(workbook, fightSheet, "對打比賽資料");
+    const spec = fightExportSpec(keys);
+    const bundle = compactExportBundle(fight, spec);
+    const aoa = [[`${club}｜對打比賽資料`], bundle.headers, ...bundle.rows];
+    const sheet = sheetFromAoa(aoa, bundle.headers.length);
+    sheet["!cols"] = bundle.widths.map((wch) => ({ wch }));
+    XLSX.utils.book_append_sheet(workbook, sheet, "對打比賽資料");
   }
 
   if (other.length && !poomsae.length && !fight.length) {
-    const extra = [
-      [`${club}｜其他`],
-      ["姓名", "項目", "組別", "場次"]
-    ];
-    other.forEach((item) => {
-      extra.push([item.player || "", item.type || "", compactDivision(item), formatMatchExport(item)]);
-    });
-    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(extra), "其他");
+    const extraSelected = selected.filter((field) => ["選手", "項目", "組別", "本場場次"].includes(field.key));
+    const cols = extraSelected.length ? extraSelected : selected;
+    const aoa = detailExportAoa("其他", other, cols);
+    XLSX.utils.book_append_sheet(workbook, sheetFromAoa(aoa, cols.length), "其他");
   }
 
   try {
@@ -4558,7 +4603,7 @@ document.getElementById("exportConfirmBtn")?.addEventListener("click", () => {
   exportFields = selected;
   saveSettings();
   closeModal();
-  doExportExcel();
+  doExportExcel(selected);
 });
 
 function openRosterModal() {
