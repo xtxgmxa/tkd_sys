@@ -27,10 +27,138 @@ html, body {
   overflow-wrap: break-word;
 }
 
+html {
+  scroll-behavior: auto;
+}
+
 .app {
-  max-width: 1760px;
-  margin: 0 auto;
+  max-width: none;
+  margin: 0;
   padding-bottom: 88px;
+}
+
+.shell,
+.workspace,
+.app {
+  overflow: visible;
+}
+
+.shell {
+  display: block;
+}
+
+.workspace {
+  min-width: 0;
+}
+
+.side-nav {
+  display: none;
+}
+
+.side-kicker {
+  margin: 0 0 8px 10px;
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.side-kicker-later {
+  margin-top: 16px;
+}
+
+.side-nav button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin: 0;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: #334155;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+  transition: background .2s ease, color .2s ease, box-shadow .2s ease;
+}
+
+.side-nav button:hover {
+  background: var(--primary-soft);
+  color: var(--primary-hover);
+}
+
+.side-nav button.is-now {
+  background: var(--primary-soft);
+  color: var(--primary-hover);
+  box-shadow: inset 3px 0 0 var(--primary);
+}
+
+.side-nav button.is-done {
+  color: #0f766e;
+}
+
+.side-num {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: #e2e8f0;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.side-nav button.is-now .side-num {
+  background: var(--primary);
+  color: #fff;
+}
+
+.side-nav button.is-done .side-num {
+  background: #99f6e4;
+  color: #0f766e;
+}
+
+@media (min-width: 1100px) {
+  .shell {
+    display: flex;
+    align-items: stretch;
+    min-height: calc(100vh - 92px);
+  }
+
+  .side-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    position: sticky;
+    top: 0;
+    align-self: flex-start;
+    width: 208px;
+    flex-shrink: 0;
+    height: 100vh;
+    padding: 18px 12px 28px;
+    background: #eef2f7;
+    border-right: 1px solid #d5dce6;
+  }
+
+  .workspace {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .workspace main {
+    padding: 20px 28px 0;
+  }
+
+  .how-lead,
+  .how-guide {
+    display: none;
+  }
 }
 
 .site-footer {
@@ -175,7 +303,7 @@ main { padding: 24px 28px 0; }
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 10px 24px rgba(15, 23, 42, 0.04);
   border: 1px solid rgba(15, 23, 42, 0.04);
   border-left: 4px solid var(--primary);
-  transition: transform .2s ease, box-shadow .2s ease;
+  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
 }
 
 .how-guide li.is-now {
@@ -538,8 +666,13 @@ main { padding: 24px 28px 0; }
   font-weight: 800;
   box-shadow: 0 8px 18px rgba(245, 158, 11, 0.35);
   cursor: pointer;
-  animation: pointerBob .85s ease-in-out infinite;
   white-space: nowrap;
+}
+
+.quest-pointer-hand {
+  display: block;
+  line-height: 1;
+  animation: pointerBob .85s ease-in-out infinite;
 }
 
 .quest-pointer.hidden { display: none; }
@@ -584,8 +717,8 @@ main { padding: 24px 28px 0; }
 }
 
 @keyframes pointerBob {
-  0%, 100% { transform: translate(-50%, -100%); }
-  50% { transform: translate(-50%, calc(-100% - 8px)); }
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
 }
 
 @keyframes tourIn {
@@ -2603,30 +2736,4 @@ tbody tr:hover { background: #f8fafc; }
   .tour-stage { min-height: 0; padding: 12px; }
   .demo-find-chips { grid-template-columns: 1fr 1fr; }
   .demo-steps b, .demo-mini-head b { word-break: keep-all; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .quest-now,
-  .how-guide li.is-now,
-  .how-guide li.is-now .how-go,
-  .quest-badge,
-  .save-note-compact,
-  .save-note-compact::after,
-  .result-wait,
-  .result-wait::after,
-  .drop-zone.quest-now .drop-icon,
-  .quest-chip,
-  .quest-chip-dot,
-  .quest-pointer,
-  .quest-toast,
-  .result-next.is-ok,
-  .result-next.is-warn,
-  .modal-card-tour,
-  .tour-copy li,
-  .demo-btn,
-  .demo-pulse,
-  .demo-swap-scene.a,
-  .demo-swap-scene.b {
-    animation: none !important;
-  }
 }

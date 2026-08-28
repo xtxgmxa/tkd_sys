@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>跆拳道賽程整理工具</title>
     <!-- 上傳前請改 v=，避免瀏覽器沿用舊的 CSS／JS -->
-    <link rel="stylesheet" href="./sys.css?v=20260828-1">
+    <link rel="stylesheet" href="./sys.css?v=20260828-4">
 </head>
 <body>
     <div class="app">
@@ -26,6 +26,26 @@
           </div>
         </header>
 
+        <div class="shell">
+        <nav class="side-nav" id="sideNav" aria-label="頁面捷徑">
+          <p class="side-kicker">工作步驟</p>
+          <button type="button" data-side="files" data-jump="stepFiles">
+            <span class="side-num">1</span>選檔案
+          </button>
+          <button type="button" data-side="run" data-jump="stepRun">
+            <span class="side-num">2</span>整理賽程
+          </button>
+          <button type="button" data-side="result" data-jump="resultSlot">
+            <span class="side-num">3</span>出場表
+          </button>
+          <p class="side-kicker side-kicker-later">有需要再點</p>
+          <button type="button" data-side="who" data-jump="stepWho">找不到人</button>
+          <button type="button" data-side="paste" data-jump="stepPaste">改貼文字</button>
+          <p class="side-kicker side-kicker-later">其他</p>
+          <button type="button" data-side="custom">客製化統計</button>
+          <button type="button" data-side="tour">操作教學</button>
+        </nav>
+        <div class="workspace">
         <main id="matchApp">
           <p class="how-lead">照 1 → 2 → 3。點步驟會跳過去。平常不用往下翻找設定。</p>
           <ol class="how-guide">
@@ -361,6 +381,8 @@
         <footer class="site-footer">
           <p>程式開發者 Mr.Bill　版權所有 © 2026</p>
         </footer>
+        </div>
+        </div>
     </div>
 
     <p class="quest-toast" id="questToast" role="status"></p>
@@ -371,7 +393,7 @@
       </button>
       <button type="button" class="quest-chip-x" id="coachHudClose" aria-label="關閉提示">×</button>
     </div>
-    <button type="button" class="quest-pointer hidden" id="questPointer" aria-hidden="true">下滑</button>
+    <button type="button" class="quest-pointer hidden" id="questPointer" aria-hidden="true"><span class="quest-pointer-hand">👇</span></button>
     <button type="button" class="to-top" id="toTopBtn" aria-label="回到最上面">↑</button>
 
     <div id="groupModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
@@ -511,6 +533,6 @@
     <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <script src="./sys.js?v=20260828-1"></script>
+    <script src="./sys.js?v=20260828-4"></script>
 </body>
 </html>

@@ -3139,20 +3139,91 @@ function render() {
   });
 }
 
+let scrollAnim = 0;
+
+function stopScrollAnim() {
+  if (!scrollAnim) return;
+  cancelAnimationFrame(scrollAnim);
+  scrollAnim = 0;
+}
+
+function docScroller() {
+  return document.scrollingElement || document.documentElement;
+}
+
+function pageYOf(el, block) {
+  const rect = el.getBoundingClientRect();
+  const margin = Number.parseFloat(window.getComputedStyle(el).scrollMarginTop) || 12;
+  const root = docScroller();
+  const y = root.scrollTop + rect.top;
+  if (block === "center") return Math.max(0, y - (window.innerHeight - rect.height) / 2);
+  return Math.max(0, y - margin);
+}
+
+function animateScrollTo(top, duration) {
+  const root = docScroller();
+  const start = root.scrollTop;
+  const dist = top - start;
+  stopScrollAnim();
+  if (Math.abs(dist) < 2 || duration <= 0) {
+    root.scrollTop = top;
+    return;
+  }
+  const t0 = performance.now();
+  const tick = (now) => {
+    const t = Math.min(1, (now - t0) / duration);
+    const ease = 1 - (1 - t) * (1 - t) * (1 - t);
+    root.scrollTop = start + dist * ease;
+    if (t < 1) scrollAnim = requestAnimationFrame(tick);
+    else scrollAnim = 0;
+  };
+  scrollAnim = requestAnimationFrame(tick);
+}
+
+function smoothGo(el, block) {
+  if (!el) return;
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  animateScrollTo(pageYOf(el, block || "start"), reduced ? 320 : 520);
+}
+
 function jumpToStep(id) {
   const el = document.getElementById(id);
   if (!el) return;
   document.querySelectorAll(".step-flash").forEach((node) => node.classList.remove("step-flash"));
-  el.scrollIntoView({ behavior: "smooth", block: "start" });
-  requestAnimationFrame(() => {
-    el.classList.add("step-flash");
-    window.setTimeout(() => el.classList.remove("step-flash"), 1700);
-  });
+  void el.offsetWidth;
+  smoothGo(el, "start");
+  el.classList.add("step-flash");
+  window.setTimeout(() => el.classList.remove("step-flash"), 1700);
 }
 
 document.querySelectorAll("[data-jump]").forEach((btn) => {
+  if (btn.closest("#sideNav")) return;
   btn.addEventListener("click", () => jumpToStep(btn.dataset.jump));
 });
+
+document.getElementById("sideNav")?.addEventListener("click", (event) => {
+  const btn = event.target.closest("[data-side]");
+  if (!btn) return;
+  const side = btn.dataset.side;
+  if (side === "tour") {
+    openTour();
+    return;
+  }
+  if (side === "custom") {
+    switchTab("custom");
+    animateScrollTo(0, 420);
+    return;
+  }
+  switchTab("match");
+  if (side === "who") setFoldOpen("whoFindToggle", "whoFindPanel", true);
+  if (side === "paste") setFoldOpen("pasteToggle", "pastePanel", true);
+  if (btn.dataset.jump) {
+    requestAnimationFrame(() => jumpToStep(btn.dataset.jump));
+  }
+});
+
+window.addEventListener("wheel", stopScrollAnim, { passive: true });
+window.addEventListener("touchstart", stopScrollAnim, { passive: true });
 
 const toTopBtn = document.getElementById("toTopBtn");
 const syncToTopBtn = () => {
@@ -3161,7 +3232,7 @@ const syncToTopBtn = () => {
 window.addEventListener("scroll", syncToTopBtn, { passive: true });
 syncToTopBtn();
 toTopBtn?.addEventListener("click", () => {
-  window.scrollTo({ top: 0, behavior: "smooth" });
+  animateScrollTo(0, 420);
 });
 
 let lastQuestKey = "";
@@ -3229,13 +3300,41 @@ function placeQuestPointer(el) {
   }
   ptr.classList.remove("hidden");
   ptr.classList.add("is-on-target");
-  ptr.textContent = "👇";
   ptr.style.left = `${box.left + box.width / 2}px`;
   ptr.style.top = `${Math.max(18, box.top - 4)}px`;
 }
 
+function updateSideNav(quest) {
+  const onCustom = !document.getElementById("customApp")?.classList.contains("hidden");
+  document.querySelectorAll("#sideNav [data-side]").forEach((btn) => {
+    const side = btn.dataset.side;
+    let now = false;
+    let done = false;
+    if (side === "custom") {
+      now = onCustom;
+    } else if (side === "tour") {
+      now = !document.getElementById("tourModal")?.classList.contains("hidden");
+    } else if (!onCustom && side === "files") {
+      now = quest?.how === 0;
+      done = Boolean(quest && (quest.key === "done" || quest.how > 0));
+    } else if (!onCustom && side === "run") {
+      now = quest?.how === 1;
+      done = Boolean(quest && (quest.key === "done" || quest.how > 1));
+    } else if (!onCustom && side === "result") {
+      now = quest?.key === "look";
+      done = quest?.key === "done";
+    } else if (!onCustom && side === "who") {
+      now = quest?.key === "find";
+    }
+    btn.classList.toggle("is-now", now);
+    btn.classList.toggle("is-done", Boolean(done && !now));
+    btn.setAttribute("aria-current", now ? "step" : "false");
+  });
+}
+
 function updateQuest() {
   const quest = currentQuest();
+  updateSideNav(quest);
   document.querySelectorAll(".how-guide li").forEach((li) => {
     const index = Number(li.dataset.how);
     const now = Boolean(quest && quest.key !== "done" && quest.how === index);
@@ -3320,9 +3419,7 @@ function guideToPlayerNames() {
   const field = document.getElementById("playerNamesField");
   if (!field) return;
   field.classList.add("field-pulse");
-  requestAnimationFrame(() => {
-    field.scrollIntoView({ behavior: "smooth", block: "center" });
-  });
+  requestAnimationFrame(() => smoothGo(field, "center"));
 }
 
 function clearPlayerNamesPulse() {
