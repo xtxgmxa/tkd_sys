@@ -577,38 +577,87 @@ async function extractPdfText(buffer) {
   return pages.join("\n\n");
 }
 
-function contentToText(content) {
-  const items = (content.items || []).filter((item) => item.str != null && item.str !== "");
+function mappedPdfItems(content) {
+  return (content.items || [])
+    .filter((item) => item.str != null && item.str !== "")
+    .map((item) => ({
+      str: item.str,
+      x: item.transform ? item.transform[4] : 0,
+      y: item.transform ? item.transform[5] : 0,
+      w: item.width || 0
+    }));
+}
+
+function itemsToLines(items) {
   if (!items.length) return "";
-
   const sorted = items.slice().sort((a, b) => {
-    const yA = a.transform ? a.transform[5] : 0;
-    const yB = b.transform ? b.transform[5] : 0;
-    if (Math.abs(yA - yB) > 4) return yB - yA;
-    const xA = a.transform ? a.transform[4] : 0;
-    const xB = b.transform ? b.transform[4] : 0;
-    return xA - xB;
+    if (Math.abs(a.y - b.y) > 4) return b.y - a.y;
+    return a.x - b.x;
   });
-
   const lines = [];
   let currentY = null;
   let current = [];
-
   sorted.forEach((item) => {
-    const y = item.transform ? item.transform[5] : 0;
-    const x = item.transform ? item.transform[4] : 0;
-    if (currentY === null || Math.abs(y - currentY) <= 4) {
-      current.push({ x, str: item.str });
-      currentY = currentY === null ? y : currentY;
+    if (currentY === null || Math.abs(item.y - currentY) <= 4) {
+      current.push({ x: item.x, str: item.str });
+      currentY = currentY === null ? item.y : currentY;
     } else {
       lines.push(joinLine(current));
-      current = [{ x, str: item.str }];
-      currentY = y;
+      current = [{ x: item.x, str: item.str }];
+      currentY = item.y;
     }
   });
-
   if (current.length) lines.push(joinLine(current));
   return lines.join("\n");
+}
+
+function splitPdfColumns(items) {
+  if (items.length < 20) return [items];
+  const minX = Math.min(...items.map((item) => item.x));
+  const maxX = Math.max(...items.map((item) => item.x + item.w));
+  if (maxX - minX < 420) return [items];
+  const buckets = {};
+  items.forEach((item) => {
+    const key = Math.round(item.x / 8);
+    buckets[key] = (buckets[key] || 0) + 1;
+  });
+  const used = Object.keys(buckets).map(Number).sort((a, b) => a - b);
+  const gaps = [];
+  let gapStart = null;
+  for (let b = used[0]; b <= used[used.length - 1]; b++) {
+    if (!buckets[b]) {
+      if (gapStart == null) gapStart = b;
+    } else if (gapStart != null) {
+      if (b - gapStart >= 5) gaps.push(((gapStart + b) / 2) * 8);
+      gapStart = null;
+    }
+  }
+  if (gaps.length < 1 || gaps.length > 2) return [items];
+  const cols = Array.from({ length: gaps.length + 1 }, () => []);
+  items.forEach((item) => {
+    let idx = gaps.length;
+    for (let i = 0; i < gaps.length; i++) {
+      if (item.x < gaps[i]) {
+        idx = i;
+        break;
+      }
+    }
+    cols[idx].push(item);
+  });
+  const filled = cols.filter((col) => col.length > 12);
+  return filled.length >= 2 ? filled : [items];
+}
+
+function contentToText(content) {
+  const items = mappedPdfItems(content);
+  if (!items.length) return "";
+  const blob = items.map((item) => item.str).join("");
+  const orderPage = /出場順序表/.test(blob) && !/MATCH LIST|組別量級/.test(blob);
+  if (orderPage) {
+    const cols = splitPdfColumns(items);
+    if (cols.length > 1) return cols.map((col) => itemsToLines(col)).filter(Boolean).join("\n");
+  }
+  return itemsToLines(items);
 }
 
 function joinLine(parts) {
@@ -835,23 +884,20 @@ function parseInput(raw) {
     return parseCoachNotes(text);
   }
 
-  if (/比賽組別/.test(text) && /籤號/.test(text) && /編號/.test(text)) {
-    const booklet = parseOrderBooklet(text);
-    if (booklet.length) return booklet;
-  }
+  const collected = [];
+  const take = (arr) => {
+    if (arr && arr.length) collected.push(...arr);
+  };
 
-  if (/MATCH LIST|組別量級/.test(text)) {
-    const list = parseMatchList(text);
-    if (list.length) return list;
-  }
-
-  const sequentialPoomsae = /品勢出場順序表|第一品勢|第二品勢/.test(text)
+  const hasOrderTable = /品勢出場順序表|競速踢擊出場順序表|第一品勢|第二品勢/.test(text)
     || (/場\s*次/.test(text) && /籤號/.test(text) && /品勢/.test(text) && !/編號/.test(text));
-  const bracketPoomsae = /比賽組別:\s*P/i.test(text) && /編號/.test(text);
-  if (sequentialPoomsae && !bracketPoomsae) {
-    const order = parsePoomsaeOrderTable(text);
-    if (order.length) return order;
-  }
+  const hasMatchList = /MATCH LIST|組別量級/.test(text);
+  const hasBooklet = /比賽組別/.test(text) && /籤號/.test(text) && /編號/.test(text);
+
+  if (hasOrderTable) take(parsePoomsaeOrderTable(text));
+  if (hasMatchList) take(parseMatchList(text));
+  if (hasBooklet) take(parseOrderBooklet(text));
+  if (collected.length) return collected;
 
   if (/人數\s*:\s*\d+\s*人/.test(text) && /場次\s*:/.test(text) && /\d+-[1-4]\s/.test(text) && !/比賽組別/.test(text)) {
     const chart = parseCompactPoomsaeChart(text);
@@ -1212,7 +1258,12 @@ function splitClubPlayer(middle) {
   const cleaned = String(middle || "").normalize("NFKC").replace(/\*/g, "").replace(/\s+/g, " ").trim();
   if (!cleaned) return null;
 
-  const clubFirst = cleaned.match(/^(.+?(?:分館|中心|國小|國中|高中|小學|協會|跆訓|跆拳道|道館|館|隊|團|會|學校))\s+(.+)$/);
+  const slashTeam = cleaned.match(/^(.+?)\s+([\u4e00-\u9fff]{2,8}(?:[\/／][\u4e00-\u9fff]{2,8})+)$/);
+  if (slashTeam && /[\u4e00-\u9fff]{2,}/.test(slashTeam[1])) {
+    return { club: slashTeam[1].replace(/舘/g, "館").trim(), player: slashTeam[2].replace(/\s+/g, "") };
+  }
+
+  const clubFirst = cleaned.match(/^(.+?(?:分館|中心|國小|國中|高中|小學|協會|跆訓|跆拳道|跆促|道館|館|隊|團|會|學校))\s+(.+)$/);
   if (clubFirst) {
     const player = formatPlayerName(clubFirst[2]) || clubFirst[2].trim();
     if (player) return { club: clubFirst[1].trim(), player };
@@ -2418,6 +2469,10 @@ function parseMatchList(raw) {
       court = courtHit;
       return;
     }
+    if (/出場順序表/.test(line)) {
+      flushChunk();
+      return;
+    }
     if (/^(MATCH LIST|組別量級)/.test(line)) {
       flushChunk();
       current.push(line);
@@ -2533,15 +2588,17 @@ function parsePoomsaeOrderTable(raw) {
       header.court = court;
       return;
     }
-    const title = line.match(/^(\d{1,4})\s*-?\s*(?:自由|雙人|團體)?品勢出場順序表/);
+    if (/^(MATCH LIST|組別量級)/.test(line)) return;
+    const title = line.match(/^(\d{1,4})\s*-?\s*(?:自由|雙人|團體|個人)?(品勢|競速踢擊)出場順序表/);
     const matchHit = line.match(/場\s*次\s*:\s*(\d{2,4})/) || title;
     if (matchHit) {
       flush();
+      const kick = (title && title[2] === "競速踢擊") || /競速踢擊/.test(line);
       header = {
         type: "品勢",
         division: "",
         matchNo: matchHit[1],
-        eventName: "",
+        eventName: kick ? "競速踢擊" : "",
         event1: "",
         event2: "",
         groupSize: 0,
@@ -2573,7 +2630,10 @@ function parsePoomsaeOrderTable(raw) {
       }
     }
     if (/^(籤號|單位|姓名)/.test(line) && !/^\d/.test(line)) return;
-    const person = line.match(/^(\d{1,2})\s+(.+?)\s+([\u4e00-\u9fff]{2,6}(?:\s*[\/／]\s*[\u4e00-\u9fff]{2,6})*)(?:\s+(\d{3,8}))?\s*$/);
+    if (/競賽方式/.test(line) && /踢擊/.test(line)) {
+      header.eventName = header.eventName || "競速踢擊";
+    }
+    const person = line.match(/^(\d{1,2})\s+(.+?)\s+([\u4e00-\u9fff]{2,8}(?:\s*[\/／]\s*[\u4e00-\u9fff]{2,8})*)(?:\s+(\d{3,8}))?\s*$/);
     const playerLine = person
       ? `${person[1]} ${person[2]} ${person[3]}`.trim()
       : normalizePlayerLine(line);
