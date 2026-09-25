@@ -1222,6 +1222,7 @@ function parseSeedLine(line, header) {
     playerId,
     groupCode: header.groupCode,
     groupSize: header.groupSize,
+    laterBouts: [],
     nextMatchNo: "",
     nextColor: "",
     nextOpponentHint: "",
@@ -1294,6 +1295,38 @@ function splitClubPlayer(middle) {
   };
 }
 
+function addLaterBout(item, no, color, hint) {
+  if (!item || !no || no === "X") return;
+  const matchNo = String(no);
+  if (String(item.matchNo || "") === matchNo) return;
+  if (!Array.isArray(item.laterBouts)) item.laterBouts = [];
+  if (item.laterBouts.some((bout) => String(bout.no) === matchNo)) return;
+  item.laterBouts.push({ no: matchNo, color: color || "", hint: hint || "" });
+  if (!item.nextMatchNo) {
+    item.nextMatchNo = matchNo;
+    item.nextColor = color || "";
+    item.nextOpponentHint = hint || "";
+  }
+}
+
+function laterBoutsOf(item) {
+  if (Array.isArray(item?.laterBouts) && item.laterBouts.length) {
+    return item.laterBouts.filter((bout) => bout && bout.no);
+  }
+  if (item?.nextMatchNo) {
+    return [{ no: item.nextMatchNo, color: item.nextColor || "", hint: item.nextOpponentHint || "" }];
+  }
+  return [];
+}
+
+function formatLaterMatchList(item, withColor) {
+  return laterBoutsOf(item).map((bout) => {
+    const no = String(bout.no || "");
+    if (!no) return "";
+    return withColor ? `${no}${shortColor(bout.color)}` : no;
+  }).filter(Boolean).join("、");
+}
+
 function winnerHint(players, matchNo) {
   const list = (players || []).filter(Boolean);
   if (!list.length) return "未提及";
@@ -1343,9 +1376,11 @@ function applyBracketLogic(seeds, m14, m32, mFinal) {
     s1.nextMatchNo = "";
     s1.nextColor = "";
     s1.nextOpponentHint = "";
+    s1.laterBouts = [];
     s2.nextMatchNo = "";
     s2.nextColor = "";
     s2.nextOpponentHint = "";
+    s2.laterBouts = [];
     return;
   }
 
@@ -1353,32 +1388,16 @@ function applyBracketLogic(seeds, m14, m32, mFinal) {
     if (!item.matchNo && finalNo) {
       item.bye = true;
       item.opponent = item.opponent || "輪空";
-      item.nextMatchNo = finalNo;
-      item.nextColor = "青方";
-      item.nextOpponentHint = winnerHint(bot, m32);
-      return;
     }
-    if (finalNo) {
-      item.nextMatchNo = finalNo;
-      item.nextColor = "青方";
-      item.nextOpponentHint = winnerHint(bot, m32);
-    }
+    if (finalNo) addLaterBout(item, finalNo, "青方", winnerHint(bot, m32));
   });
 
   bot.forEach((item) => {
     if (!item.matchNo && finalNo) {
       item.bye = true;
       item.opponent = item.opponent || "輪空";
-      item.nextMatchNo = finalNo;
-      item.nextColor = "紅方";
-      item.nextOpponentHint = winnerHint(top, m14);
-      return;
     }
-    if (finalNo) {
-      item.nextMatchNo = finalNo;
-      item.nextColor = "紅方";
-      item.nextOpponentHint = winnerHint(top, m14);
-    }
+    if (finalNo) addLaterBout(item, finalNo, "紅方", winnerHint(top, m14));
   });
 }
 
@@ -2424,7 +2443,8 @@ function parseCoachNotes(raw) {
     const eventName = extractPoomsaeEvent(leftover);
     const division = leftover.replace(eventName, "").trim();
     const first = bouts[0] || {};
-    const next = bouts[1] || {};
+    const later = bouts.slice(1);
+    const next = later[0] || {};
     const type = (eventName || /章|馬步|品勢/.test(leftover))
       ? "品勢"
       : (/公斤|對打/.test(leftover) ? "對打" : (bouts.length ? "品勢" : ""));
@@ -2442,6 +2462,7 @@ function parseCoachNotes(raw) {
       nextMatchNo: next.no || "",
       nextColor: next.color || "",
       nextOpponentHint: "",
+      laterBouts: later.map((bout) => ({ no: bout.no, color: bout.color || "", hint: "" })),
       bye: false,
       source: "notes",
       boutStyle: bouts.length ? "bracket" : (type === "品勢" ? "order" : "bracket")
@@ -2823,18 +2844,8 @@ function linkBracketSides(leftNodes, rightNodes, matchNo) {
   const leftHint = winnerHint(left, left.length === 1 && !left[0].matchNo ? "" : subtreeExitMatch(leftNodes));
   const rightHint = winnerHint(right, right.length === 1 && !right[0].matchNo ? "" : subtreeExitMatch(rightNodes));
 
-  left.forEach((item) => {
-    if (item.nextMatchNo) return;
-    item.nextMatchNo = matchNo;
-    item.nextColor = "青方";
-    item.nextOpponentHint = rightHint;
-  });
-  right.forEach((item) => {
-    if (item.nextMatchNo) return;
-    item.nextMatchNo = matchNo;
-    item.nextColor = "紅方";
-    item.nextOpponentHint = leftHint;
-  });
+  left.forEach((item) => addLaterBout(item, matchNo, "青方", rightHint));
+  right.forEach((item) => addLaterBout(item, matchNo, "紅方", leftHint));
 }
 
 function pairSequentialMatches(nodes) {
@@ -2850,10 +2861,7 @@ function pairSequentialMatches(nodes) {
   const leftover = nodes.filter((node) => node.kind === "m" && !used.has(node.no)).map((node) => node.no);
   unpaired.forEach((item) => {
     item.bye = true;
-    if (leftover[0] && !item.nextMatchNo) {
-      item.nextMatchNo = leftover.shift();
-      item.nextColor = "青方";
-    }
+    if (leftover[0]) addLaterBout(item, leftover.shift(), "青方", "");
   });
 }
 
@@ -3098,7 +3106,7 @@ function updateNextPlayer() {
   if (isOrderStyle(item)) {
     first = `場次 ${displayValue(item.matchNo)} ｜ ${orderLabel(item)}`;
   } else if (item.bye && !item.matchNo) {
-    first = `輪空晉級 ｜ 下一場 ${item.nextMatchNo || ""} ${item.nextColor || ""}`;
+    first = `輪空晉級 ｜ 下一場 ${formatLaterMatchList(item, true) || (item.nextMatchNo || "")}`;
   } else {
     first = `${item.color || ""} ｜ 場次 ${displayValue(item.matchNo)}`;
   }
@@ -3579,7 +3587,7 @@ function renderTableRow(item, index, multiDate) {
     <td class="${!isOrderStyle(item) && isMissing(item.opponent) ? "missing" : ""}">
       ${opponentCell(item)}
     </td>
-    <td class="next-cell ${isOrderStyle(item) || (isMissing(item.nextMatchNo) && isMissing(item.nextOpponentHint)) ? (isOrderStyle(item) ? "" : "missing") : ""}">
+    <td class="next-cell ${isOrderStyle(item) || (!laterBoutsOf(item).length && isMissing(item.nextOpponentHint)) ? (isOrderStyle(item) ? "" : "missing") : ""}">
       ${isOrderStyle(item) ? "－" : formatNextMatch(item)}
     </td>
   `;
@@ -3594,10 +3602,11 @@ function sideBadge(color) {
 }
 
 function formatNextMatch(item) {
-  if (item.nextMatchNo) {
-    const color = item.nextColor ? " " + item.nextColor : "";
-    const hint = item.nextOpponentHint ? "<br><small>vs " + escapeHTML(item.nextOpponentHint) + "</small>" : "";
-    return `場次 ${escapeHTML(item.nextMatchNo)}${escapeHTML(color)}${hint}`;
+  const list = laterBoutsOf(item);
+  if (list.length) {
+    const main = list.map((bout) => `場次 ${escapeHTML(bout.no)}${bout.color ? " " + escapeHTML(bout.color) : ""}`).join("、");
+    const hint = list[0].hint ? "<br><small>vs " + escapeHTML(list[0].hint) + "</small>" : "";
+    return main + hint;
   }
   if (item.nextOpponentHint) return `對上 ${escapeHTML(item.nextOpponentHint)}`;
   return "未提及";
@@ -3637,8 +3646,8 @@ function renderMobileCard(item, index, multiDate) {
     : cardRow("對手", `${escapeHTML(displayValue(item.opponent))}${item.opponentClub ? "<small>" + escapeHTML(item.opponentClub) + "</small>" : ""}`);
   const nextRow = isOrderStyle(item)
     ? ""
-    : cardRow("下一場", item.nextMatchNo
-      ? escapeHTML("場次 " + item.nextMatchNo + (item.nextColor ? " " + item.nextColor : "") + (item.nextOpponentHint ? " vs " + item.nextOpponentHint : ""))
+    : cardRow("下一場", laterBoutsOf(item).length
+      ? escapeHTML(laterBoutsOf(item).map((bout) => "場次 " + bout.no + (bout.color ? " " + bout.color : "")).join("、") + (item.nextOpponentHint ? " vs " + item.nextOpponentHint : ""))
       : (item.nextOpponentHint ? "對上 " + escapeHTML(item.nextOpponentHint) : "未提及"));
   card.innerHTML = `
     <div class="card-head">
@@ -3739,8 +3748,8 @@ function matchPlanRow(item) {
       : `本場：場次 ${displayValue(item.matchNo)} ${item.color || ""} vs ${displayValue(item.opponent)}${item.opponentClub ? "（" + item.opponentClub + "）" : ""}`);
   const next = isOrderStyle(item)
     ? "一個個上場打分，打完換下一位"
-    : (item.nextMatchNo
-      ? `贏了下一場：場次 ${item.nextMatchNo} ${item.nextColor || ""} vs ${item.nextOpponentHint || "未提及"}`
+    : (laterBoutsOf(item).length
+      ? `贏了之後：${laterBoutsOf(item).map((bout) => `場次 ${bout.no}${bout.color ? " " + bout.color : ""}`).join("、")}${item.nextOpponentHint ? " vs " + item.nextOpponentHint : ""}`
       : (item.nextOpponentHint ? `贏了下一場：對上 ${item.nextOpponentHint}` : "贏了下一場：未提及"));
   return `
     <div class="person-row ours">
@@ -4100,9 +4109,9 @@ function rowsForExport(data) {
     青紅方: sideExport(item),
     對手: opponentExport(item),
     對手道館: isOrderStyle(item) ? "－" : displayValue(item.opponentClub),
-    下一場場次: isOrderStyle(item) ? "－" : displayValue(item.nextMatchNo),
-    下一場青紅: isOrderStyle(item) ? "－" : displayValue(item.nextColor),
-    下一場對手: isOrderStyle(item) ? "－" : displayValue(item.nextOpponentHint),
+    下一場場次: isOrderStyle(item) ? "－" : (formatLaterMatchList(item, false) || displayValue(item.nextMatchNo)),
+    下一場青紅: isOrderStyle(item) ? "－" : (laterBoutsOf(item).map((bout) => bout.color).filter(Boolean).join("、") || displayValue(item.nextColor)),
+    下一場對手: isOrderStyle(item) ? "－" : (laterBoutsOf(item).map((bout) => bout.hint).filter(Boolean).join("；") || displayValue(item.nextOpponentHint)),
     籤號: item.seed || "未提及",
     同組人數: item.groupSize || "未提及",
     本館: displayValue(item.club)
@@ -4306,7 +4315,7 @@ function renderExportTabs() {
           : "這張詳細資料做成出場表。簡表另外有，不會混在這張。"),
       groups: "組別名單：同組有誰、籤號、出場順序。",
       poomsae: "品勢簡表：每人一列，有場次、第一／第二品勢。詳細表另外一張。",
-      fight: "對打簡表：每人一列，有場次、青紅。詳細表另外一張。"
+      fight: "對打簡表：每人一列。場次會依籤表列出本場、贏了之後的準決賽／決賽。"
     };
     note.textContent = notes[exportPreviewTab] || "";
   }
@@ -4434,7 +4443,7 @@ function fightExportSpec(keys) {
   const cols = [{ label: "姓名", wch: 12, pick: (item) => item.player || "" }];
   if (has("比賽日期")) cols.push({ label: "日期", wch: 16, pick: (item) => item.eventDate || item.eventDateShort || "" });
   if (has("組別") || has("級別或品勢項目")) cols.push({ label: "量級／組別", wch: 32, pick: (item) => compactDivision(item) });
-  if (has("本場場次") || has("青紅方")) cols.push({ label: "場次／青紅", wch: 18, pick: (item) => formatColorSequence(item) });
+  if (has("本場場次") || has("青紅方")) cols.push({ label: "場次／青紅", wch: 28, pick: (item) => formatColorSequence(item) });
   return cols;
 }
 
@@ -4541,7 +4550,7 @@ function wordGroupsHtml(list) {
       `<li>${escapeHTML(displayValue(item.player))}（${escapeHTML(displayValue(item.club))}）
        籤號${item.seed || "?"} ${escapeHTML(isOrderStyle(item) ? orderLabel(item) : (item.color || ""))} 場次${escapeHTML(displayValue(item.matchNo))}
        ${isOrderStyle(item) ? "輪流出場" : "對手：" + escapeHTML(displayValue(item.opponent))}
-       ${isOrderStyle(item) ? "" : "下一場：" + escapeHTML(displayValue(item.nextMatchNo)) + " " + escapeHTML(item.nextColor || "")}</li>`
+       ${isOrderStyle(item) ? "" : "下一場：" + escapeHTML(formatLaterMatchList(item, true) || displayValue(item.nextMatchNo))}</li>`
     ).join("");
     return `<h3>${escapeHTML(displayValue(group.type))} ｜ ${escapeHTML(displayValue(group.division))}</h3><ul>${people}</ul>`;
   }).join("");
@@ -4600,12 +4609,14 @@ function doExportWord() {
 
 function formatColorSequence(item) {
   const parts = [];
-  if (item.bye && !item.matchNo && item.nextMatchNo) {
-    parts.push(`${item.nextMatchNo}${shortColor(item.nextColor)}`);
-    return parts.join("、");
+  if (item.bye && !item.matchNo) {
+    return formatLaterMatchList(item, true) || "未提及";
   }
   if (item.matchNo) parts.push(`${item.matchNo}${shortColor(item.color)}`);
-  if (item.nextMatchNo) parts.push(`${item.nextMatchNo}${shortColor(item.nextColor)}`);
+  laterBoutsOf(item).forEach((bout) => {
+    const text = `${bout.no}${shortColor(bout.color)}`;
+    if (text && !parts.includes(text)) parts.push(text);
+  });
   return parts.filter(Boolean).join("、") || "未提及";
 }
 
