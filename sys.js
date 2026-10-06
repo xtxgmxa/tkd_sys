@@ -889,7 +889,7 @@ function parseInput(raw) {
     if (arr && arr.length) collected.push(...arr);
   };
 
-  const hasOrderTable = /品勢出場順序表|競速踢擊出場順序表|第一品勢|第二品勢/.test(text)
+  const hasOrderTable = /品勢出場順序表|競速踢擊出場順序表|擊破出場順序表|疊杯出場順序表|第一品勢|第二品勢/.test(text)
     || (/場\s*次/.test(text) && /籤號/.test(text) && /品勢/.test(text) && !/編號/.test(text));
   const hasMatchList = /MATCH LIST|組別量級/.test(text);
   const hasBooklet = /比賽組別/.test(text) && /籤號/.test(text) && /編號/.test(text);
@@ -2529,17 +2529,31 @@ function parseMatchList(raw) {
     const tokens = [];
     chunk.lines.forEach((line) => {
       if (/^(No|單位|姓名|籤號|護具|比賽名稱|比賽地點|比賽日期|MATCH LIST|組別量級)/.test(line)) return;
-      const playerLine = normalizePlayerLine(line);
-      if (playerLine) {
-        tokens.push({ kind: "p", line: playerLine });
-        return;
+      const peeled = peelMatchNumbers(line);
+      const playerLine = normalizePlayerLine(peeled.rest);
+      if (playerLine) tokens.push({ kind: "p", line: playerLine });
+      peeled.nums.forEach((no) => tokens.push({ kind: "m", no }));
+      if (!playerLine && !peeled.nums.length) {
+        const matchLine = peeled.rest.match(/^(\d{3,4}(?:-\d+)?)$/);
+        if (matchLine) tokens.push({ kind: "m", no: matchLine[1] });
       }
-      const matchLine = line.match(/^(\d{3,4})(?:-\d+)?$/);
-      if (matchLine) tokens.push({ kind: "m", no: matchLine[1] });
     });
     items.push(...tokensToBracketItems(tokens, header));
   });
   return items;
+}
+
+function peelMatchNumbers(line) {
+  let rest = String(line || "").replace(/\s+/g, " ").trim();
+  rest = rest.replace(/^[A-Z]{1,3}\d{2,4}(?=\s+[\u4e00-\u9fffA-Za-z])/, "").trim();
+  const nums = [];
+  while (true) {
+    const hit = rest.match(/^(.*\S)\s+(\d{3,4}(?:-\d+)?)$/);
+    if (!hit) break;
+    nums.unshift(hit[2]);
+    rest = hit[1].trim();
+  }
+  return { rest, nums };
 }
 
 function detectPoomsaeStyleFromText(text) {
@@ -2552,8 +2566,10 @@ function detectPoomsaeStyleFromText(text) {
 
 function normalizePlayerLine(line) {
   const t = String(line || "").replace(/\|/g, " ").replace(/\s+/g, " ").trim()
-    .replace(/^(\d+)月(\d+)日\s+/, "$1-$2 ");
-  if (!t || /^(籤號|單位|姓名|No|護具|量級|比賽)/.test(t)) return "";
+    .replace(/^(\d+)月(\d+)日\s+/, "$1-$2 ")
+    .replace(/\s*(Cycle|3-3-3|3-6-3)\s*$/i, "");
+  if (!t || /^(籤號|單位|姓名|No|護具|量級|比賽|項目|第一次|第二次|第三次|最佳成績|名次|踢擊次數|擊破數量)$/.test(t)) return "";
+  if (/^(3-3-3|3-6-3|Cycle)$/i.test(t)) return "";
   const dashed = t.match(/^(\d+)-([1-4])\s+(.+)$/);
   if (dashed && /[\u4e00-\u9fffA-Za-z]/.test(dashed[3])) {
     return `${dashed[2]} ${dashed[3]}`;
@@ -2610,16 +2626,16 @@ function parsePoomsaeOrderTable(raw) {
       return;
     }
     if (/^(MATCH LIST|組別量級)/.test(line)) return;
-    const title = line.match(/^(\d{1,4})\s*-?\s*(?:自由|雙人|團體|個人)?(品勢|競速踢擊)出場順序表/);
+    const title = line.match(/^(\d{1,4})\s*-?\s*(?:自由|雙人|團體|個人)?(品勢|競速踢擊|擊破|疊杯)出場順序表/);
     const matchHit = line.match(/場\s*次\s*:\s*(\d{2,4})/) || title;
     if (matchHit) {
       flush();
-      const kick = (title && title[2] === "競速踢擊") || /競速踢擊/.test(line);
+      const kind = title ? title[2] : (/競速踢擊/.test(line) ? "競速踢擊" : /擊破/.test(line) ? "擊破" : /疊杯/.test(line) ? "疊杯" : "品勢");
       header = {
         type: "品勢",
         division: "",
         matchNo: matchHit[1],
-        eventName: kick ? "競速踢擊" : "",
+        eventName: kind === "品勢" ? "" : kind,
         event1: "",
         event2: "",
         groupSize: 0,
@@ -2654,17 +2670,23 @@ function parsePoomsaeOrderTable(raw) {
     if (/競賽方式/.test(line) && /踢擊/.test(line)) {
       header.eventName = header.eventName || "競速踢擊";
     }
-    const person = line.match(/^(\d{1,2})\s+(.+?)\s+([\u4e00-\u9fff]{2,8}(?:\s*[\/／]\s*[\u4e00-\u9fff]{2,8})*)(?:\s+(\d{3,8}))?\s*$/);
+    if (/競賽方式/.test(line) && /擊破/.test(line)) {
+      header.eventName = header.eventName || "擊破";
+    }
+    const cleanedLine = line.replace(/\s*(Cycle|3-3-3|3-6-3)\s*$/i, "").trim();
+    if (!cleanedLine || /^(3-3-3|3-6-3|Cycle)$/i.test(cleanedLine)) return;
+    const person = cleanedLine.match(/^(\d{1,2})\s+(.+?)\s+([\u4e00-\u9fff]{2,8}(?:\s*[\/／]\s*[\u4e00-\u9fff]{2,8})*)(?:\s+(\d{3,8}))?\s*$/);
     const playerLine = person
       ? `${person[1]} ${person[2]} ${person[3]}`.trim()
-      : normalizePlayerLine(line);
-    if (playerLine && /^\d/.test(line) && (/[\u4e00-\u9fff]{2,}/.test(line) || /[A-Za-z]{2,}/.test(line))) {
+      : normalizePlayerLine(cleanedLine);
+    if (playerLine && /^\d/.test(cleanedLine) && (/[\u4e00-\u9fff]{2,}/.test(cleanedLine) || /[A-Za-z]{2,}/.test(cleanedLine))) {
       const item = parseSeedLine(playerLine, header);
       if (item) {
         if (person) {
           item.player = person[3].replace(/\s+/g, "");
           item.club = person[2].replace(/\s+/g, " ").trim();
         }
+        if (current.some((row) => row.seed === item.seed && row.player === item.player)) return;
         item.matchNo = header.matchNo || "";
         item.boutStyle = "order";
         item.orderNo = item.seed;
