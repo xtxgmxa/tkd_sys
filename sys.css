@@ -1405,6 +1405,8 @@ textarea {
 .btn.gray { background: #e8edf3; color: #1e293b; }
 .btn.export { background: #059669; color: #fff; }
 .btn.export:hover { background: #047857; }
+.btn.poster { background: #0f172a; color: #fff; }
+.btn.poster:hover { background: #1e293b; }
 .btn:hover { filter: brightness(0.98); }
 .btn:disabled { opacity: .55; cursor: wait; }
 
@@ -2052,6 +2054,80 @@ tbody tr:hover { background: #f8fafc; }
   grid-template-columns: repeat(auto-fill, minmax(136px, 1fr));
 }
 #exportPreview { min-width: 0; max-width: 100%; display: grid; gap: 16px; }
+
+.poster-preview-wrap {
+  overflow: auto;
+  max-height: min(58vh, 640px);
+  background: #e2e8f0;
+  border-radius: 12px;
+  padding: 12px;
+}
+.poster-sheet {
+  width: 100%;
+  margin: 0 auto;
+  background: #fff;
+  color: #111;
+  padding: 20px 12px 28px;
+  font-family: "Microsoft JhengHei", "PingFang TC", "Noto Sans TC", sans-serif;
+}
+.poster-preview-wrap .poster-sheet h2 {
+  font-size: 26px;
+  letter-spacing: 0.12em;
+}
+.poster-block + .poster-block { margin-top: 40px; }
+.poster-sheet h2 {
+  margin: 0 0 14px;
+  text-align: center;
+  font-size: 34px;
+  font-weight: 900;
+  letter-spacing: 0.22em;
+}
+.poster-sheet table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: auto;
+}
+.poster-sheet th,
+.poster-sheet td {
+  border: 1px solid #2f2f2f;
+  padding: 8px 10px;
+  text-align: center;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.35;
+  word-break: break-word;
+}
+.poster-sheet th {
+  background: #4a4a4a;
+  color: #fff;
+  font-size: 16px;
+}
+.poster-name { text-align: left; white-space: nowrap; }
+.poster-div { text-align: left; }
+.poster-col-name { width: 12%; }
+.poster-col-div { width: 46%; }
+.poster-col-match { width: 18%; }
+.poster-col-form { width: 24%; }
+.poster-bout-r { color: #d70015; }
+.poster-bout-b { color: #155dfc; }
+.poster-capture-host {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 1100px;
+  background: #fff;
+  pointer-events: none;
+  opacity: 0.01;
+  z-index: 0;
+}
+.poster-capture-host .poster-sheet {
+  width: 1100px;
+  padding: 36px 32px 48px;
+}
+.poster-capture-host .poster-sheet h2 {
+  font-size: 34px;
+  letter-spacing: 0.22em;
+}
 .export-scope {
   display: flex;
   flex-wrap: wrap;

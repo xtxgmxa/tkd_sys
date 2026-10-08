@@ -4066,7 +4066,8 @@ function exportFileName(ext) {
   const competition = document.getElementById("competitionName").value.trim() || "賽程";
   const club = clubName.value.trim() || "本館";
   const extra = exportScope === "品勢" ? "-品勢" : exportScope === "對打" ? "-對打" : "";
-  return `${safeFileName(`${competition}-${club}${extra}`)}.${ext}`;
+  const kindTag = exportKind === "image" ? "-總表" : "";
+  return `${safeFileName(`${competition}-${club}${extra}${kindTag}`)}.${ext}`;
 }
 
 function downloadWorkbook(wb, filename) {
@@ -4165,8 +4166,16 @@ document.getElementById("exportWordBtn").addEventListener("click", () => {
   openExportModal("word");
 });
 
+document.getElementById("exportPosterBtn")?.addEventListener("click", () => {
+  if (!allData.length) {
+    alert("沒有可匯出的資料");
+    return;
+  }
+  openExportModal("image");
+});
+
 function openExportModal(kind) {
-  exportKind = kind === "word" ? "word" : "excel";
+  exportKind = kind === "word" ? "word" : kind === "image" ? "image" : "excel";
   exportPreviewTab = "all";
   exportScope = (currentFilter === "品勢" || currentFilter === "對打") ? currentFilter : "both";
   if (!poomsaeItems(allData).length) exportScope = fightItems(allData).length ? "對打" : "both";
@@ -4175,16 +4184,22 @@ function openExportModal(kind) {
   const modal = document.getElementById("exportModal");
   if (!box || !modal) {
     if (exportKind === "word") doExportWord();
+    else if (exportKind === "image") doExportPoster();
     else doExportExcel();
     return;
   }
   const kicker = document.getElementById("exportKicker");
   const title = document.getElementById("exportTitle");
   const confirm = document.getElementById("exportConfirmBtn");
-  if (kicker) kicker.textContent = exportKind === "word" ? "匯出 Word" : "匯出 Excel";
-  if (title) title.textContent = "先看長什麼樣子";
-  if (confirm) confirm.textContent = exportKind === "word" ? "下載 Word" : "下載 Excel";
-  document.getElementById("exportFieldsFold")?.classList.toggle("hidden", exportKind === "word");
+  if (kicker) kicker.textContent = exportKind === "word" ? "匯出 Word" : exportKind === "image" ? "下載總表圖片" : "匯出 Excel";
+  if (title) title.textContent = exportKind === "image" ? "依整理後的資料做成總表" : "先看長什麼樣子";
+  if (confirm) {
+    confirm.textContent = exportKind === "word" ? "下載 Word" : exportKind === "image" ? "下載總表圖片" : "下載 Excel";
+    confirm.classList.toggle("poster", exportKind === "image");
+    confirm.classList.toggle("export", exportKind !== "image");
+  }
+  document.getElementById("exportFieldsFold")?.classList.toggle("hidden", exportKind !== "excel");
+  document.getElementById("exportSheetsFold")?.classList.toggle("hidden", exportKind === "image");
   const sheetsTitle = document.getElementById("exportSheetsTitle");
   if (sheetsTitle) sheetsTitle.textContent = exportKind === "word" ? "看出場表預覽" : "看簡表長什麼樣子";
   const sheetsNote = document.getElementById("exportSheetsNote");
@@ -4296,6 +4311,9 @@ function renderExportScope() {
 function exportSummaryText() {
   const n = exportItems().length;
   const both = exportHasBothTypes() && exportScope === "both";
+  if (exportKind === "image") {
+    return "用整理後的資料做成總表圖：品勢／擊破看出場順序，對打把同一人贏下去的場次併成第一場、第二場。紅字 R＝紅方，藍字 B＝青方。文字與出場表相同，不會另外縮寫。";
+  }
   if (exportKind === "word") {
     if (both) return `會匯出 ${n} 筆。品勢、對打分開兩個表。看完再按下載。`;
     return `會匯出 ${n} 筆，做成出場表。看完再按下載。`;
@@ -4348,8 +4366,15 @@ function renderExportPreview() {
   const fileHint = document.getElementById("exportFileHint");
   const summary = document.getElementById("exportSummary");
   if (summary) summary.textContent = exportSummaryText();
-  if (fileHint) fileHint.textContent = `檔名會是 ${exportFileName(exportKind === "word" ? "doc" : "xlsx")}`;
+  if (fileHint) {
+    const ext = exportKind === "word" ? "doc" : exportKind === "image" ? "png" : "xlsx";
+    fileHint.textContent = `檔名會是 ${exportFileName(ext)}`;
+  }
   if (!host) return;
+  if (exportKind === "image") {
+    host.innerHTML = posterPreviewHtml();
+    return;
+  }
   const club = clubName.value.trim() || "本館";
   const tab = exportSheetsOpen() ? exportPreviewTab : "all";
   if (exportKind === "word") {
@@ -4628,6 +4653,304 @@ function doExportWord() {
   );
 }
 
+const POSTER_ROUND_NAMES = ["第一場", "第二場", "第三場", "第四場", "第五場", "第六場", "第七場", "第八場"];
+
+function posterEventKind(item) {
+  const text = [item.eventName, item.type, item.division, item.detailLabel].join("");
+  if (/疊杯/.test(text)) return "疊杯";
+  if (/擊破/.test(text)) return "擊破";
+  if (/競速/.test(text)) return "競速";
+  return "品勢";
+}
+
+function posterMatchNoKey(no) {
+  const text = String(no || "");
+  const main = parseInt(text.match(/\d+/)?.[0] || "0", 10);
+  const extra = text.includes("-") ? parseInt(text.split("-")[1], 10) || 0 : 0;
+  return main * 100 + extra;
+}
+
+function posterOrderMatch(item) {
+  const text = formatMatchExport(item);
+  return !text || text === "未提及" ? "－" : text;
+}
+
+function posterSpecifiedPoomsae(item) {
+  const kind = posterEventKind(item);
+  if (kind !== "品勢") {
+    return String(item.eventName || item.detailLabel || kind).trim() || kind;
+  }
+  const first = String(item.event1 || "").trim();
+  const second = String(item.event2 || "").trim();
+  if (first && second && first !== second) return `${first}、${second}`;
+  return first || second || String(item.eventName || item.detailLabel || "").trim() || "－";
+}
+
+function posterDivisionLabel(item) {
+  const text = compactDivision(item);
+  return !text || text === "未提及" ? "－" : text;
+}
+
+function posterBoutToken(no, color) {
+  const side = /紅/.test(color || "") ? "R" : /青|藍/.test(color || "") ? "B" : "";
+  return { no: String(no || ""), side, text: `${no || ""}${side}` };
+}
+
+function posterOrderRows(items) {
+  return items.slice().sort((a, b) => {
+    const match = posterMatchNoKey(a.matchNo) - posterMatchNoKey(b.matchNo);
+    if (match) return match;
+    return (Number(a.orderNo || a.seed) || 0) - (Number(b.orderNo || b.seed) || 0);
+  }).map((item) => ({
+    name: item.player || "－",
+    division: posterDivisionLabel(item),
+    match: posterOrderMatch(item),
+    form: posterSpecifiedPoomsae(item)
+  }));
+}
+
+function posterFightRows(items) {
+  const groups = new Map();
+  items.forEach((item) => {
+    const division = posterDivisionLabel(item);
+    const key = [item.player, division, item.groupCode || ""].join("\t");
+    if (!groups.has(key)) {
+      groups.set(key, { name: item.player || "－", division, bouts: [] });
+    }
+    const row = groups.get(key);
+    const add = (no, color) => {
+      if (!no || no === "X") return;
+      const token = posterBoutToken(no, color);
+      if (!token.text || row.bouts.some((bout) => bout.text === token.text)) return;
+      row.bouts.push(token);
+    };
+    if (!(item.bye && !item.matchNo)) add(item.matchNo, item.color);
+    laterBoutsOf(item).forEach((bout) => add(bout.no, bout.color));
+  });
+  const rows = [...groups.values()].sort((a, b) => {
+    const match = posterMatchNoKey(a.bouts[0]?.no) - posterMatchNoKey(b.bouts[0]?.no);
+    return match || String(a.name).localeCompare(String(b.name), "zh-Hant");
+  });
+  const rounds = Math.max(2, rows.reduce((max, row) => Math.max(max, row.bouts.length), 0));
+  return { rows, rounds };
+}
+
+function posterModel(source) {
+  const items = source || exportItems();
+  const sections = [];
+  const poom = poomsaeItems(items);
+  ["品勢", "競速", "擊破", "疊杯"].forEach((kind) => {
+    const rows = posterOrderRows(poom.filter((item) => posterEventKind(item) === kind));
+    if (!rows.length) return;
+    sections.push({
+      type: "order",
+      title: `${kind}賽程`,
+      lastHeader: kind === "品勢" ? "指定品勢" : "項目",
+      rows
+    });
+  });
+  const fight = posterFightRows(fightItems(items));
+  if (fight.rows.length) {
+    sections.push({ type: "fight", title: "對打賽程", rounds: fight.rounds, rows: fight.rows });
+  }
+  return { sections };
+}
+
+function posterName(index, name) {
+  return `${index + 1}、${name}`;
+}
+
+function posterSheetInnerHtml(model) {
+  return model.sections.map((section) => {
+    if (section.type === "order") {
+      const body = section.rows.map((row, index) => `
+        <tr>
+          <td class="poster-name">${escapeHTML(posterName(index, row.name))}</td>
+          <td class="poster-div">${escapeHTML(row.division)}</td>
+          <td>${escapeHTML(row.match)}</td>
+          <td>${escapeHTML(row.form)}</td>
+        </tr>`).join("");
+      return `<section class="poster-block">
+        <h2>${escapeHTML(section.title)}</h2>
+        <table>
+          <colgroup>
+            <col class="poster-col-name" />
+            <col class="poster-col-div" />
+            <col class="poster-col-match" />
+            <col class="poster-col-form" />
+          </colgroup>
+          <thead><tr><th>名字</th><th>組別</th><th>場次</th><th>${escapeHTML(section.lastHeader)}</th></tr></thead>
+          <tbody>${body}</tbody>
+        </table>
+      </section>`;
+    }
+    const heads = ["名字", "量級／組別"].concat(POSTER_ROUND_NAMES.slice(0, section.rounds));
+    const body = section.rows.map((row, index) => {
+      const bouts = POSTER_ROUND_NAMES.slice(0, section.rounds).map((_, i) => {
+        const bout = row.bouts[i];
+        if (!bout) return "<td></td>";
+        const cls = bout.side === "R" ? "poster-bout-r" : bout.side === "B" ? "poster-bout-b" : "";
+        return `<td class="${cls}">${escapeHTML(bout.text)}</td>`;
+      }).join("");
+      return `<tr>
+        <td class="poster-name">${escapeHTML(posterName(index, row.name))}</td>
+        <td class="poster-div">${escapeHTML(row.division)}</td>
+        ${bouts}
+      </tr>`;
+    }).join("");
+    return `<section class="poster-block">
+      <h2>${escapeHTML(section.title)}</h2>
+      <table>
+        <thead><tr>${heads.map((h) => `<th>${escapeHTML(h)}</th>`).join("")}</tr></thead>
+        <tbody>${body}</tbody>
+      </table>
+    </section>`;
+  }).join("");
+}
+
+function posterPreviewHtml() {
+  const model = posterModel();
+  if (!model.sections.length) {
+    return `<p class="export-preview-empty">目前沒有可做成總表圖片的品勢或對打資料</p>`;
+  }
+  return `<div class="poster-preview-wrap">
+    <div class="poster-sheet" id="posterSheet">${posterSheetInnerHtml(model)}</div>
+  </div>`;
+}
+
+function posterPrintCss() {
+  return `.poster-sheet{box-sizing:border-box;width:1100px;background:#fff;color:#111;padding:36px 32px 48px;font-family:"Microsoft JhengHei","PingFang TC","Noto Sans TC","Noto Sans CJK TC",sans-serif;}
+.poster-block+.poster-block{margin-top:40px;}
+.poster-sheet h2{margin:0 0 14px;text-align:center;font-size:34px;font-weight:900;letter-spacing:.22em;}
+.poster-sheet table{width:100%;border-collapse:collapse;table-layout:auto;}
+.poster-sheet th,.poster-sheet td{border:1px solid #2f2f2f;padding:8px 10px;text-align:center;font-size:15px;font-weight:700;line-height:1.35;}
+.poster-sheet th{background:#4a4a4a;color:#fff;font-size:16px;}
+.poster-name{text-align:left;white-space:nowrap;}
+.poster-div{text-align:left;}
+.poster-col-name{width:12%;}
+.poster-col-div{width:46%;}
+.poster-col-match{width:18%;}
+.poster-col-form{width:24%;}
+.poster-bout-r{color:#d70015;font-weight:800;}
+.poster-bout-b{color:#155dfc;font-weight:800;}`;
+}
+
+function loadHtml2Canvas() {
+  if (window.html2canvas) return Promise.resolve(window.html2canvas);
+  return new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = "https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js";
+    script.onload = () => window.html2canvas ? resolve(window.html2canvas) : reject(new Error("圖片套件未載入"));
+    script.onerror = () => reject(new Error("無法載入圖片套件，請確認網路"));
+    document.head.appendChild(script);
+  });
+}
+
+function captureViaSvg(node) {
+  const width = Math.ceil(node.scrollWidth || node.offsetWidth);
+  const height = Math.ceil(node.scrollHeight || node.offsetHeight);
+  const svg = `<?xml version="1.0" encoding="UTF-8"?><svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><foreignObject width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml"><style>${posterPrintCss()}</style>${node.outerHTML}</div></foreignObject></svg>`;
+  const url = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml;charset=utf-8" }));
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = width * 2;
+      canvas.height = height * 2;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.scale(2, 2);
+      ctx.drawImage(image, 0, 0);
+      URL.revokeObjectURL(url);
+      resolve(canvas);
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("圖片轉換失敗"));
+    };
+    image.src = url;
+  });
+}
+
+async function capturePosterNode(node) {
+  const width = node.scrollWidth;
+  const height = node.scrollHeight;
+  const scale = height * 2 > 16000 ? 1 : 2;
+  try {
+    const html2canvas = await loadHtml2Canvas();
+    return await html2canvas(node, {
+      scale,
+      backgroundColor: "#ffffff",
+      useCORS: true,
+      logging: false,
+      width,
+      height,
+      windowWidth: width,
+      windowHeight: height
+    });
+  } catch (error) {
+    return captureViaSvg(node);
+  }
+}
+
+function mountPosterSheet(model) {
+  const host = document.createElement("div");
+  host.className = "poster-capture-host";
+  host.innerHTML = `<div class="poster-sheet is-print">${posterSheetInnerHtml(model)}</div>`;
+  document.body.appendChild(host);
+  return { host, sheet: host.querySelector(".poster-sheet") };
+}
+
+async function doExportPoster() {
+  const model = posterModel();
+  if (!model.sections.length) {
+    alert("沒有可做成總表圖片的資料");
+    return;
+  }
+  const confirm = document.getElementById("exportConfirmBtn");
+  const previous = confirm?.textContent;
+  if (confirm) {
+    confirm.disabled = true;
+    confirm.textContent = "製作中…";
+  }
+  const { host, sheet } = mountPosterSheet(model);
+  try {
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    const canvas = await capturePosterNode(sheet);
+    const name = exportFileName("png");
+    await new Promise((resolve, reject) => {
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          try {
+            downloadBlob(dataUrlToBlob(canvas.toDataURL("image/png")), name);
+            resolve();
+          } catch (error) {
+            reject(error);
+          }
+          return;
+        }
+        downloadBlob(blob, name);
+        resolve();
+      }, "image/png");
+    });
+    closeModal();
+  } finally {
+    host.remove();
+    if (confirm) {
+      confirm.disabled = false;
+      confirm.textContent = previous || "下載總表圖片";
+    }
+  }
+}
+
+function dataUrlToBlob(dataUrl) {
+  const parts = String(dataUrl).split(",");
+  const bin = atob(parts[1] || "");
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new Blob([bytes], { type: "image/png" });
+}
 
 function formatColorSequence(item) {
   const parts = [];
@@ -4783,6 +5106,12 @@ document.getElementById("exportConfirmBtn")?.addEventListener("click", () => {
   if (exportKind === "word") {
     closeModal();
     doExportWord();
+    return;
+  }
+  if (exportKind === "image") {
+    doExportPoster().catch((error) => {
+      alert("圖片產生失敗：" + (error.message || error));
+    });
     return;
   }
   const selected = collectExportFields();
