@@ -4271,6 +4271,20 @@ function sheetFromAoa(aoa, colCount) {
   return sheet;
 }
 
+function uniqueSheetName(name, used) {
+  const taken = used || new Set();
+  const cleaned = String(name || "工作表").replace(/[\\/?*[\]：:]/g, "").trim() || "工作表";
+  let base = cleaned.slice(0, 31);
+  let next = base;
+  let i = 2;
+  while (taken.has(next)) {
+    const suffix = `-${i++}`;
+    next = `${base.slice(0, Math.max(1, 31 - suffix.length))}${suffix}`;
+  }
+  taken.add(next);
+  return next;
+}
+
 function poomsaeItems(data) {
   return (data || []).filter((item) => classifyType(item) === "品勢");
 }
@@ -4312,7 +4326,7 @@ function exportSummaryText() {
   const n = exportItems().length;
   const both = exportHasBothTypes() && exportScope === "both";
   if (exportKind === "image") {
-    return "用整理後的資料做成總表圖：品勢／擊破看出場順序，對打把同一人贏下去的場次併成第一場、第二場。紅字 R＝紅方，藍字 B＝青方。文字與出場表相同，不會另外縮寫。";
+    return "總表圖跟 Excel 簡表同一份整理資料。場次變多會自動加第一場、第二場、第三場；擊破／競速／疊杯或其他項目也會一併成表。紅字 R＝紅方，藍字 B＝青方。";
   }
   if (exportKind === "word") {
     if (both) return `會匯出 ${n} 筆。品勢、對打分開兩個表。看完再按下載。`;
@@ -4354,8 +4368,8 @@ function renderExportTabs() {
           ? "品勢和對打會分開兩張詳細表。簡表另外有，不會跟詳細表混在一起。"
           : "這張詳細資料做成出場表。簡表另外有，不會混在這張。"),
       groups: "組別名單：同組有誰、籤號、出場順序。",
-      poomsae: "品勢簡表：每人一列，有場次、第一／第二品勢。詳細表另外一張。",
-      fight: "對打簡表：每人一列。場次會依籤表列出本場、贏了之後的準決賽／決賽。"
+      poomsae: "總表跟圖片同一份：品勢／擊破／競速／疊杯分開。場次變多會自動加欄。",
+      fight: "總表跟圖片同一份：同一人贏下去的場次會自動變成第一場、第二場、第三場…"
     };
     note.textContent = notes[exportPreviewTab] || "";
   }
@@ -4402,14 +4416,35 @@ function renderExportPreview() {
     return;
   }
   if (tab === "poomsae") {
-    const spec = poomsaeExportSpec(selected.map((field) => field.key));
-    const bundle = compactExportBundle(poomsaeItems(exportItems()), spec);
-    host.innerHTML = previewTableHtml(bundle.headers, bundle.rows, `${club}｜品勢簡表`);
+    const sections = summaryModel().sections.filter((section) => section.type === "order");
+    host.innerHTML = sections.map((section) => previewTableHtml(...summaryPreviewArgs(section, club))).join("")
+      || `<p class="export-preview-empty">沒有品勢／其他項目資料</p>`;
     return;
   }
-  const spec = fightExportSpec(selected.map((field) => field.key));
-  const bundle = compactExportBundle(fightItems(exportItems()), spec);
-  host.innerHTML = previewTableHtml(bundle.headers, bundle.rows, `${club}｜對打簡表`);
+  const fightSection = summaryModel().sections.find((section) => section.type === "fight");
+  host.innerHTML = fightSection
+    ? previewTableHtml(...summaryPreviewArgs(fightSection, club))
+    : `<p class="export-preview-empty">沒有對打資料</p>`;
+}
+
+function summaryPreviewArgs(section, club) {
+  const [headers, rows] = summarySectionRows(section);
+  return [headers, rows, `${club}｜${section.title}`];
+}
+
+function summarySectionRows(section) {
+  if (section.type === "order") {
+    const headers = ["名字", "組別", "場次", section.lastHeader];
+    const rows = section.rows.map((row, index) => [posterName(index, row.name), row.division, row.match, row.form]);
+    return [headers, rows];
+  }
+  const headers = ["名字", "量級／組別"].concat(Array.from({ length: section.rounds }, (_, i) => roundColumnName(i)));
+  const rows = section.rows.map((row, index) => [
+    posterName(index, row.name),
+    row.division,
+    ...Array.from({ length: section.rounds }, (_, i) => row.bouts[i]?.text || "")
+  ]);
+  return [headers, rows];
 }
 
 function previewDetailBlocks(club, headers, rowFn, kind) {
@@ -4541,29 +4576,23 @@ function doExportExcel(fieldKeys) {
     addDetailSheet(poomsae.length && !fight.length ? "詳細資料-品勢" : fight.length && !poomsae.length ? "詳細資料-對打" : "詳細資料", source);
   }
 
-  if (poomsae.length) {
-    const spec = poomsaeExportSpec(keys);
-    const bundle = compactExportBundle(poomsae, spec);
-    const aoa = [[`${club}｜比賽資料`], bundle.headers, ...bundle.rows];
-    const sheet = sheetFromAoa(aoa, bundle.headers.length);
-    sheet["!cols"] = bundle.widths.map((wch) => ({ wch }));
-    XLSX.utils.book_append_sheet(workbook, sheet, "比賽資料");
-  }
+  const usedSheets = new Set(workbook.SheetNames || []);
+  const summary = summaryModel(source);
+  summary.sections.forEach((section) => {
+    const [headers, rows] = summarySectionRows(section);
+    const aoa = [[`${club}｜${section.title}`], headers, ...rows];
+    const sheet = sheetFromAoa(aoa, headers.length);
+    sheet["!cols"] = headers.map((label, index) => ({
+      wch: index <= 1 ? 28 : Math.min(18, Math.max(10, String(label).length + 4))
+    }));
+    XLSX.utils.book_append_sheet(workbook, sheet, uniqueSheetName(section.title, usedSheets));
+  });
 
-  if (fight.length) {
-    const spec = fightExportSpec(keys);
-    const bundle = compactExportBundle(fight, spec);
-    const aoa = [[`${club}｜對打比賽資料`], bundle.headers, ...bundle.rows];
-    const sheet = sheetFromAoa(aoa, bundle.headers.length);
-    sheet["!cols"] = bundle.widths.map((wch) => ({ wch }));
-    XLSX.utils.book_append_sheet(workbook, sheet, "對打比賽資料");
-  }
-
-  if (other.length && !poomsae.length && !fight.length) {
+  if (other.length && !summary.sections.length) {
     const extraSelected = selected.filter((field) => ["選手", "項目", "組別", "本場場次"].includes(field.key));
     const cols = extraSelected.length ? extraSelected : selected;
     const aoa = detailExportAoa("其他", other, cols);
-    XLSX.utils.book_append_sheet(workbook, sheetFromAoa(aoa, cols.length), "其他");
+    XLSX.utils.book_append_sheet(workbook, sheetFromAoa(aoa, cols.length), uniqueSheetName("其他", usedSheets));
   }
 
   try {
@@ -4653,14 +4682,26 @@ function doExportWord() {
   );
 }
 
-const POSTER_ROUND_NAMES = ["第一場", "第二場", "第三場", "第四場", "第五場", "第六場", "第七場", "第八場"];
+const SUMMARY_KIND_ORDER = ["品勢", "競速", "擊破", "疊杯"];
+const ROUND_HAN = ["一", "二", "三", "四", "五", "六", "七", "八", "九", "十", "十一", "十二", "十三", "十四", "十五", "十六"];
 
-function posterEventKind(item) {
+function roundColumnName(index) {
+  return `第${ROUND_HAN[index] || String(index + 1)}場`;
+}
+
+function summaryEventKind(item) {
+  if (classifyType(item) === "對打") return "對打";
   const text = [item.eventName, item.type, item.division, item.detailLabel].join("");
   if (/疊杯/.test(text)) return "疊杯";
   if (/擊破/.test(text)) return "擊破";
   if (/競速/.test(text)) return "競速";
-  return "品勢";
+  if (classifyType(item) === "品勢") return "品勢";
+  const extra = String(item.eventName || item.type || "").replace(/賽程|出場順序表|對戰表/g, "").trim();
+  return extra || "其他";
+}
+
+function posterEventKind(item) {
+  return summaryEventKind(item);
 }
 
 function posterMatchNoKey(no) {
@@ -4731,19 +4772,28 @@ function posterFightRows(items) {
     const match = posterMatchNoKey(a.bouts[0]?.no) - posterMatchNoKey(b.bouts[0]?.no);
     return match || String(a.name).localeCompare(String(b.name), "zh-Hant");
   });
-  const rounds = Math.max(2, rows.reduce((max, row) => Math.max(max, row.bouts.length), 0));
+  const rounds = Math.max(1, rows.reduce((max, row) => Math.max(max, row.bouts.length), 0));
   return { rows, rounds };
 }
 
-function posterModel(source) {
+function summaryModel(source) {
   const items = source || exportItems();
+  const kinds = [];
+  const seen = new Set();
+  const addKind = (kind) => {
+    if (!kind || kind === "對打" || seen.has(kind)) return;
+    seen.add(kind);
+    kinds.push(kind);
+  };
+  SUMMARY_KIND_ORDER.forEach(addKind);
+  items.forEach((item) => addKind(summaryEventKind(item)));
   const sections = [];
-  const poom = poomsaeItems(items);
-  ["品勢", "競速", "擊破", "疊杯"].forEach((kind) => {
-    const rows = posterOrderRows(poom.filter((item) => posterEventKind(item) === kind));
+  kinds.forEach((kind) => {
+    const rows = posterOrderRows(items.filter((item) => classifyType(item) !== "對打" && summaryEventKind(item) === kind));
     if (!rows.length) return;
     sections.push({
       type: "order",
+      kind,
       title: `${kind}賽程`,
       lastHeader: kind === "品勢" ? "指定品勢" : "項目",
       rows
@@ -4751,9 +4801,13 @@ function posterModel(source) {
   });
   const fight = posterFightRows(fightItems(items));
   if (fight.rows.length) {
-    sections.push({ type: "fight", title: "對打賽程", rounds: fight.rounds, rows: fight.rows });
+    sections.push({ type: "fight", kind: "對打", title: "對打賽程", rounds: fight.rounds, rows: fight.rows });
   }
   return { sections };
+}
+
+function posterModel(source) {
+  return summaryModel(source);
 }
 
 function posterName(index, name) {
@@ -4784,9 +4838,9 @@ function posterSheetInnerHtml(model) {
         </table>
       </section>`;
     }
-    const heads = ["名字", "量級／組別"].concat(POSTER_ROUND_NAMES.slice(0, section.rounds));
+    const heads = ["名字", "量級／組別"].concat(Array.from({ length: section.rounds }, (_, i) => roundColumnName(i)));
     const body = section.rows.map((row, index) => {
-      const bouts = POSTER_ROUND_NAMES.slice(0, section.rounds).map((_, i) => {
+      const bouts = Array.from({ length: section.rounds }, (_, i) => {
         const bout = row.bouts[i];
         if (!bout) return "<td></td>";
         const cls = bout.side === "R" ? "poster-bout-r" : bout.side === "B" ? "poster-bout-b" : "";
