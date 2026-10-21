@@ -2082,10 +2082,18 @@ tbody tr:hover { background: #f8fafc; }
   font-weight: 900;
   letter-spacing: 0.22em;
 }
+.poster-date {
+  margin: -4px 0 12px;
+  text-align: center;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #333;
+}
 .poster-sheet table {
   width: 100%;
   border-collapse: collapse;
-  table-layout: auto;
+  table-layout: fixed;
 }
 .poster-sheet th,
 .poster-sheet td {
@@ -2095,6 +2103,7 @@ tbody tr:hover { background: #f8fafc; }
   font-size: 15px;
   font-weight: 700;
   line-height: 1.35;
+  overflow-wrap: anywhere;
   word-break: break-word;
 }
 .poster-sheet th {
@@ -2102,27 +2111,35 @@ tbody tr:hover { background: #f8fafc; }
   color: #fff;
   font-size: 16px;
 }
-.poster-name { text-align: left; white-space: nowrap; }
-.poster-div { text-align: left; }
-.poster-col-name { width: 12%; }
-.poster-col-div { width: 46%; }
-.poster-col-match { width: 18%; }
-.poster-col-form { width: 24%; }
+.poster-name { text-align: left; white-space: nowrap; overflow: hidden; }
+.poster-div {
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.poster-match { white-space: nowrap; }
+.poster-form { white-space: normal; }
+.poster-col-name { width: 16%; }
+.poster-col-div { width: 34%; }
+.poster-col-match { width: 22%; }
+.poster-col-form { width: 28%; }
 .poster-bout-r { color: #d70015; }
 .poster-bout-b { color: #155dfc; }
 .poster-capture-host {
   position: fixed;
   left: 0;
   top: 0;
-  width: 1100px;
   background: #fff;
   pointer-events: none;
   opacity: 0.01;
   z-index: 0;
+  overflow: hidden;
 }
 .poster-capture-host .poster-sheet {
-  width: 1100px;
+  box-sizing: border-box;
   padding: 36px 32px 48px;
+  overflow: hidden;
 }
 .poster-capture-host .poster-sheet h2 {
   font-size: 34px;
