@@ -332,6 +332,7 @@ analyzeBtn.addEventListener("click", async () => {
       const file = uploadedFiles[i];
       setStatus(`正在解析（${i + 1}/${uploadedFiles.length}）：${file.name}`);
       const parsed = await parseFile(file);
+      if (parsed.text) fillEventMeta(parsed.items, parsed.text);
       collected.push(...parsed.items);
       if (parsed.text) sourceTexts.push(parsed.text);
       sourceTexts.push(file.name.replace(/\.[^.]+$/, ""));
@@ -571,7 +572,9 @@ async function extractPdfText(buffer) {
     setStatus(`正在讀取 PDF 第 ${i}/${pdf.numPages} 頁`);
     const page = await pdf.getPage(i);
     const content = await page.getTextContent();
-    pages.push(contentToText(content));
+    const text = contentToText(content);
+    const blob = (content.items || []).map((item) => item.str || "").join("");
+    pages.push(i === 1 ? `=====PDF_COVER_START=====\n${text}\n=====PDF_COVER_BLOB=====\n${blob}\n=====PDF_COVER_END=====` : text);
   }
 
   return pages.join("\n\n");
@@ -691,9 +694,26 @@ function rocToGregorianYear(n) {
   return n;
 }
 
+function hantToInt(raw) {
+  const text = String(raw || "").replace(/廿/g, "二十").replace(/卅/g, "三十");
+  const digit = { 零: 0, 〇: 0, 一: 1, 二: 2, 兩: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9 };
+  if (!text) return NaN;
+  if (/^\d+$/.test(text)) return parseInt(text, 10);
+  if (text === "十") return 10;
+  if (text.startsWith("十")) return 10 + (digit[text.slice(1)] || 0);
+  if (text.endsWith("十")) return (digit[text[0]] || 0) * 10;
+  if (text.includes("十")) {
+    const parts = text.split("十");
+    return (digit[parts[0]] || 0) * 10 + (digit[parts[1]] || 0);
+  }
+  if (text.length === 1 && digit[text] != null) return digit[text];
+  return NaN;
+}
+
 function parseEventDate(raw) {
   const t = String(raw || "")
     .normalize("NFKC")
+    .replace(/中華民國/g, "民國")
     .replace(/（[^）]*）/g, "")
     .replace(/\([^)]*\)/g, "")
     .replace(/\s+/g, "");
@@ -704,10 +724,31 @@ function parseEventDate(raw) {
     const roc = srcYear < 1911;
     return makeEventDate(rocToGregorianYear(srcYear), parseInt(m[2], 10), parseInt(m[3], 10), roc);
   }
+  m = t.match(/(?:民國)?(\d{2,4})年([一二三四五六七八九十廿卅]+)月([一二三四五六七八九十廿卅]+)日/);
+  if (m) {
+    const month = hantToInt(m[2]);
+    const day = hantToInt(m[3]);
+    if (month && day) {
+      const srcYear = parseInt(m[1], 10);
+      const roc = srcYear < 1911;
+      return makeEventDate(rocToGregorianYear(srcYear), month, day, roc);
+    }
+  }
   m = t.match(/(\d{4})[./-](\d{1,2})[./-](\d{1,2})/);
   if (m) return makeEventDate(parseInt(m[1], 10), parseInt(m[2], 10), parseInt(m[3], 10), false);
+  m = t.match(/(\d{2,3})[./-](\d{1,2})[./-](\d{1,2})/);
+  if (m) {
+    const y = parseInt(m[1], 10);
+    if (y >= 80 && y <= 200) return makeEventDate(rocToGregorianYear(y), parseInt(m[2], 10), parseInt(m[3], 10), true);
+  }
   m = t.match(/(\d{1,2})月(\d{1,2})日/);
   if (m) return makeEventDate(0, parseInt(m[1], 10), parseInt(m[2], 10), false);
+  m = t.match(/([一二三四五六七八九十廿卅]+)月([一二三四五六七八九十廿卅]+)日/);
+  if (m) {
+    const month = hantToInt(m[1]);
+    const day = hantToInt(m[2]);
+    if (month && day) return makeEventDate(0, month, day, false);
+  }
   return null;
 }
 
@@ -788,11 +829,171 @@ function absorbEventMeta(line, target) {
   return hit;
 }
 
+function isSkippableDateLine(line) {
+  if (/比賽日期|比賽時間/.test(line)) return false;
+  return /報名|截止|繳費|期限|出生|身分證/.test(line);
+}
+
+function lastIndexOfRe(text, re) {
+  let pos = -1;
+  let match;
+  const copy = new RegExp(re.source, "g");
+  while ((match = copy.exec(String(text || "")))) pos = match.index;
+  return pos;
+}
+
+function dateIndexOf(text, date) {
+  const hay = String(text || "");
+  const needles = [
+    `${date.month}月${date.day}日`,
+    `${date.month} 月 ${date.day} 日`,
+    date.display,
+    date.short
+  ].filter(Boolean);
+  for (const needle of needles) {
+    const idx = hay.indexOf(needle);
+    if (idx >= 0) return idx;
+  }
+  return -1;
+}
+
+function dateWindowOf(text, date) {
+  const hay = String(text || "");
+  const idx = dateIndexOf(hay, date);
+  if (idx < 0) return hay;
+  return hay.slice(Math.max(0, idx - 20), idx + 24);
+}
+
+function isNoiseDateAt(text, index) {
+  const before = String(text || "").slice(0, Math.max(0, index));
+  const noisePos = lastIndexOfRe(before, /報名|截止|繳費|期限|出生|身分證/);
+  const eventPos = lastIndexOfRe(before, /比賽日期|比賽時間/);
+  return noisePos > eventPos;
+}
+
+function isNoiseDateWindow(window) {
+  return isNoiseDateAt(window, String(window || "").length);
+}
+
+function collectTextDates(text) {
+  const found = [];
+  const whole = String(text || "");
+  whole.split(/\n/).forEach((line) => {
+    if (isSkippableDateLine(line)) return;
+    if (!/\d{1,2}\s*月\s*\d{1,2}\s*日/.test(line) && !/\d{2,4}[./-]\d{1,2}[./-]\d{1,2}/.test(line) && !/民國/.test(line) && !/[一二三四五六七八九十廿卅]+月/.test(line)) return;
+    let hint = "";
+    if (/對打|競技/.test(line) && !/品勢/.test(line)) hint = "對打";
+    else if (/品勢/.test(line) && !/對打/.test(line)) hint = "品勢";
+    if (/第一天/.test(line) && /品勢/.test(whole)) hint = hint || "品勢";
+    if (/第二天/.test(line) && /對打/.test(whole)) hint = hint || "對打";
+    const parts = line.match(/(?:中華)?民國?\d{2,4}\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日|(?:民國)?\d{2,4}\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日|\d{1,2}\s*月\s*\d{1,2}\s*日|[一二三四五六七八九十廿卅]+月[一二三四五六七八九十廿卅]+日|\d{2,4}[./-]\d{1,2}[./-]\d{1,2}/g) || [];
+    parts.forEach((part) => {
+      const date = parseEventDate(part);
+      if (!date) return;
+      const at = line.indexOf(part);
+      if (at >= 0 ? isNoiseDateAt(line, at) : isNoiseDateAt(line, dateIndexOf(line, date))) return;
+      if (found.some((item) => item.key === date.key && item.hint === hint)) return;
+      found.push({ ...date, hint });
+    });
+  });
+  return found;
+}
+
+function squeezeDateText(text) {
+  return String(text || "")
+    .replace(/中華民國/g, "民國")
+    .replace(/比\s*賽\s*日\s*期/g, "比賽日期")
+    .replace(/日\s*期/g, "日期")
+    .replace(/品\s*勢/g, "品勢")
+    .replace(/對\s*打/g, "對打")
+    .replace(/(\d)\s+(?=\d|年|月|日)/g, "$1")
+    .replace(/([年月日])\s+/g, "$1");
+}
+
+function extractPdfCoverTexts(raw) {
+  const texts = [];
+  const re = /=====PDF_COVER_START=====\n?([\s\S]*?)\n?=====PDF_COVER_END=====/g;
+  let match;
+  while ((match = re.exec(String(raw || "")))) texts.push(match[1]);
+  return texts;
+}
+
+function inferYearFromText(text) {
+  const src = String(text || "");
+  let match = src.match(/(?:中華民國|民國)\s*(\d{2,3})\s*年/);
+  if (!match) match = src.match(/(?:^|[^\d])(\d{2,3})\s*年/);
+  if (match) {
+    const n = parseInt(match[1], 10);
+    if (n >= 80 && n < 1911) return n + 1911;
+    if (n >= 1911 && n <= 2100) return n;
+  }
+  match = src.match(/(?:^|[^\d])(20\d{2})\s*年/);
+  if (match) return parseInt(match[1], 10);
+  return new Date().getFullYear();
+}
+
+function parseCoverDates(cover, yearHint) {
+  const result = { date: null, poomsaeDate: null, fightDate: null };
+  if (!cover) return result;
+  const squeezed = squeezeDateText(cover);
+  const flat = squeezeDateText(cover.replace(/\n/g, ""));
+  const found = collectTextDates(squeezed).concat(collectTextDates(flat));
+  const year = yearHint || inferYearFromText(cover);
+  squeezed.split(/\n/).forEach((line) => {
+    const bare = line.trim().match(/^(\d{1,2})[./](\d{1,2})$/);
+    if (!bare) return;
+    const month = parseInt(bare[1], 10);
+    const day = parseInt(bare[2], 10);
+    if (month < 1 || month > 12 || day < 1 || day > 31) return;
+    const date = makeEventDate(year, month, day, false);
+    if (!date || found.some((item) => item.key === date.key)) return;
+    found.push({ ...date, hint: "" });
+  });
+  const extraRe = /(?:中華)?民國?\d{2,4}年\d{1,2}月\d{1,2}日|\d{1,2}月\d{1,2}日|[一二三四五六七八九十廿卅]+月[一二三四五六七八九十廿卅]+日|\d{2,4}[./-]\d{1,2}[./-]\d{1,2}/g;
+  let extraMatch;
+  while ((extraMatch = extraRe.exec(flat))) {
+    const date = parseEventDate(extraMatch[0]);
+    if (!date) continue;
+    if (isNoiseDateAt(flat, extraMatch.index)) continue;
+    if (found.some((item) => item.key === date.key)) continue;
+    found.push({ ...date, hint: "" });
+  }
+  const around = (date) => {
+    const window = dateWindowOf(flat, date);
+    if (/對打|競技/.test(window) && !/品勢/.test(window)) return "對打";
+    if (/品勢/.test(window) && !/對打/.test(window)) return "品勢";
+    return "";
+  };
+  found.forEach((item) => {
+    if (!item.hint) item.hint = around(item);
+  });
+  const poom = found.find((item) => item.hint === "品勢");
+  const fight = found.find((item) => item.hint === "對打");
+  if (poom) result.poomsaeDate = poom;
+  if (fight) result.fightDate = fight;
+  const uniq = [];
+  found.forEach((item) => {
+    const at = dateIndexOf(flat, item);
+    if (at >= 0 && isNoiseDateAt(flat, at)) return;
+    if (!uniq.some((row) => row.key === item.key)) uniq.push(item);
+  });
+  if (uniq.length === 1) result.date = uniq[0];
+  if (!result.poomsaeDate && !result.fightDate && uniq.length >= 2 && /品勢/.test(cover) && /對打/.test(cover)) {
+    result.poomsaeDate = uniq[0];
+    result.fightDate = uniq[1];
+  }
+  if (!result.date && uniq.length) result.date = uniq[0];
+  return result;
+}
+
 function inferDocEventMeta(raw) {
   const text = String(raw || "").replace(/[：]/g, ":");
   const doc = { date: null, venue: "", address: "", poomsaeDate: null, fightDate: null };
-  const lines = text.split(/\n/).slice(0, 80);
-  lines.forEach((line) => absorbEventMeta(line, doc));
+  const lines = text.split(/\n/);
+  lines.slice(0, 160).forEach((line) => absorbEventMeta(line, doc));
+  lines.forEach((line) => {
+    if (/比賽日期|比賽時間/.test(line)) absorbEventMeta(line, doc);
+  });
   if (doc.eventDateKey) {
     doc.date = {
       display: doc.eventDate,
@@ -803,16 +1004,26 @@ function inferDocEventMeta(raw) {
   }
   if (doc.eventVenue) doc.venue = doc.eventVenue;
   if (doc.eventAddress) doc.address = doc.eventAddress;
-  const typed = (kind) => {
-    const re = new RegExp(
-      kind + "[^\\n]{0,90}?((?:民國)?\\d{2,4}\\s*年\\s*\\d{1,2}\\s*月\\s*\\d{1,2}\\s*日)",
-      "g"
-    );
-    const m = re.exec(text);
-    return m ? parseEventDate(m[1]) : null;
-  };
-  doc.poomsaeDate = typed("品勢");
-  doc.fightDate = typed("對打");
+  const found = collectTextDates(text);
+  const poom = found.find((item) => item.hint === "品勢");
+  const fight = found.find((item) => item.hint === "對打");
+  if (poom) doc.poomsaeDate = poom;
+  if (fight) doc.fightDate = fight;
+  if (!doc.date) {
+    const uniq = [];
+    found.forEach((item) => {
+      if (!uniq.some((x) => x.key === item.key)) uniq.push(item);
+    });
+    if (uniq.length === 1) doc.date = uniq[0];
+    else if (!doc.poomsaeDate && !doc.fightDate && uniq.length) doc.date = uniq[0];
+  }
+  const cover = extractPdfCoverTexts(text).join("\n");
+  if (cover) {
+    const fromCover = parseCoverDates(cover, inferYearFromText(text));
+    if (fromCover.poomsaeDate) doc.poomsaeDate = fromCover.poomsaeDate;
+    if (fromCover.fightDate) doc.fightDate = fromCover.fightDate;
+    if (fromCover.date) doc.date = fromCover.date;
+  }
   if (!doc.venue) {
     const place = text.match(/比賽地點\s*:\s*([^\n]{2,90})/);
     if (place) {
@@ -824,8 +1035,19 @@ function inferDocEventMeta(raw) {
   return doc;
 }
 
+let lastEventMeta = { date: null, poomsaeDate: null, fightDate: null };
+
+function fallbackMetaDate(kind) {
+  const meta = lastEventMeta || {};
+  const typed = kind === "對打" ? meta.fightDate : kind === "品勢" ? meta.poomsaeDate : null;
+  const date = typed || meta.date;
+  if (!date) return "";
+  return date.label || date.short || date.display || "";
+}
+
 function fillEventMeta(items, raw) {
   const doc = inferDocEventMeta(raw);
+  lastEventMeta = doc;
   (items || []).forEach((item) => {
     if (!item.eventDateKey) {
       const typed = isFight(item) ? doc.fightDate : isPoomsae(item) ? doc.poomsaeDate : null;
@@ -2626,6 +2848,7 @@ function parsePoomsaeOrderTable(raw) {
       return;
     }
     if (/^(MATCH LIST|組別量級)/.test(line)) return;
+    if (/^=====PDF_COVER/.test(line)) return;
     const title = line.match(/^(\d{1,4})\s*-?\s*(?:自由|雙人|團體|個人)?(品勢|競速踢擊|擊破|疊杯)出場順序表/);
     const matchHit = line.match(/場\s*次\s*:\s*(\d{2,4})/) || title;
     if (matchHit) {
@@ -2689,7 +2912,7 @@ function parsePoomsaeOrderTable(raw) {
         if (current.some((row) => row.seed === item.seed && row.player === item.player)) return;
         item.matchNo = header.matchNo || "";
         item.boutStyle = "order";
-        item.orderNo = item.seed;
+        item.orderNo = current.length + 1;
         item.color = "";
         item.nextMatchNo = "";
         item.nextColor = "";
@@ -3018,6 +3241,10 @@ function attachGroups(items) {
     item.groupMembers = members;
     const n = members.filter((row) => row.player && row.player !== "輪空").length;
     if (n) item.groupSize = n;
+    if (item.boutStyle === "order") {
+      const idx = members.indexOf(item);
+      if (idx >= 0) item.orderNo = idx + 1;
+    }
   });
 }
 
@@ -3077,8 +3304,25 @@ function displayValue(value) {
   return text ? text : "未提及";
 }
 
+function appearanceOrder(item) {
+  if (!item) return "";
+  if (item.boutStyle === "order" && item.orderNo) return Number(item.orderNo);
+  const members = item.groupMembers;
+  if (Array.isArray(members) && members.length && (item.boutStyle === "order" || isOrderStyle(item))) {
+    const idx = members.indexOf(item);
+    if (idx >= 0) return idx + 1;
+    const byPlayer = members.findIndex((row) =>
+      row.player === item.player
+      && String(row.matchNo || "") === String(item.matchNo || "")
+      && String(row.club || "") === String(item.club || "")
+    );
+    if (byPlayer >= 0) return byPlayer + 1;
+  }
+  return item.orderNo && Number(item.orderNo) !== Number(item.seed) ? Number(item.orderNo) : "";
+}
+
 function orderLabel(item) {
-  const n = item.orderNo || item.seed;
+  const n = appearanceOrder(item);
   const size = item.groupSize;
   if (n && size) return `第${n}位／共${size}人`;
   if (n) return `第${n}位上場`;
@@ -4098,9 +4342,9 @@ function classifyType(item) {
 function formatMatchExport(item) {
   if (isOrderStyle(item)) {
     const match = item.matchNo || "";
-    const order = item.orderNo || item.seed;
-    if (match && order) return `${match}（第${order}位）`;
-    return match || (order ? `第${order}位` : "未提及");
+    const order = appearanceOrder(item);
+    if (match && order) return `${match}-${order}`;
+    return match || (order ? String(order) : "未提及");
   }
   return formatColorSequence(item);
 }
@@ -4713,8 +4957,12 @@ function posterMatchNoKey(no) {
 }
 
 function posterOrderMatch(item) {
-  const text = formatMatchExport(item);
-  return !text || text === "未提及" ? "－" : text;
+  const match = String(item.matchNo || "").trim();
+  const order = appearanceOrder(item);
+  if (match && order) return `${match}-${order}`;
+  if (match) return match;
+  if (order) return String(order);
+  return "－";
 }
 
 function posterSpecifiedPoomsae(item) {
@@ -4806,24 +5054,69 @@ function shortPoomsaeDivision(item) {
   return `${left}${gender ? " " + gender : ""}`.trim();
 }
 
+function dateInfoOf(item) {
+  if (item.eventDateKey) {
+    return {
+      key: item.eventDateKey,
+      label: item.eventDateLabel || item.eventDateShort || item.eventDate || ""
+    };
+  }
+  const meta = lastEventMeta || {};
+  const typed = classifyType(item) === "對打" ? meta.fightDate : classifyType(item) === "品勢" ? meta.poomsaeDate : null;
+  const date = typed || meta.date;
+  if (!date) return { key: "", label: "" };
+  return { key: date.key || "", label: date.label || date.short || date.display || "" };
+}
+
 function groupItemsByDate(list) {
   const map = new Map();
   (list || []).forEach((item) => {
-    const key = item.eventDateKey || "";
+    const info = dateInfoOf(item);
+    const key = info.key || "";
     if (!map.has(key)) {
-      map.set(key, {
-        key,
-        label: key ? (item.eventDateShort || item.eventDateLabel || item.eventDate || "") : "",
-        items: []
-      });
+      map.set(key, { key, label: info.label || "", items: [] });
     }
     map.get(key).items.push(item);
   });
-  return [...map.values()].sort((a, b) => {
+  const groups = [...map.values()];
+  const dated = groups.filter((group) => group.key);
+  const dayKey = (key) => String(key).slice(-5);
+  const days = [...new Set(dated.map((group) => dayKey(group.key)))];
+  if (days.length === 1) {
+    return [{
+      key: dated[0].key,
+      label: dated[0].label || groups.find((group) => group.label)?.label || "",
+      items: groups.flatMap((group) => group.items)
+    }];
+  }
+  return groups.sort((a, b) => {
     if (!a.key) return 1;
     if (!b.key) return -1;
     return a.key.localeCompare(b.key);
   });
+}
+
+function posterAgeBand(item) {
+  const blob = [item.ageGroup, item.division, item.weightClass, item.eventName].filter(Boolean).join(" ");
+  if (/幼兒|幼稚園|幼兒園/.test(blob)) return "幼兒";
+  if (/國小/.test(blob)) return "國小";
+  if (/國中/.test(blob)) return "國中";
+  if (/高中/.test(blob)) return "高中";
+  if (/大專/.test(blob)) return "大專";
+  return "";
+}
+
+function posterDayNote(items) {
+  const order = ["幼兒", "國小", "國中", "高中", "大專"];
+  const bands = [];
+  (items || []).forEach((item) => {
+    const band = posterAgeBand(item);
+    if (band && !bands.includes(band)) bands.push(band);
+  });
+  bands.sort((a, b) => order.indexOf(a) - order.indexOf(b));
+  if (!bands.length || bands.length > 2) return "";
+  if (bands.length === 1) return `${bands[0]}組`;
+  return `${bands.join("、")}組`;
 }
 
 function posterBoutToken(no, color) {
@@ -4835,7 +5128,7 @@ function posterOrderRows(items) {
   return items.slice().sort((a, b) => {
     const match = posterMatchNoKey(a.matchNo) - posterMatchNoKey(b.matchNo);
     if (match) return match;
-    return (Number(a.orderNo || a.seed) || 0) - (Number(b.orderNo || b.seed) || 0);
+    return (Number(appearanceOrder(a)) || 0) - (Number(appearanceOrder(b)) || 0);
   }).map((item) => ({
     name: item.player || "－",
     division: posterDivisionLabel(item),
@@ -4884,27 +5177,33 @@ function summaryModel(source) {
   const sections = [];
   kinds.forEach((kind) => {
     const ofKind = items.filter((item) => classifyType(item) !== "對打" && summaryEventKind(item) === kind);
-    groupItemsByDate(ofKind).forEach((group) => {
+    const groups = groupItemsByDate(ofKind);
+    const split = groups.length > 1;
+    groups.forEach((group) => {
       const rows = posterOrderRows(group.items);
       if (!rows.length) return;
       sections.push({
         type: "order",
         kind,
         title: `${kind}賽程`,
-        date: group.label || "",
+        date: group.label || fallbackMetaDate(kind),
+        note: split ? posterDayNote(group.items) : "",
         lastHeader: kind === "品勢" ? "指定品勢" : "項目",
         rows
       });
     });
   });
-  groupItemsByDate(fightItems(items)).forEach((group) => {
+  const fightGroups = groupItemsByDate(fightItems(items));
+  const fightSplit = fightGroups.length > 1;
+  fightGroups.forEach((group) => {
     const fight = posterFightRows(group.items);
     if (!fight.rows.length) return;
     sections.push({
       type: "fight",
       kind: "對打",
       title: "對打賽程",
-      date: group.label || "",
+      date: group.label || fallbackMetaDate("對打"),
+      note: fightSplit ? posterDayNote(group.items) : "",
       rounds: fight.rounds,
       rows: fight.rows
     });
@@ -4916,17 +5215,22 @@ function posterModel(source) {
   return summaryModel(source);
 }
 
+function posterDateLine(section) {
+  const text = [section.date, section.note].filter(Boolean).join("　");
+  if (!text) return "";
+  return `<p class="poster-date">${escapeHTML(text)}</p>`;
+}
+
 function posterName(index, name) {
   return `${index + 1}、${name}`;
 }
 
 function posterCaptureWidth(model) {
-  let width = 1280;
+  let rounds = 3;
   (model?.sections || []).forEach((section) => {
-    if (section.type !== "fight") return;
-    width = Math.max(width, 520 + Math.max(1, section.rounds) * 108);
+    if (section.type === "fight") rounds = Math.max(rounds, section.rounds || 1);
   });
-  return Math.min(width, 1800);
+  return Math.max(1180, 520 + rounds * 140);
 }
 
 function posterSheetInnerHtml(model) {
@@ -4941,7 +5245,7 @@ function posterSheetInnerHtml(model) {
         </tr>`).join("");
       return `<section class="poster-block">
         <h2>${escapeHTML(section.title)}</h2>
-        ${section.date ? `<p class="poster-date">${escapeHTML(section.date)}</p>` : ""}
+        ${posterDateLine(section)}
         <table class="poster-table-order">
           <colgroup>
             <col class="poster-col-name" />
@@ -4967,7 +5271,7 @@ function posterSheetInnerHtml(model) {
       }).join("");
       return `<tr>
         <td class="poster-name">${escapeHTML(posterName(index, row.name))}</td>
-        <td class="poster-div">${escapeHTML(row.division)}</td>
+        <td class="poster-kg">${escapeHTML(row.division)}</td>
         ${bouts}
       </tr>`;
     }).join("");
@@ -4975,7 +5279,7 @@ function posterSheetInnerHtml(model) {
       + Array.from({ length: section.rounds }, () => `<col style="width:${boutW}%" />`).join("");
     return `<section class="poster-block">
       <h2>${escapeHTML(section.title)}</h2>
-      ${section.date ? `<p class="poster-date">${escapeHTML(section.date)}</p>` : ""}
+      ${posterDateLine(section)}
       <table class="poster-table-fight">
         <colgroup>${cols}</colgroup>
         <thead><tr>${heads.map((h) => `<th>${escapeHTML(h)}</th>`).join("")}</tr></thead>
@@ -4996,21 +5300,22 @@ function posterPreviewHtml() {
 }
 
 function posterPrintCss() {
-  return `.poster-sheet{box-sizing:border-box;background:#fff;color:#111;padding:36px 32px 48px;font-family:"Microsoft JhengHei","PingFang TC","Noto Sans TC","Noto Sans CJK TC",sans-serif;overflow:hidden;}
-.poster-block+.poster-block{margin-top:40px;}
-.poster-sheet h2{margin:0 0 14px;text-align:center;font-size:34px;font-weight:900;letter-spacing:.22em;}
-.poster-date{margin:-4px 0 12px;text-align:center;font-size:18px;font-weight:800;letter-spacing:.08em;color:#333;}
-.poster-sheet table{width:100%;border-collapse:collapse;table-layout:fixed;}
-.poster-sheet th,.poster-sheet td{border:1px solid #2f2f2f;padding:8px 10px;text-align:center;font-size:15px;font-weight:700;line-height:1.35;overflow-wrap:anywhere;word-break:break-word;}
-.poster-sheet th{background:#4a4a4a;color:#fff;font-size:16px;}
-.poster-name{text-align:left;white-space:nowrap;overflow:hidden;}
-.poster-div{text-align:left;white-space:normal;overflow-wrap:anywhere;word-break:break-word;}
+  return `.poster-sheet{box-sizing:border-box;background:#fff;color:#111;padding:28px 72px 36px;font-family:"Microsoft JhengHei","PingFang TC","Noto Sans TC","Noto Sans CJK TC",sans-serif;overflow:visible;margin:0 auto;}
+.poster-block+.poster-block{margin-top:22px;}
+.poster-sheet h2{display:block;width:100%;margin:0 0 6px;text-align:center;font-size:36px;font-weight:900;letter-spacing:.08em;text-indent:.08em;}
+.poster-date{display:block;width:100%;margin:0 0 12px;text-align:center;font-size:22px;font-weight:800;letter-spacing:0;color:#111;}
+.poster-sheet table{width:100%;border-collapse:collapse;table-layout:fixed;margin:0 auto;}
+.poster-sheet th,.poster-sheet td{border:1.5px solid #2f2f2f;padding:9px 8px;text-align:center;font-size:18px;font-weight:800;line-height:1.3;overflow-wrap:anywhere;word-break:break-word;min-width:0;}
+.poster-sheet th{background:#4a4a4a;color:#fff;font-size:18px;}
+.poster-name{text-align:left;white-space:nowrap;}
+.poster-div{text-align:center;white-space:normal;overflow-wrap:anywhere;word-break:break-word;}
+.poster-kg{text-align:center;white-space:nowrap;}
 .poster-match{white-space:nowrap;}
 .poster-form{white-space:normal;}
-.poster-col-name{width:16%;}
-.poster-col-div{width:34%;}
-.poster-col-match{width:22%;}
-.poster-col-form{width:28%;}
+.poster-col-name{width:18%;}
+.poster-col-div{width:28%;}
+.poster-col-match{width:18%;}
+.poster-col-form{width:36%;}
 .poster-bout-r{color:#d70015;font-weight:800;}
 .poster-bout-b{color:#155dfc;font-weight:800;}`;
 }
@@ -5053,13 +5358,16 @@ function captureViaSvg(node) {
   });
 }
 
-async function capturePosterNode(node) {
-  const width = Math.ceil(Math.max(node.offsetWidth || 0, node.scrollWidth || 0));
-  const height = Math.ceil(Math.max(node.offsetHeight || 0, node.scrollHeight || 0));
+async function capturePosterNode(frame) {
+  const doc = frame.contentDocument || frame.contentWindow.document;
+  const target = doc.body;
+  const width = Math.ceil(Math.max(target.scrollWidth || 0, target.offsetWidth || 0, frame.offsetWidth || 0));
+  const height = Math.ceil(Math.max(target.scrollHeight || 0, target.offsetHeight || 0));
+  frame.style.height = `${height}px`;
   const scale = height * 2 > 16000 ? 1 : 2;
   try {
     const html2canvas = await loadHtml2Canvas();
-    return await html2canvas(node, {
+    return await html2canvas(target, {
       scale,
       backgroundColor: "#ffffff",
       useCORS: true,
@@ -5072,18 +5380,38 @@ async function capturePosterNode(node) {
       scrollY: 0
     });
   } catch (error) {
-    return captureViaSvg(node);
+    return captureViaSvg(doc.querySelector(".poster-sheet") || target);
   }
 }
 
 function mountPosterSheet(model) {
   const width = posterCaptureWidth(model);
-  const host = document.createElement("div");
-  host.className = "poster-capture-host";
-  host.style.width = `${width}px`;
-  host.innerHTML = `<div class="poster-sheet is-print" style="width:${width}px">${posterSheetInnerHtml(model)}</div>`;
-  document.body.appendChild(host);
-  return { host, sheet: host.querySelector(".poster-sheet") };
+  const frame = document.createElement("iframe");
+  frame.className = "poster-capture-host";
+  frame.setAttribute("aria-hidden", "true");
+  frame.style.cssText = [
+    "position:fixed",
+    "left:0",
+    "top:0",
+    `width:${width}px`,
+    `min-width:${width}px`,
+    "height:2400px",
+    "border:0",
+    "background:#fff",
+    "z-index:2147483000",
+    "margin:0",
+    "padding:0"
+  ].join(";");
+  document.body.appendChild(frame);
+  const doc = frame.contentDocument;
+  doc.open();
+  doc.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+html,body{margin:0;padding:0;background:#fff;width:${width}px;overflow:visible;}
+${posterPrintCss()}
+.poster-sheet{width:${width}px;max-width:none;padding:36px 48px 40px;box-sizing:border-box;overflow:visible;}
+</style></head><body><div class="poster-sheet is-print">${posterSheetInnerHtml(model)}</div></body></html>`);
+  doc.close();
+  return { host: frame, sheet: doc.querySelector(".poster-sheet") };
 }
 
 async function doExportPoster() {
@@ -5101,7 +5429,8 @@ async function doExportPoster() {
   const { host, sheet } = mountPosterSheet(model);
   try {
     await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-    const canvas = await capturePosterNode(sheet);
+    await new Promise((resolve) => setTimeout(resolve, 40));
+    const canvas = await capturePosterNode(host);
     const name = exportFileName("png");
     await new Promise((resolve, reject) => {
       canvas.toBlob((blob) => {
