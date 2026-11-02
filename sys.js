@@ -1100,7 +1100,8 @@ function dateSortValue(item) {
 
 function looksLikePoomsaeScoreSheet(text) {
   const src = String(text || "");
-  return /正確性/.test(src) && /組\s*別\s*:/.test(src) && /場\s*次\s*:/.test(src) && /品\s*勢/.test(src);
+  if (!/組\s*別\s*:\s*[A-Za-z]{1,3}\d{2,4}/.test(src)) return false;
+  return /品\s*勢\s*:/.test(src) || /場\s*次\s*:/.test(src) || /正確性/.test(src) || /出場序/.test(src);
 }
 
 function cleanScorePoomsae(name) {
@@ -1128,6 +1129,52 @@ function splitScorePlayer(rest) {
   return splitClubPlayer(text);
 }
 
+function scoreSheetDivisionKey(division) {
+  return String(division || "")
+    .replace(/^[A-Za-z]{1,3}\d{2,4}[A-Za-z]?/, "")
+    .replace(/\s+/g, "");
+}
+
+function scoreSheetIndex(lines) {
+  const map = new Map();
+  lines.forEach((line) => {
+    const hit = line.match(/^(\d{3})\s+(.+?)\s+(\d{1,2})$/);
+    if (!hit) return;
+    const name = hit[2].replace(/\s+/g, "");
+    if (!/組|級|帶|段/.test(name)) return;
+    map.set(name, hit[1]);
+  });
+  return map;
+}
+
+function absorbScoreSheetLine(line, card) {
+  const size = line.match(/人\s*數\s*:\s*(\d+)/);
+  if (size) card.groupSize = parseInt(size[1], 10);
+  const prefixed = line.match(/^(.{1,8}?)人\s*數\s*:/);
+  if (prefixed) {
+    const name = cleanScorePoomsae(prefixed[1]);
+    if (name) card.eventName = card.eventName || name;
+  }
+  const form = line.match(/品\s*勢\s*:\s*([^場人組]*)/);
+  if (form) {
+    let rawName = form[1].trim();
+    const trail = rawName.match(/^(.*\S)\s+(\d{3})\s*$/);
+    if (trail) {
+      rawName = trail[1].trim();
+      if (!card.matchNo) card.matchNo = trail[2];
+    }
+    const name = cleanScorePoomsae(rawName);
+    if (name) card.eventName = name;
+  }
+  const match = line.match(/場\s*次\s*:?\s*(\d{3})/) || line.match(/(\d{3})\s*場\s*次/);
+  if (match) card.matchNo = match[1];
+  if (!card.matchNo && card.pendingMatch) {
+    const lone = line.match(/^(\d{3})$/);
+    if (lone) card.matchNo = lone[1];
+  }
+  card.pendingMatch = /場\s*次\s*:?\s*$/.test(line) && !card.matchNo;
+}
+
 function parsePoomsaeScoreSheet(raw) {
   const lines = String(raw || "")
     .replace(/\u3000/g, " ")
@@ -1135,47 +1182,33 @@ function parsePoomsaeScoreSheet(raw) {
     .split(/\n/)
     .map((line) => line.replace(/[ \t]+/g, " ").trim())
     .filter((line) => line && !/^=====/.test(line) && !/^-\s*\d+\s*-$/.test(line));
+  const index = scoreSheetIndex(lines);
   const cards = [];
   let card = null;
 
   function startCard(line) {
     const hit = line.match(/組\s*別\s*:\s*(?:([A-Za-z]{1,3}\d{2,4}[A-Za-z]?)\s*)?(.*)$/);
     if (!hit) return false;
+    let division = (hit[2] || hit[1] || "").trim();
+    division = division.replace(/場\s*次\s*:?.*$/, "").replace(/品\s*勢\s*:?.*$/, "").replace(/人\s*數\s*:?.*$/, "").trim();
     card = {
       groupCode: hit[1] || "",
-      division: (hit[2] || hit[1] || "").trim(),
+      division,
       eventName: "",
       matchNo: "",
       groupSize: 0,
+      pendingMatch: false,
       players: []
     };
     cards.push(card);
+    absorbScoreSheetLine(line, card);
     return true;
   }
 
   lines.forEach((line) => {
     if (/組\s*別\s*:/.test(line) && startCard(line)) return;
     if (!card) return;
-    const size = line.match(/人\s*數\s*:\s*(\d+)/);
-    if (size) card.groupSize = parseInt(size[1], 10);
-    const prefixed = line.match(/^(.{1,8}?)人\s*數\s*:/);
-    if (prefixed) {
-      const name = cleanScorePoomsae(prefixed[1]);
-      if (name) card.eventName = card.eventName || name;
-    }
-    const form = line.match(/品\s*勢\s*:\s*(.*)$/);
-    if (form) {
-      let rawName = form[1].trim();
-      const trail = rawName.match(/^(.*\S)\s+(\d{3})\s*$/);
-      if (trail) {
-        rawName = trail[1].trim();
-        if (!card.matchNo) card.matchNo = trail[2];
-      }
-      const name = cleanScorePoomsae(rawName);
-      if (name) card.eventName = name;
-    }
-    const match = line.match(/場\s*次\s*:\s*(\d{2,4})/);
-    if (match) card.matchNo = match[1];
+    absorbScoreSheetLine(line, card);
     if (/組\s*別|場\s*次|人\s*數|品\s*勢|正確性|^籤號/.test(line)) return;
     const seedLine = line.match(/^([1-9]\d?)\s+(.+)$/);
     if (!seedLine) return;
@@ -1190,6 +1223,10 @@ function parsePoomsaeScoreSheet(raw) {
 
   const items = [];
   cards.forEach((entry) => {
+    if (!entry.matchNo) {
+      const key = scoreSheetDivisionKey(entry.division);
+      entry.matchNo = index.get(key) || index.get(entry.division.replace(/\s+/g, "")) || "";
+    }
     const header = {
       type: "品勢",
       division: entry.division,
