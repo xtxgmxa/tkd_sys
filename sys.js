@@ -1098,12 +1098,146 @@ function dateSortValue(item) {
   return parseInt(key.replace(/-/g, ""), 10) || 99999999;
 }
 
+function looksLikePoomsaeScoreSheet(text) {
+  const src = String(text || "");
+  return /正確性/.test(src) && /組\s*別\s*:/.test(src) && /場\s*次\s*:/.test(src) && /品\s*勢/.test(src);
+}
+
+function cleanScorePoomsae(name) {
+  const text = String(name || "")
+    .replace(/[（(][^）)]*[）)]/g, "")
+    .replace(/品\s*勢\s*:?/g, "")
+    .replace(/人\s*數.*$/, "")
+    .replace(/\s+/g, "")
+    .trim();
+  if (!text || text.length > 12) return "";
+  if (/組別|場次|籤號|正確性|單位|姓名/.test(text)) return "";
+  return text;
+}
+
+function splitScorePlayer(rest) {
+  let text = String(rest || "").replace(/\s+/g, " ").trim();
+  text = text.replace(/(\d{4,8})(?=[\u4e00-\u9fff])/g, "$1 ");
+  text = text.replace(/\s*\d{4,8}(?=\s|$)/g, " ").replace(/\s+/g, " ").trim();
+  const named = text.match(/^(.*?\S)\s+([\u4e00-\u9fff]{2,4})(?:\s+([A-Za-z][A-Za-z\-']*(?:\s+[A-Za-z][A-Za-z\-']*){0,4}))?\s*$/);
+  if (named) {
+    const club = named[1].trim();
+    const player = named[3] ? `${named[2]} ${named[3]}` : named[2];
+    if (club && !/^(籤號|單位|姓名|正確性)/.test(club)) return { club, player };
+  }
+  return splitClubPlayer(text);
+}
+
+function parsePoomsaeScoreSheet(raw) {
+  const lines = String(raw || "")
+    .replace(/\u3000/g, " ")
+    .replace(/[：]/g, ":")
+    .split(/\n/)
+    .map((line) => line.replace(/[ \t]+/g, " ").trim())
+    .filter((line) => line && !/^=====/.test(line) && !/^-\s*\d+\s*-$/.test(line));
+  const cards = [];
+  let card = null;
+
+  function startCard(line) {
+    const hit = line.match(/組\s*別\s*:\s*(?:([A-Za-z]{1,3}\d{2,4}[A-Za-z]?)\s*)?(.*)$/);
+    if (!hit) return false;
+    card = {
+      groupCode: hit[1] || "",
+      division: (hit[2] || hit[1] || "").trim(),
+      eventName: "",
+      matchNo: "",
+      groupSize: 0,
+      players: []
+    };
+    cards.push(card);
+    return true;
+  }
+
+  lines.forEach((line) => {
+    if (/組\s*別\s*:/.test(line) && startCard(line)) return;
+    if (!card) return;
+    const size = line.match(/人\s*數\s*:\s*(\d+)/);
+    if (size) card.groupSize = parseInt(size[1], 10);
+    const prefixed = line.match(/^(.{1,8}?)人\s*數\s*:/);
+    if (prefixed) {
+      const name = cleanScorePoomsae(prefixed[1]);
+      if (name) card.eventName = card.eventName || name;
+    }
+    const form = line.match(/品\s*勢\s*:\s*(.*)$/);
+    if (form) {
+      let rawName = form[1].trim();
+      const trail = rawName.match(/^(.*\S)\s+(\d{3})\s*$/);
+      if (trail) {
+        rawName = trail[1].trim();
+        if (!card.matchNo) card.matchNo = trail[2];
+      }
+      const name = cleanScorePoomsae(rawName);
+      if (name) card.eventName = name;
+    }
+    const match = line.match(/場\s*次\s*:\s*(\d{2,4})/);
+    if (match) card.matchNo = match[1];
+    if (/組\s*別|場\s*次|人\s*數|品\s*勢|正確性|^籤號/.test(line)) return;
+    const seedLine = line.match(/^([1-9]\d?)\s+(.+)$/);
+    if (!seedLine) return;
+    const split = splitScorePlayer(seedLine[2]);
+    if (!split || !split.player || split.player.length < 2) return;
+    card.players.push({
+      seed: parseInt(seedLine[1], 10),
+      club: split.club || "",
+      player: split.player
+    });
+  });
+
+  const items = [];
+  cards.forEach((entry) => {
+    const header = {
+      type: "品勢",
+      division: entry.division,
+      groupCode: entry.groupCode,
+      eventName: entry.eventName,
+      event1: entry.eventName,
+      event2: "",
+      matchNo: entry.matchNo,
+      groupSize: entry.groupSize || entry.players.length,
+      boutStyle: "order",
+      court: ""
+    };
+    const group = [];
+    entry.players.forEach((row) => {
+      const item = parseSeedLine(`${row.seed} ${row.club} ${row.player}`.replace(/\s+/g, " ").trim(), header);
+      if (!item) return;
+      item.player = row.player;
+      item.club = row.club;
+      item.matchNo = entry.matchNo;
+      item.orderNo = row.seed;
+      item.seed = row.seed;
+      item.boutStyle = "order";
+      item.eventName = entry.eventName;
+      item.event1 = entry.eventName;
+      item.detailLabel = entry.eventName;
+      item.groupCode = entry.groupCode;
+      item.groupSize = header.groupSize;
+      group.push(item);
+    });
+    group.forEach((item) => {
+      item.groupMembers = group;
+    });
+    items.push(...group);
+  });
+  return items;
+}
+
 function parseInput(raw) {
   const text = normalizeSourceText(raw);
   if (!text) return [];
 
   if (looksLikeCoachNotes(text)) {
     return parseCoachNotes(text);
+  }
+
+  if (looksLikePoomsaeScoreSheet(text)) {
+    const sheet = parsePoomsaeScoreSheet(text);
+    if (sheet.length) return sheet;
   }
 
   const collected = [];
