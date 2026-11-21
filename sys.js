@@ -2219,7 +2219,10 @@ function enrichItem(item) {
     item.eventName = [item.event1, item.event2].filter(Boolean).join("、") || item.eventName;
   }
   if (!item.gender) item.gender = extractGender(blob);
-  if (!item.ageGroup) item.ageGroup = extractAgeGroup(blob);
+  if (!item.ageGroup) {
+    const ageBlob = [item.division, item.type, item.eventName, item.groupCode].filter(Boolean).join(" ");
+    item.ageGroup = extractAgeGroup(ageBlob);
+  }
   if (!item.division) {
     item.division = [item.ageGroup, item.gender, item.belt || item.weightClass].filter(Boolean).join("");
   }
@@ -2336,8 +2339,27 @@ function extractGender(text) {
 }
 
 function extractAgeGroup(text) {
-  const match = String(text || "").match(/(幼兒|兒童|國小低年級|國小中年級|國小高年級|國小|國中|高中|大專|一般|社會|公開|成年)/);
+  const src = String(text || "");
+  if (/國小低年級/.test(src)) return "國小低年級";
+  if (/國小中年級/.test(src)) return "國小中年級";
+  if (/國小高年級/.test(src)) return "國小高年級";
+  if (/國小/.test(src)) return "國小";
+  if (/幼幼|幼兒|幼稚園|幼兒園|兒童/.test(src)) return "幼兒";
+  if (/國男組|國女組|國中組|國男|國女|國中/.test(src)) return "國中";
+  if (/高男組|高女組|高中組|高男|高女|高中/.test(src)) return "高中";
+  if (/大專/.test(src)) return "大專";
+  const match = src.match(/(一般|社會|公開|成年)/);
   return match ? match[1] : "";
+}
+
+function ageBandFromDivision(text) {
+  const src = String(text || "");
+  if (/國小/.test(src)) return "國小";
+  if (/幼幼|幼兒|幼稚園|幼兒園/.test(src)) return "幼兒";
+  if (/國男組|國女組|國中組|國男|國女|國中/.test(src)) return "國中";
+  if (/高男組|高女組|高中組|高男|高女|高中/.test(src)) return "高中";
+  if (/大專/.test(src)) return "大專";
+  return extractAgeGroup(src);
 }
 
 function isPoomsae(item) {
@@ -5268,12 +5290,11 @@ function groupItemsByDate(list) {
 }
 
 function posterAgeBand(item) {
-  const blob = [item.ageGroup, item.division, item.weightClass, item.eventName].filter(Boolean).join(" ");
-  if (/幼兒|幼稚園|幼兒園/.test(blob)) return "幼兒";
-  if (/國小/.test(blob)) return "國小";
-  if (/國中/.test(blob)) return "國中";
-  if (/高中/.test(blob)) return "高中";
-  if (/大專/.test(blob)) return "大專";
+  const blob = [item.ageGroup, item.division, item.eventName, item.groupCode].filter(Boolean).join(" ");
+  const band = ageBandFromDivision(blob);
+  if (band === "國小低年級" || band === "國小中年級" || band === "國小高年級") return "國小";
+  if (band === "幼兒" || band === "兒童") return "幼兒";
+  if (band === "國中" || band === "高中" || band === "大專" || band === "國小") return band;
   return "";
 }
 
